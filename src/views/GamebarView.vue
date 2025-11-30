@@ -2,42 +2,21 @@
 
 <script>
 import GS_body from '../componets/GS_body.vue';
+import { useUserStore } from '@/stores/userStore';
+import { computed } from 'vue';
 export default {
   name: 'GamebarView',
   components: {
     GS_body,
   },
-  data() {
+  setup() {
+    const userStore = useUserStore();
+    
+    // 从Pinia store获取用户信息
+    const currentUser = computed(() => userStore.currentUser);
+    
     return {
-      currentUser: null
-    }
-  },
-  mounted() {
-    // 组件挂载时获取用户信息
-    this.checkUserLogin();
-    // 监听storage变化，以便在其他标签页登录状态改变时更新
-    window.addEventListener('storage', this.handleStorageChange);
-  },
-  beforeUnmount() {
-    // 清理事件监听
-    window.removeEventListener('storage', this.handleStorageChange);
-  },
-  methods: {
-    checkUserLogin() {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          this.currentUser = JSON.parse(userStr);
-        } catch (e) {
-          console.error('解析用户信息失败:', e);
-          localStorage.removeItem('user');
-        }
-      }
-    },
-    handleStorageChange(event) {
-      if (event.key === 'user') {
-        this.checkUserLogin();
-      }
+      currentUser
     }
   }
 }

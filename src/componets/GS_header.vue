@@ -1,9 +1,19 @@
 <script>
 import GS_header_user from './GS_header_user.vue';
-
+import { useUserStore } from '../stores/userStore';
+import { computed } from 'vue';
 export default {
     components: {
         GS_header_user
+    },
+    setup() {
+        const userStore = useUserStore();
+        // 初始化加载用户信息
+        userStore.initUser();
+        
+        return {
+            userStore
+        }
     },
     data() {
         return {
@@ -15,10 +25,12 @@ export default {
                 { text: '客服', href: '/support' },
                 { text: '库', href: '/gamebar' },
             ],
-            currentUser: null,
         }
     },
     computed: {
+        currentUser() {
+            return this.userStore?.currentUser;
+        },
         isLoggedIn() {
             const items = [...this.navItems];
             if (this.currentUser && this.currentUser.user_name) {
@@ -34,7 +46,6 @@ export default {
             if (index !== -1) {
                 this.activeIndex = index
             }
-            this.checkUserLogin();
         }
     },
     mounted() {
@@ -43,63 +54,28 @@ export default {
         if (index !== -1) {
             this.activeIndex = index
         }
-        
-        // 检查本地存储中是否有用户信息
-        this.checkUserLogin();
-        
-        // 监听storage变化，以便在其他标签页登录时更新状态
-        window.addEventListener('storage', this.handleStorageChange);
-    },
-    beforeUnmount() {
-        // 清理事件监听
-        window.removeEventListener('storage', this.handleStorageChange);
-    },
-    methods: {
-        checkUserLogin() {
-            const userStr = localStorage.getItem('user');
-            if (userStr) {
-                try {
-                    this.currentUser = JSON.parse(userStr);
-                } catch (e) {
-                    console.error('解析用户信息失败:', e);
-                    localStorage.removeItem('user');
-                }
-            }
-        },
-        handleStorageChange(event) {
-            if (event.key === 'user') {
-                this.checkUserLogin();
-            }
-        },
-        handleLogout() {
-            // 从子组件接收退出登录事件
-            this.currentUser = null;
-        }
-    },
+    }
 }
 </script>
 
 <template>
     <div class="GS_header_container">
         <div class="GS_header">
-        <div class="GS_header_left">
-            <div class="STEAM">
-                <img src="/WebResources/STEAM.png" alt=""><a href="/">STEAM™</a>
+            <div class="GS_header_left">
+                <div class="STEAM">
+                    <img src="/WebResources/STEAM.png" alt=""><a href="/">STEAM™</a>
+                </div>
+                <div class="GS_header_left_nav">
+                    <router-link 
+                        v-for="(item, index) in isLoggedIn.filter(i => i.text !== '库' || currentUser)" 
+                        :key="index" 
+                        :to="item.href" 
+                        :class="{active: activeIndex === index}"
+                    >{{ item.text }}</router-link>
+                </div>
             </div>
-            <div class="GS_header_left_nav">
-                <router-link 
-                    v-for="(item, index) in isLoggedIn.filter(i => i.text !== '库' || currentUser)" 
-                    :key="index" 
-                    :to="item.href" 
-                    :class="{active: activeIndex === index}"
-                >{{ item.text }}</router-link>
-            </div>
+            <GS_header_user />
         </div>
-        <GS_header_user 
-            :currentUser="currentUser"
-            @logout="handleLogout"
-        />
-    </div>
     </div>
 </template>
 

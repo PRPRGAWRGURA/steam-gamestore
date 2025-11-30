@@ -2,6 +2,8 @@
 import GS_body from '../componets/GS_body.vue';
 import GS_container from '../componets/GS_container.vue';
 import normalUserAPI from '@/utils/normalUserAPI';
+import { useUserStore } from '@/stores/userStore';
+import { computed } from 'vue';
 
 export default {
   name: 'UseritemView',
@@ -9,10 +11,21 @@ export default {
     GS_body,
     GS_container,
   },
+  setup() {
+    const userStore = useUserStore();
+    
+    // 使用computed从Pinia store获取当前用户名
+    const currentUsername = computed(() => {
+      return userStore.currentUser?.user_name || '';
+    });
+    
+    return {
+      userStore,
+      currentUsername
+    };
+  },
   data() {
     return {
-      // 当前登录的用户名（现在从user对象中获取）
-      currentUser: null,
       // 修改密码表单数据
       passwordForm: {
         oldPassword: '',
@@ -36,12 +49,6 @@ export default {
       successMessage: '',
       errorMessage: ''
     };
-  },
-  computed: {
-    // 获取当前用户名
-    currentUsername() {
-      return this.currentUser && this.currentUser.user_name ? this.currentUser.user_name : '';
-    }
   },
   methods: {
     /**
@@ -133,27 +140,6 @@ export default {
     },
 
     /**
-     * 检查并加载用户信息
-     */
-    checkUserLogin() {
-      console.log('检查用户登录状态...');
-      const userStr = localStorage.getItem('user');
-      console.log('从localStorage获取的user值:', userStr);
-      
-      if (userStr) {
-        try {
-          this.currentUser = JSON.parse(userStr);
-          console.log('解析后的用户信息:', this.currentUser);
-        } catch (e) {
-          console.error('解析用户信息失败:', e);
-          localStorage.removeItem('user');
-        }
-      } else {
-        console.log('localStorage中未找到用户信息');
-      }
-    },
-
-    /**
      * 提交修改密码表单
      */
     async submitChangePassword() {
@@ -223,14 +209,8 @@ export default {
         if (updateResult.success) {
           this.successMessage = '密码修改成功！';
           
-          // 如果更新成功，更新localStorage中的用户信息，但不包含密码
-          if (updateResult.data) {
-            const updatedUser = {
-              ...this.currentUser
-              // 移除密码字段，不在前端存储密码
-            };
-            localStorage.setItem('user', JSON.stringify(updatedUser));
-          }
+          // 密码修改成功后，我们不需要在组件中手动更新用户信息
+          // Pinia store会自动处理状态管理
           
           this.resetForm();
         } else {
@@ -243,29 +223,9 @@ export default {
       } finally {
         this.isSubmitting = false;
       }
-    },
-    
-    /**
-     * 处理storage变化事件
-     */
-    handleStorageChange(event) {
-      if (event.key === 'user') {
-        this.checkUserLogin();
-      }
     }
-  },
-  mounted() {
-    // 组件挂载时检查用户登录状态
-    this.checkUserLogin();
-    
-    // 监听storage变化，以便在其他标签页修改用户信息时更新状态
-    window.addEventListener('storage', this.handleStorageChange);
-  },
-  beforeUnmount() {
-    // 清理事件监听
-    window.removeEventListener('storage', this.handleStorageChange);
   }
-}
+};
 </script>
 
 <template>

@@ -1,5 +1,6 @@
 <script>
 import { normalUserAPI } from '@/utils/normalUserAPI'
+import { useUserStore } from '@/stores/userStore'
 export default {
     data() {
         return {
@@ -30,6 +31,12 @@ export default {
                 regUsername: '',
                 regPassword: ''
             }
+        }
+    },
+    setup() {
+        const userStore = useUserStore()
+        return {
+            userStore
         }
     },
     methods: {
@@ -108,15 +115,9 @@ export default {
             const user = await normalUserAPI.login(this.loginData.username, this.loginData.password)
             if(user.success){
                 alert('登录成功！');
-                localStorage.setItem('user', JSON.stringify(user.data))
-                // 修复记住我功能：直接保存用户名和密码，而不是JSON格式
-                if (this.rememberMe) {
-                    localStorage.setItem('rememberedUsername', this.loginData.username);
-                    localStorage.setItem('rememberedPassword', this.loginData.password);
-                } else {
-                    localStorage.removeItem('rememberedUsername');
-                    localStorage.removeItem('rememberedPassword');
-                }
+                // 使用Pinia store保存用户信息
+                this.userStore.login(this.loginData.username, this.loginData.password, this.rememberMe)
+                // 记住我功能由store内部处理
                 this.$router.push('/')
             }else{
                 this.errorMsg = user.error
@@ -139,7 +140,8 @@ export default {
             const user = await normalUserAPI.register(this.registerData.username, this.registerData.password)
             if(user.success){
                 alert('注册成功！');
-                localStorage.setItem('user', JSON.stringify(user.data))
+                // 使用Pinia store保存用户信息
+                this.userStore.login(this.registerData.username, this.registerData.password, false)
                 this.$router.push('/')
             }else{
                 this.errorMsg = user.error

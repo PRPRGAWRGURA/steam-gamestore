@@ -1,22 +1,30 @@
 <script>
+import { useUserStore } from '@/stores/userStore';
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 export default {
     data() {
         return {
             isHover: false,
         }
     },
-    props: {
-        currentUser: {
-            type: Object,
-            default: null
-        }
-    },
-    methods: {
-        logout() {
-            localStorage.removeItem('user');
-            this.$emit('logout');
-            this.$router.push('/login');
+    setup() {
+        const userStore = useUserStore();
+        const router = useRouter();
+        
+        // 从Pinia store获取用户信息
+        const currentUser = computed(() => userStore.currentUser);
+        
+        const logout = () => {
+            userStore.logout();
+            router.push('/login');
             alert('您已退出登录');
+        };
+        
+        return {
+            currentUser,
+            logout,
+            userStore
         }
     }
 }
