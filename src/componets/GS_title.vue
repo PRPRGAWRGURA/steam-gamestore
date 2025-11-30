@@ -65,8 +65,9 @@ export default {
         left: 50%;
         transform: translateX(-50%);
         width: 100%;
-        height: 200px;
-        z-index: 100;
+        height: 100%;
+        z-index: 50;
+        pointer-events: none;
     }
     .GS_title{
         color: white;
@@ -80,6 +81,7 @@ export default {
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        pointer-events: auto;
     }
     .GS_title_box{
         display: flex;
@@ -87,7 +89,6 @@ export default {
         align-items: center;
         width: 1220px;
         height: 48px;
-        
     }
     .box-left{
         flex: 1;
