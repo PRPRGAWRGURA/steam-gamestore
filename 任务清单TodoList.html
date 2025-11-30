@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏商城开发任务清单</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --vue-color: #42b883;
+            --react-color: #61dafb;
+            --p0-color: #e63946;
+            --p1-color: #f4a261;
+            --p2-color: #2a9d8f;
+            --p3-color: #457b9d;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            background-color: white;
+            color: var(--gray);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-weight: 500;
+        }
+        
+        .filter-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .search-box {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            width: 250px;
+            font-size: 1rem;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .stages {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .stage-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+        
+        .stage-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stage-header {
+            padding: 15px 20px;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stage-header.vue {
+            background-color: var(--vue-color);
+        }
+        
+        .stage-header.react {
+            background-color: var(--react-color);
+        }
+        
+        .stage-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .tech-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .task-list {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+        
+        .task-item:last-child {
+            border-bottom: none;
+        }
+        
+        .task-checkbox {
+            margin-right: 10px;
+            margin-top: 3px;
+        }
+        
+        .task-content {
+            flex: 1;
+        }
+        
+        .task-text {
+            margin-bottom: 5px;
+        }
+        
+        .task-meta {
+            display: flex;
+            gap: 10px;
+            font-size: 0.8rem;
+        }
+        
+        .priority {
+            padding: 2px 8px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 500;
+        }
+        
+        .p0 {
+            background-color: var(--p0-color);
+        }
+        
+        .p1 {
+            background-color: var(--p1-color);
+        }
+        
+        .p2 {
+            background-color: var(--p2-color);
+        }
+        
+        .p3 {
+            background-color: var(--p3-color);
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: var(--success);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        
+        .progress-text {
+            text-align: right;
+            font-size: 0.8rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .delete-task {
+            background: none;
+            border: none;
+            color: var(--gray);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0 5px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .delete-task:hover {
+            opacity: 1;
+            color: var(--warning);
+        }
+        
+        .add-task-form {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-top: 30px;
+        }
+        
+        .form-title {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .form-select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            background-color: white;
+        }
+        
+        .form-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        
+        .form-button:hover {
+            background-color: var(--secondary);
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .stages {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-row {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>游戏商城开发任务清单</h1>
+            <p class="subtitle">基于Vue 3与微前端架构的现代化游戏商城平台</p>
+        </header>
+        
+        <div class="controls">
+            <div class="filter-group">
+                <button class="filter-btn active" data-filter="all">全部任务</button>
+                <button class="filter-btn" data-filter="vue">Vue 项目</button>
+                <button class="filter-btn" data-filter="react">React 项目</button>
+                <button class="filter-btn" data-filter="p0">P0 优先级</button>
+                <button class="filter-btn" data-filter="p1">P1 优先级</button>
+            </div>
+            <input type="text" class="search-box" placeholder="搜索任务...">
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="total-tasks">0</div>
+                <div class="stat-label">总任务数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="completed-tasks">0</div>
+                <div class="stat-label">已完成</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="completion-rate">0%</div>
+                <div class="stat-label">完成率</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="vue-tasks">0</div>
+                <div class="stat-label">Vue 任务</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="react-tasks">0</div>
+                <div class="stat-label">React 任务</div>
+            </div>
+        </div>
+        
+        <div class="stages" id="stages-container">
+            <!-- 阶段卡片将通过JavaScript动态生成 -->
+        </div>
+        
+        <div class="add-task-form">
+            <h3 class="form-title">添加新需求</h3>
+            <form id="add-task-form">
+                <div class="form-group">
+                    <input type="text" class="form-input" id="task-text" placeholder="输入任务描述..." required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <select class="form-select" id="task-stage" required>
+                            <option value="">选择阶段</option>
+                            <option value="stage1">第一阶段：用户前端完善</option>
+                            <option value="stage2">第二阶段：开发商管理端</option>
+                            <option value="stage3">第三阶段：管理后台</option>
+                            <option value="stage4">第四阶段：实时通讯系统</option>
+                            <option value="stage5">第五阶段：微前端集成与优化</option>
+                            <option value="stage6">第六阶段：测试与部署</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <select class="form-select" id="task-priority" required>
+                            <option value="">选择优先级</option>
+                            <option value="p0">P0 - 最高优先级</option>
+                            <option value="p1">P1 - 高优先级</option>
+                            <option value="p2">P2 - 中等优先级</option>
+                            <option value="p3">P3 - 低优先级</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="form-button">添加任务</button>
+            </form>
+        </div>
+        
+        <footer>
+            <p>项目进度自动保存到本地存储 | 最后更新: <span id="last-updated">-</span></p>
+        </footer>
+    </div>
+
+    <script>
+        // 任务数据结构
+        const tasksData = [
+            {
+                id: "stage1",
+                title: "第一阶段：用户前端完善",
+                technology: "Vue 3",
+                tasks: [
+                    { id: "s1t1", text: "实现商品搜索功能", priority: "p0", completed: false },
+                    { id: "s1t2", text: "完成游戏详情页", priority: "p0", completed: false },
+                    { id: "s1t3", text: "实现购物车功能", priority: "p0", completed: false },
+                    { id: "s1t4", text: "模拟支付流程", priority: "p0", completed: false },
+                    { id: "s1t5", text: "添加商品分类筛选", priority: "p1", completed: false },
+                    { id: "s1t6", text: "已购游戏列表展示", priority: "p1", completed: false },
+                    { id: "s1t7", text: "模拟游戏入库", priority: "p1", completed: false },
+                    { id: "s1t8", text: "帖子发布/编辑", priority: "p1", completed: false },
+                    { id: "s1t9", text: "评论/点赞系统", priority: "p1", completed: false },
+                    { id: "s1t10", text: "工单提交表单", priority: "p1", completed: false },
+                    { id: "s1t11", text: "问题分类选择", priority: "p1", completed: false }
+                ]
+            },
+            {
+                id: "stage2",
+                title: "第二阶段：开发商管理端",
+                technology: "React",
+                tasks: [
+                    { id: "s2t1", text: "游戏发布表单", priority: "p1", completed: false },
+                    { id: "s2t2", text: "游戏信息编辑", priority: "p1", completed: false },
+                    { id: "s2t3", text: "用户反馈查看", priority: "p2", completed: false }
+                ]
+            },
+            {
+                id: "stage3",
+                title: "第三阶段：管理后台",
+                technology: "Vue 3",
+                tasks: [
+                    { id: "s3t1", text: "用户账户审核", priority: "p1", completed: false },
+                    { id: "s3t2", text: "违规行为处理", priority: "p1", completed: false },
+                    { id: "s3t3", text: "游戏上架审核", priority: "p1", completed: false },
+                    { id: "s3t4", text: "社区内容监管", priority: "p1", completed: false },
+                    { id: "s3t5", text: "公告发布管理", priority: "p1", completed: false }
+                ]
+            },
+            {
+                id: "stage4",
+                title: "第四阶段：实时通讯系统",
+                technology: "React",
+                tasks: [
+                    { id: "s4t1", text: "WebSocket连接管理", priority: "p2", completed: false },
+                    { id: "s4t2", text: "实时消息推送", priority: "p2", completed: false },
+                    { id: "s4t3", text: "在线状态显示", priority: "p2", completed: false }
+                ]
+            },
+            {
+                id: "stage5",
+                title: "第五阶段：微前端集成与优化",
+                technology: "Vue 3 + React",
+                tasks: [
+                    { id: "s5t1", text: "qiankun主应用配置", priority: "p1", completed: false },
+                    { id: "s5t2", text: "微应用生命周期管理", priority: "p1", completed: false },
+                    { id: "s5t3", text: "应用间通信机制", priority: "p1", completed: false },
+                    { id: "s5t4", text: "路由懒加载实现", priority: "p2", completed: false }
+                ]
+            },
+            {
+                id: "stage6",
+                title: "第六阶段：测试与部署",
+                technology: "Vue 3 + React",
+                tasks: [
+                    { id: "s6t1", text: "单元测试编写", priority: "p1", completed: false },
+                    { id: "s6t2", text: "集成测试执行", priority: "p1", completed: false },
+                    { id: "s6t3", text: "用户体验测试", priority: "p1", completed: false },
+                    { id: "s6t4", text: "生产环境配置", priority: "p1", completed: false }
+                ]
+            }
+        ];
+
+        // 从localStorage加载任务状态
+        function loadTasksState() {
+            const savedState = localStorage.getItem('gameStoreTasks');
+            if (savedState) {
+                const savedData = JSON.parse(savedState);
+                
+                // 更新任务完成状态
+                tasksData.forEach(stage => {
+                    stage.tasks.forEach(task => {
+                        const savedTask = savedData.find(t => t.id === task.id);
+                        if (savedTask) {
+                            task.completed = savedTask.completed;
+                        }
+                    });
+                });
+                
+                // 更新最后修改时间
+                document.getElementById('last-updated').textContent = 
+                    new Date(savedData.timestamp).toLocaleString();
+            }
+        }
+
+        // 保存任务状态到localStorage
+        function saveTasksState() {
+            const tasksToSave = [];
+            tasksData.forEach(stage => {
+                stage.tasks.forEach(task => {
+                    tasksToSave.push({
+                        id: task.id,
+                        completed: task.completed
+                    });
+                });
+            });
+            
+            // 添加时间戳
+            tasksToSave.timestamp = new Date().toISOString();
+            
+            localStorage.setItem('gameStoreTasks', JSON.stringify(tasksToSave));
+            document.getElementById('last-updated').textContent = new Date().toLocaleString();
+        }
+
+        // 生成唯一ID
+        function generateId() {
+            return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // 添加新任务
+        function addNewTask(text, stageId, priority) {
+            const stage = tasksData.find(s => s.id === stageId);
+            if (stage) {
+                const newTask = {
+                    id: generateId(),
+                    text: text,
+                    priority: priority,
+                    completed: false
+                };
+                stage.tasks.push(newTask);
+                saveTasksState();
+                return true;
+            }
+            return false;
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            for (const stage of tasksData) {
+                const taskIndex = stage.tasks.findIndex(task => task.id === taskId);
+                if (taskIndex !== -1) {
+                    stage.tasks.splice(taskIndex, 1);
+                    saveTasksState();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // 渲染任务列表
+        function renderTasks(filter = 'all', searchTerm = '') {
+            const container = document.getElementById('stages-container');
+            container.innerHTML = '';
+            
+            let totalTasks = 0;
+            let completedTasks = 0;
+            let vueTasks = 0;
+            let reactTasks = 0;
+            
+            tasksData.forEach(stage => {
+                // 筛选任务
+                const filteredTasks = stage.tasks.filter(task => {
+                    const matchesFilter = 
+                        filter === 'all' || 
+                        (filter === 'vue' && stage.technology.includes('Vue')) ||
+                        (filter === 'react' && stage.technology.includes('React')) ||
+                        (filter === 'p0' && task.priority === 'p0') ||
+                        (filter === 'p1' && task.priority === 'p1');
+                    
+                    const matchesSearch = 
+                        searchTerm === '' || 
+                        task.text.toLowerCase().includes(searchTerm.toLowerCase());
+                    
+                    return matchesFilter && matchesSearch;
+                });
+                
+                if (filteredTasks.length === 0) return;
+                
+                // 统计任务
+                const stageCompleted = filteredTasks.filter(task => task.completed).length;
+                totalTasks += filteredTasks.length;
+                completedTasks += stageCompleted;
+                
+                if (stage.technology.includes('Vue')) vueTasks += filteredTasks.length;
+                if (stage.technology.includes('React')) reactTasks += filteredTasks.length;
+                
+                // 创建阶段卡片
+                const stageCard = document.createElement('div');
+                stageCard.className = 'stage-card';
+                
+                const progressPercent = (stageCompleted / filteredTasks.length) * 100;
+                
+                stageCard.innerHTML = `
+                    <div class="stage-header ${stage.technology.toLowerCase().includes('vue') ? 'vue' : 'react'}">
+                        <div class="stage-title">${stage.title}</div>
+                        <div class="tech-badge">${stage.technology}</div>
+                    </div>
+                    <div class="task-list">
+                        ${filteredTasks.map(task => `
+                            <div class="task-item">
+                                <input type="checkbox" class="task-checkbox" id="${task.id}" ${task.completed ? 'checked' : ''}>
+                                <div class="task-content">
+                                    <div class="task-text">${task.text}</div>
+                                    <div class="task-meta">
+                                        <span class="priority ${task.priority}">${task.priority.toUpperCase()}</span>
+                                    </div>
+                                </div>
+                                <button class="delete-task" data-task-id="${task.id}">×</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progressPercent}%"></div>
+                    </div>
+                    <div class="progress-text">${stageCompleted}/${filteredTasks.length} 完成 (${Math.round(progressPercent)}%)</div>
+                `;
+                
+                container.appendChild(stageCard);
+                
+                // 添加事件监听器
+                filteredTasks.forEach(task => {
+                    const checkbox = document.getElementById(task.id);
+                    checkbox.addEventListener('change', function() {
+                        task.completed = this.checked;
+                        saveTasksState();
+                        updateStats();
+                        renderTasks(filter, searchTerm);
+                    });
+                    
+                    const deleteBtn = document.querySelector(`.delete-task[data-task-id="${task.id}"]`);
+                    deleteBtn.addEventListener('click', function() {
+                        if (confirm('确定要删除这个任务吗？')) {
+                            deleteTask(task.id);
+                            renderTasks(filter, searchTerm);
+                        }
+                    });
+                });
+            });
+            
+            // 更新统计信息
+            updateStats(totalTasks, completedTasks, vueTasks, reactTasks);
+        }
+
+        // 更新统计信息
+        function updateStats(total = 0, completed = 0, vue = 0, react = 0) {
+            document.getElementById('total-tasks').textContent = total;
+            document.getElementById('completed-tasks').textContent = completed;
+            document.getElementById('completion-rate').textContent = total > 0 ? Math.round((completed / total) * 100) + '%' : '0%';
+            document.getElementById('vue-tasks').textContent = vue;
+            document.getElementById('react-tasks').textContent = react;
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载保存的任务状态
+            loadTasksState();
+            
+            // 初始渲染
+            renderTasks();
+            
+            // 筛选按钮事件
+            document.querySelectorAll('.filter-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const filter = this.getAttribute('data-filter');
+                    const searchTerm = document.querySelector('.search-box').value;
+                    renderTasks(filter, searchTerm);
+                });
+            });
+            
+            // 搜索框事件
+            document.querySelector('.search-box').addEventListener('input', function() {
+                const filter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+                renderTasks(filter, this.value);
+            });
+            
+            // 添加任务表单提交事件
+            document.getElementById('add-task-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const taskText = document.getElementById('task-text').value;
+                const taskStage = document.getElementById('task-stage').value;
+                const taskPriority = document.getElementById('task-priority').value;
+                
+                if (taskText && taskStage && taskPriority) {
+                    if (addNewTask(taskText, taskStage, taskPriority)) {
+                        // 重置表单
+                        this.reset();
+                        
+                        // 重新渲染任务列表
+                        const filter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+                        const searchTerm = document.querySelector('.search-box').value;
+                        renderTasks(filter, searchTerm);
+                        
+                        alert('任务添加成功！');
+                    } else {
+                        alert('添加任务失败，请重试！');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
