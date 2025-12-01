@@ -5,7 +5,8 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     currentUser: null,
     isLoading: false,
-    error: null
+    error: null,
+    user_count: null,
   }),
 
   getters: {
@@ -20,11 +21,29 @@ export const useUserStore = defineStore('user', {
         if (userStr) {
           this.currentUser = JSON.parse(userStr)
         }
+        const userCountStr = localStorage.getItem('user_count')
+        if (userCountStr) {
+          this.user_count = parseInt(userCountStr)
+        }
       } catch (e) {
         console.error('解析用户信息失败:', e)
         localStorage.removeItem('user')
       }
     },
+
+    // 获取玩家数量
+    async getCount() {
+      try {
+        const count = await normalUserAPI.getCount();
+        this.user_count = count;
+        localStorage.setItem('user_count', count.toString())
+        return count
+      } catch (error) {
+        console.error('获取玩家数量失败:', error)
+        return this.user_count
+      }
+    },
+
 
     // 登录操作
     async login(username, password, rememberMe = false) {

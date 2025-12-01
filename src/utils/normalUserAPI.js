@@ -26,6 +26,23 @@ export const normalUserAPI = {
   },
 
   /**
+   * 统计normal_user表中的用户数量
+   * @returns {Promise<number>} 用户数量
+   */
+  async getCount() {
+    const { count, error } = await supabase
+    .from('normal_user')
+    .select('*', { count: 'exact', head: true})
+
+    if (error) {
+      console.error('统计用户数量失败:', error)
+      return 
+    }
+    
+    return count
+  },
+
+  /**
    * 检查用户名是否已存在
    * @param {string} userName - 要检查的用户名
    * @param {string} [excludeName=null] - 要排除的用户名（用于更新操作）

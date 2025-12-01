@@ -20,7 +20,7 @@ export default {
 
 <style scoped>
   .GS_body{
-    height: 110vh;
+    min-height: 1200px;
     position: relative;
   }
   .GS_login{

@@ -325,32 +325,18 @@ export default {
         box-sizing: border-box;
         position: relative;
         overflow: hidden;
-        background-color: rgba(24, 26, 33, 0.95);
-    }
-    
-    /* 使用伪元素创建背景层 */
-    .GS_login_bg::before {
-        content: '';
-        position: absolute;
-        background: url('/WebResources/login_bg.png') center/cover;
-        filter: blur(3px) brightness(0.25);
-        transform: rotate(-30deg);
-        transform-origin: center;
-        width: 140%;
-        height: 140%;
-        left: -20%;
-        top: -20%;
-        z-index: 0;
+        background: url('/WebResources/login_bg.jpg') center/cover;
     }
     .GS_login_box {
         position: absolute;
+        border: 0.1px solid transparent;
+        border-image: linear-gradient(135deg, #36a4da87, #6046f386) 1;
         z-index: 1;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         width: 620px;
         height: 400px;
-        
     }
     /* 选项卡样式 */
     .GS_login_tabs {
