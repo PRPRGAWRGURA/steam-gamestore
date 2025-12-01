@@ -5,7 +5,7 @@ import { communityAPI } from '../utils/communityAPI'
 
 export default {
   name: 'PostCreator',
-  emits: ['postCreated'],
+  emits: ['postCreated', 'postUpdated', 'postFailed'],
   setup(props, { emit }) {
     const store = useUserStore()
     
@@ -74,8 +74,32 @@ export default {
       }
       
       const currentUser = store.currentUser
-      let imageUrl = null
       
+      // 1. 创建临时帖子对象（乐观更新）
+      const tempPost = {
+        id: `temp_${Date.now()}`, // 临时ID
+        user_id: currentUser.user_name,
+        content: newPostContent.value.trim(),
+        image_url: previewImage.value || null,
+        user: {
+          user_name: currentUser.user_name,
+          user_image: currentUser.user_image || '/UserImage/001.png'
+        },
+        comment_count: 0,
+        like_count: 0,
+        created_at: new Date().toISOString(),
+        is_temp: true // 标记为临时帖子
+      }
+      
+      // 2. 立即发送到父组件，添加到列表顶部
+      emit('postCreated', tempPost)
+      
+      // 3. 重置表单
+      newPostContent.value = ''
+      removeImage()
+      
+      // 4. 后台异步上传到服务器
+      let imageUrl = null
       try {
         // 显示加载状态
         loading.value = true
@@ -89,7 +113,7 @@ export default {
         // 准备消息数据
         const postData = {
           user_id: currentUser.user_name, // 外键约束连接的是normal_user表的user_name字段
-          content: newPostContent.value.trim(),
+          content: tempPost.content,
           image_url: imageUrl || null
         }
         
@@ -98,31 +122,20 @@ export default {
         
         if (response.success) {
           console.log('发布成功:', response.data)
-          // 重置表单
-          newPostContent.value = ''
-          removeImage()
-          
-          // 补充必要的用户信息
-          const newPost = response.data
-          newPost.user = {
-            user_name: currentUser.user_name,
-            user_image: currentUser.user_image || '/UserImage/001.png' // 使用默认头像作为后备
-          }
-          newPost.comment_count = 0
-          newPost.like_count = 0
-          newPost.created_at = new Date().toISOString() // 使用当前时间
-          
-          // 向父组件发送事件
-          emit('postCreated', newPost)
-          
-          alert('发布成功！')
+          // 5. 上传成功，通知父组件更新帖子ID和状态
+          emit('postUpdated', {
+            tempId: tempPost.id,
+            realPost: response.data
+          })
         } else {
           console.error('发布失败:', response.error)
-          alert(response.error || '发布失败，请稍后重试')
+          // 6. 上传失败，通知父组件
+          emit('postFailed', tempPost.id)
         }
       } catch (error) {
         console.error('发布消息出错:', error)
-        alert('网络错误，请稍后重试')
+        // 7. 上传出错，通知父组件
+        emit('postFailed', tempPost.id)
       } finally {
         loading.value = false
       }

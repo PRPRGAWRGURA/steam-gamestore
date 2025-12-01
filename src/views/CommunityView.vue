@@ -24,9 +24,25 @@ export default {
       }
     }
     
+    // 处理帖子更新成功的回调
+    const handlePostUpdated = (data) => {
+      if (postListRef.value) {
+        postListRef.value.updateTempPost(data.tempId, data.realPost)
+      }
+    }
+    
+    // 处理帖子上传失败的回调
+    const handlePostFailed = (tempId) => {
+      if (postListRef.value) {
+        postListRef.value.handlePostFailed(tempId)
+      }
+    }
+    
     return {
       postListRef,
-      handlePostCreated
+      handlePostCreated,
+      handlePostUpdated,
+      handlePostFailed
     }
   }
 }
@@ -39,7 +55,11 @@ export default {
         <h1 class="community-title">游戏社区</h1>
         
         <!-- 使用PostCreator组件 -->
-        <GS_post_creator @post-created="handlePostCreated" />
+        <GS_post_creator 
+          @post-created="handlePostCreated" 
+          @post-updated="handlePostUpdated"
+          @post-failed="handlePostFailed"
+        />
         
         <!-- 使用PostList组件 -->
         <GS_post_list ref="postListRef" />

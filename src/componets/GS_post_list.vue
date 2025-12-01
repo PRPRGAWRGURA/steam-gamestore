@@ -12,7 +12,7 @@ export default {
       default: () => []
     }
   },
-  emits: ['postsLoaded'],
+  emits: ['postsLoaded', 'postUpdated', 'postFailed'],
   setup(props, { emit }) {
     const store = useUserStore()
     
@@ -23,12 +23,50 @@ export default {
     const loadingComments = ref([])
     const visibleComments = ref(new Set())
     const offset = ref(0)
-    const limit = 20
+    const limit = 10 // 减少初始加载的帖子数量，提高加载速度
     const hasMore = ref(true)
     const commentInputs = ref({})
     
     // 默认头像
     const defaultAvatar = '/UserImage/001.png'
+    
+    // 缓存配置
+    const CACHE_KEY = 'community_posts'
+    const CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
+    
+    // 从本地缓存加载帖子
+    const loadPostsFromCache = () => {
+      const cachedPosts = localStorage.getItem(CACHE_KEY)
+      const cacheTime = localStorage.getItem(`${CACHE_KEY}_time`)
+      
+      if (cachedPosts && cacheTime) {
+        const cacheAge = Date.now() - parseInt(cacheTime)
+        // 检查缓存是否在有效期内
+        if (cacheAge < CACHE_EXPIRE_TIME) {
+          const loadedPosts = JSON.parse(cachedPosts)
+          
+          // 更新当前用户帖子的用户信息
+          if (store.currentUser) {
+            loadedPosts.forEach(post => {
+              if (post.user_id === store.currentUser.user_name) {
+                post.user = {
+                  user_name: store.currentUser.user_name,
+                  user_image: store.currentUser.user_image || defaultAvatar
+                }
+              }
+            })
+          }
+          
+          posts.value = loadedPosts
+        }
+      }
+    }
+    
+    // 保存帖子到本地缓存
+    const savePostsToCache = () => {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(posts.value))
+      localStorage.setItem(`${CACHE_KEY}_time`, Date.now().toString())
+    }
     
     // 格式化时间
     const formatTime = (timeString) => {
@@ -46,7 +84,7 @@ export default {
     
     // 判断是否为当前用户
     const isCurrentUser = (userId) => {
-      return store.currentUser && store.currentUser.id === userId
+      return store.currentUser && store.currentUser.user_name === userId
     }
     
     // 评论可见性控制
@@ -99,11 +137,21 @@ export default {
         })
         
         if (response.success) {
+          let updatedPosts = []
+          
           if (isLoadMore) {
-            posts.value = [...posts.value, ...response.data]
+            // 加载更多时，合并数据并去重
+            const existingIds = new Set(posts.value.map(post => post.id))
+            const newPosts = response.data.filter(post => !existingIds.has(post.id))
+            updatedPosts = [...posts.value, ...newPosts]
           } else {
-            posts.value = response.data
+            // 刷新数据时，保留临时帖子
+            const tempPosts = posts.value.filter(post => post.is_temp)
+            const newPosts = response.data.filter(post => !tempPosts.some(temp => temp.content === post.content))
+            updatedPosts = [...tempPosts, ...newPosts]
           }
+          
+          posts.value = updatedPosts
           
           // 更新偏移量
           offset.value += response.data.length
@@ -111,25 +159,78 @@ export default {
           // 判断是否还有更多数据
           hasMore.value = response.data.length === limit
                   
-          // 自动为每个帖子加载评论，但不展开评论区
-          const newPosts = isLoadMore ? response.data : posts.value
-          newPosts.forEach(post => {
-            if (!comments.value[post.id]) {
-              loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
+          // 处理每个帖子的用户信息
+          updatedPosts.forEach(post => {
+            // 检查是否为当前用户的帖子
+            const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
+            
+            // 如果是当前用户的帖子，优先使用store中的用户信息
+            if (isCurrentUserPost) {
+              post.user = {
+                user_name: store.currentUser.user_name,
+                user_image: store.currentUser.user_image || defaultAvatar
+              }
+            } else {
+              // 其他用户的帖子使用服务器返回的信息
+              post.user = {
+                user_name: post.normal_user?.user_name || '匿名用户',
+                user_image: post.normal_user?.user_image || defaultAvatar
+              }
             }
+            
+            // 不再自动加载所有评论，只在用户展开评论区时加载
           })
+          
+          // 保存到本地缓存
+          savePostsToCache()
           
           // 向父组件发送事件
           emit('postsLoaded', posts.value)
         } else {
           console.error('加载消息失败:', response.error)
-          alert(response.error || '加载失败，请稍后重试')
+          // 不显示错误提示，避免影响用户体验
         }
       } catch (error) {
         console.error('加载消息出错:', error)
-        alert('网络错误，请稍后重试')
+        // 不显示错误提示，避免影响用户体验
       } finally {
         loading.value = false
+      }
+    }
+    
+    // 更新临时帖子为真实帖子（乐观更新成功）
+    const updateTempPost = (tempId, realPost) => {
+      const index = posts.value.findIndex(post => post.id === tempId)
+      if (index !== -1) {
+        // 检查是否为当前用户的帖子
+        const isCurrentUserPost = store.currentUser && store.currentUser.user_name === realPost.user_id
+        
+        // 替换临时帖子为真实帖子
+        posts.value[index] = {
+          ...realPost,
+          user: {
+            // 如果是当前用户的帖子，优先使用store中的用户信息
+            user_name: isCurrentUserPost ? store.currentUser.user_name : (realPost.normal_user?.user_name || '匿名用户'),
+            user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (realPost.normal_user?.user_image || defaultAvatar)
+          },
+          comment_count: realPost.comment_count || 0,
+          like_count: realPost.like_count || 0
+        }
+        // 保存到缓存
+        savePostsToCache()
+      }
+    }
+    
+    // 处理帖子上传失败（乐观更新失败）
+    const handlePostFailed = (tempId) => {
+      const index = posts.value.findIndex(post => post.id === tempId)
+      if (index !== -1) {
+        // 从列表中移除失败的临时帖子
+        posts.value.splice(index, 1)
+        // 保存到缓存
+        savePostsToCache()
+        // 提示用户
+        alert('消息发布失败，请稍后重试')
       }
     }
     
@@ -257,12 +358,6 @@ export default {
       }
     }
     
-    // 编辑帖子（这里只包含基本结构）
-    const editPost = (post) => {
-      // 实际实现编辑功能
-      alert('编辑功能待实现')
-    }
-    
     // 删除评论
     const deleteComment = async (commentId) => {
       if (!confirm('确定要删除这条评论吗？')) {
@@ -290,12 +385,6 @@ export default {
       }
     }
     
-    // 编辑评论
-    const editComment = (comment) => {
-      // 实际实现编辑功能
-      alert('编辑评论功能待实现')
-    }
-    
     // 添加新帖子（从父组件接收）
     const addNewPost = (newPost) => {
       posts.value.unshift(newPost)
@@ -303,7 +392,16 @@ export default {
     
     // 组件挂载时加载帖子
     onMounted(() => {
-      if (posts.value.length === 0) {
+      // 先从本地缓存加载数据
+      loadPostsFromCache()
+      
+      // 如果缓存中有数据，延迟2秒后再从服务器获取最新数据，避免阻塞初始渲染
+      // 如果缓存中没有数据，立即从服务器获取数据
+      if (posts.value.length > 0) {
+        setTimeout(() => {
+          loadPosts()
+        }, 2000)
+      } else {
         loadPosts()
       }
     })
@@ -323,12 +421,12 @@ export default {
       getCommentsCount,
       loadMorePosts,
       submitComment,
-      editPost,
       deletePost,
-      editComment,
       deleteComment,
       autoResizeTextarea,
-      addNewPost
+      addNewPost,
+      updateTempPost,
+      handlePostFailed
     }
   }
 }
@@ -368,11 +466,9 @@ export default {
           </div>
           <!-- 操作按钮 -->
           <div class="post-actions" v-if="isCurrentUser(post.user_id)">
-            <button @click="editPost(post)" class="action-btn edit-btn">
-              <i class="icon-edit">✎</i> 编辑
-            </button>
             <button @click="deletePost(post.id)" class="action-btn delete-btn">
-              <i class="icon-delete">🗑</i> 删除
+              <img src="/WebResources/close.svg" alt="删除" class="delete-icon normal-icon" />
+              <img src="/WebResources/close_red.svg" alt="删除" class="delete-icon hover-icon" />
             </button>
           </div>
         </div>
@@ -381,7 +477,12 @@ export default {
         <div class="post-content">
           <div class="content-text">{{ post.content }}</div>
           <div class="content-image" v-if="post.image_url">
-            <img :src="post.image_url" :alt="'图片'" class="post-image" />
+            <img 
+              :src="post.image_url" 
+              :alt="'图片'" 
+              class="post-image" 
+              loading="lazy"
+            />
           </div>
         </div>
         
@@ -450,8 +551,9 @@ export default {
                     <span class="commenter-name">{{ comment.normal_user?.user_name || '匿名用户' }}</span>
                     <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
                     <div class="comment-actions" v-if="isCurrentUser(comment.user_id)">
-                      <button @click="editComment(comment)" class="action-btn edit-btn">编辑</button>
-                      <button @click="deleteComment(comment.id)" class="action-btn delete-btn">删除</button>
+                      <button @click="deleteComment(comment.id)" class="action-btn delete-btn">
+                        <img src="/WebResources/close.svg" alt="删除" class="delete-icon" />
+                      </button>
                     </div>
                   </div>
                   <div class="comment-text">{{ comment.content }}</div>
@@ -558,12 +660,41 @@ export default {
 }
 
 .delete-btn {
-  background-color: #ff6b6b;
-  color: white;
+  background-color: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.delete-btn:hover {
-  background-color: #ee5a5a;
+.delete-icon {
+  width: 16px;
+  height: 16px;
+ 
+}
+
+.normal-icon {
+  display: block;
+}
+
+.hover-icon {
+  display: none;
+}
+
+.delete-btn:hover .normal-icon {
+  display: none;
+}
+
+.delete-btn:hover .hover-icon {
+  display: block;
+}
+
+/* 调整帖子操作区的布局 */
+.post-actions {
+  display: flex;
+  gap: 5px;
 }
 
 /* 帖子内容样式 */
