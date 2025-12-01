@@ -1,19 +1,14 @@
-<script>
-
-</script>
-
 <template>
     <div class="GS_body">  
         <slot></slot>
     </div>
 </template>
-
 <style scoped>
     .GS_body {
         position: relative;
         z-index: 1;
         width: 100%;
-        height: 200vh;
+        min-height: 2000px;
         /* 使用多重径向渐变创建点光源效果 */
         background: 
             /* 蓝色点光源 - 位于左上方 */

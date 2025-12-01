@@ -32,7 +32,7 @@ export default {
     const commentInputsVisibility = ref({})
     
     // 默认头像
-    const defaultAvatar = 'https://via.placeholder.com/50'
+    const defaultAvatar = '/UserImage/001.png'
     
     // 计算属性
     const canSubmitPost = computed(() => {

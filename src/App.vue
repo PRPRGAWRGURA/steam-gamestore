@@ -18,7 +18,8 @@ export default {
 <style>
     body{
     font-family: 'Motiva Sans', Arial, sans-serif; 
-    background-color: rgb(255, 255, 255);
+    min-height: 100vh;
+    background-color: #000000;
     padding: 0;
     margin: 0;
     }
