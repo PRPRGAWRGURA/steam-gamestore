@@ -239,6 +239,7 @@ export default {
 /* 发布消息区域 */
 .post-create-section {
   position: fixed;
+  z-index: 100;
   width: 40%;
   bottom: 0;
   left: 50%;

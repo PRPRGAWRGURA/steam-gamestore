@@ -50,10 +50,12 @@ export default {
 
 <template>
   <GS_body>
+    <div class="community-title">
+      <div class="community-title-line"></div>
+      <div class="community-title-text">社区内容</div>
+    </div>
     <GS_container>
       <div class="community-container">
-        <h1 class="community-title">游戏社区</h1>
-        
         <!-- 使用PostCreator组件 -->
         <GS_post_creator 
           @post-created="handlePostCreated" 
@@ -80,9 +82,26 @@ export default {
 }
 
 .community-title {
-  font-size: 28px;
-  margin-bottom: 30px;
-  text-align: center;
-  color: #ffffff;
+  background-color: transparent;
+}
+.community-title-line {
+  height: 3px;
+  background-color: #0d1723;
+}
+.community-title-text  {
+  width: 1220px;
+  height: 80px;
+  line-height: 80px;
+  margin: 0 auto;
+  border-radius: 5px;
+  background-color: #0d1723;
+  font-size: 25px;
+  font-weight: bold;
+  padding-left: 20px;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  border-top: none;
+  border-image: linear-gradient(to bottom,  #0d1723 15%,  #499deb 100%) 1;
+  color: #fff;
 }
 </style>

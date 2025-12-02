@@ -486,7 +486,6 @@ export default {
             <div class="user-name">{{ post.normal_user?.user_name || ' ' }}</div>
             <div class="post-meta">
               <span class="post-time">{{ formatTime(post.created_at) }}</span>
-              <span class="post-views">浏览 {{ post.views || 0 }}</span>
             </div>
           </div>
           <!-- 操作按钮 -->
@@ -514,19 +513,16 @@ export default {
         <!-- B站风格互动栏 -->
         <div class="post-interaction-bar">
           <button class="interaction-btn like-btn" :class="{liked: post.liked}">
-            <i class="icon-like">👍</i>
+            <img class="icon-like" src="/WebResources/likes.svg" alt="点赞" />
+            <img class="icon-like" src="/WebResources/likes_click.svg" alt="点赞" />
             <span class="interaction-count">{{ post.likes || 0 }}</span>
           </button>
-          <button class="interaction-btn collect-btn" :class="{collected: post.collected}">
-            <i class="icon-collect">⭐</i>
-            <span class="interaction-count">{{ post.collections || 0 }}</span>
-          </button>
           <button class="interaction-btn comment-btn" @click="toggleComments(post.id)">
-            <i class="icon-comment">💬</i>
+            <img class="icon-comment" src="/WebResources/comment.svg" alt="评论" />
             <span class="interaction-count">{{ getCommentsCount(post.id) }}</span>
           </button>
           <button class="interaction-btn share-btn">
-            <i class="icon-share">🔗</i>
+            <img class="icon-share" src="/WebResources/share.svg" alt="分享" />
             <span class="interaction-text">分享</span>
           </button>
         </div>
@@ -577,7 +573,8 @@ export default {
                     <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
                     <div class="comment-actions" v-if="isCurrentUser(comment.user_id)">
                       <button @click="deleteComment(comment.id)" class="action-btn delete-btn">
-                        <img src="/WebResources/close.svg" alt="删除" class="delete-icon" />
+                      <img src="/WebResources/close.svg" alt="删除" class="delete-icon normal-icon" />
+                      <img src="/WebResources/close_red.svg" alt="删除" class="delete-icon hover-icon" />
                       </button>
                     </div>
                   </div>
@@ -589,11 +586,12 @@ export default {
         </div>
       </div>
       
-      <!-- 加载更多按钮 -->
+      
+    </div>
+    <!-- 加载更多按钮 -->
       <div class="load-more-section" v-if="hasMore && !loading">
         <button @click="loadMorePosts" class="load-more-btn">加载更多</button>
       </div>
-    </div>
   </div>
 </template>
 
@@ -603,10 +601,15 @@ export default {
   width: 100%;
   height: 100%;
   overflow: scroll;
-  scrollbar-width: none;
   overflow-x: hidden;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  border-image: linear-gradient(to top, #0d1723, #499deb) 1;
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  scrollbar-color: #499deb30 transparent;
+  scrollbar-width: thin;
 }
-
 .loading-indicator,
 .empty-state {
   text-align: center;
@@ -622,20 +625,16 @@ export default {
 }
 
 .post-item {
-  background-color: white;
-  border-radius: 8px;
+  background-color: #07121f;
+  color: rgb(225, 229, 234);
   padding: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s ease;
   margin-bottom: 15px;
   break-inside: avoid; /* 防止帖子被分割到不同列 */
   display: inline-block;
   width: 100%;
   box-sizing: border-box;
-}
-
-.post-item:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
 }
 
 /* 帖子头部样式 */
@@ -647,15 +646,18 @@ export default {
 
 .user-avatar-wrapper {
   margin-right: 15px;
+  transition: transform 0.3s ease;
 }
 
 .user-avatar {
   width: 48px;
   height: 48px;
-  border-radius: 50%;
+  border-right: 3px solid #1a9efe ;
   object-fit: cover;
 }
-
+.user-avatar-wrapper:hover {
+  transform: scale(1.1);
+}
 .user-info {
   flex: 1;
 }
@@ -674,7 +676,6 @@ export default {
 
 .post-actions {
   display: flex;
-  gap: 10px;
 }
 
 .action-btn {
@@ -749,14 +750,20 @@ export default {
 .post-image {
   max-width: 100%;
   border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.post-image:hover {
+  transform: scale(1.01);
+  box-shadow: 0 0 10px rgba(41, 104, 163, 0.34);
 }
 
 /* 互动栏样式 */
 .post-interaction-bar {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   padding-top: 15px;
-  border-top: 1px solid #eee;
+  border-top: 2px solid #4167ada7;
 }
 
 .interaction-btn {
@@ -764,13 +771,16 @@ export default {
   align-items: center;
   gap: 5px;
   padding: 8px 16px;
-  background-color: #f5f5f5;
+  background-color: #0c1f35;
+  color: rgb(205, 218, 225);
   border: none;
-  border-radius: 20px;
   cursor: pointer;
   transition: all 0.3s;
 }
-
+.interaction-btn img {
+  width: 16px;
+  height: auto;
+}
 .interaction-btn:hover {
   background-color: #e0e0e0;
 }
@@ -779,15 +789,12 @@ export default {
   color: #ff6b6b;
 }
 
-.collect-btn.collected {
-  color: #ffd700;
-}
 
 /* 评论区域样式 */
 .comments-section {
   margin-top: 20px;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 2px solid #385894a7;
 }
 
 .comment-input-wrapper {
@@ -892,13 +899,16 @@ export default {
 
 /* 加载更多按钮 */
 .load-more-section {
+  width: 100%;
   text-align: center;
   padding: 20px 0;
 }
 
 .load-more-btn {
+  width: 100%;
   padding: 10px 20px;
-  background-color: #f5f5f5;
+  background-color: #274760b6;
+  color: #dce3e6;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -906,6 +916,6 @@ export default {
 }
 
 .load-more-btn:hover {
-  background-color: #e0e0e0;
+  background-color: #345f7fb6;
 }
 </style>
