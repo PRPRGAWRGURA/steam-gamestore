@@ -151,7 +151,7 @@ export default {
             updatedPosts = [...tempPosts, ...newPosts]
           }
           
-          // 处理每个帖子的用户信息，确保在设置posts.value之前完成
+          // 处理每个帖子的用户信息和点赞状态，确保在设置posts.value之前完成
           updatedPosts.forEach(post => {
             // 检查是否为当前用户的帖子
             const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
@@ -161,9 +161,38 @@ export default {
               user_name: isCurrentUserPost ? store.currentUser.user_name : (post.normal_user?.user_name || ' '),
               user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (post.normal_user?.user_image || defaultAvatar)
             }
+            
+            // 设置点赞数量，从数据库获取
+            post.likes = post.like || 0
+            
+            // 如果用户已登录，从本地存储获取点赞状态
+            if (store.currentUser) {
+              const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${store.currentUser.user_name}`) || '[]')
+              post.liked = likedPosts.includes(post.id)
+            } else {
+              post.liked = false
+            }
           })
           
-          posts.value = updatedPosts
+          // 重新排序帖子，使其在CSS Columns布局下呈现从左到右、从上到下的视觉效果
+          const columns = 3;
+          const reorderedPosts = [];
+          const totalPosts = updatedPosts.length;
+          
+          // 计算每列需要放多少帖子
+          const postsPerColumn = Math.ceil(totalPosts / columns);
+          
+          // 按列填充帖子，确保视觉上从左到右、从上到下排列
+          for (let i = 0; i < postsPerColumn; i++) {
+            for (let j = 0; j < columns; j++) {
+              const index = j * postsPerColumn + i;
+              if (index < totalPosts) {
+                reorderedPosts.push(updatedPosts[index]);
+              }
+            }
+          }
+          
+          posts.value = reorderedPosts
           
           // 更新偏移量
           offset.value += response.data.length
@@ -356,6 +385,39 @@ export default {
       }
     }
     
+    // 处理点赞
+    const handleLike = async (postId) => {
+      // 检查用户是否登录
+      if (!store.currentUser) {
+        alert('请先登录后再点赞')
+        return
+      }
+      
+      const currentUser = store.currentUser
+      const post = posts.value.find(p => p.id === postId)
+      
+      if (!post) return
+      
+      try {
+        // 显示加载状态（可以添加一个loadingLikes状态数组）
+        const response = await communityAPI.toggleLike(postId, currentUser.user_name)
+        
+        if (response.success) {
+          // 更新帖子的点赞状态和数量
+          post.liked = response.data.liked
+          post.likes = response.data.likes
+          
+          // 保存到缓存
+          savePostsToCache()
+        } else {
+          alert(response.error || '点赞失败，请稍后重试')
+        }
+      } catch (error) {
+        console.error('点赞出错:', error)
+        alert('网络错误，请稍后重试')
+      }
+    }
+    
     // 删除帖子（这里只包含基本结构，实际实现可能需要更多逻辑）
     const deletePost = async (postId) => {
       if (!confirm('确定要删除这条消息吗？')) {
@@ -451,7 +513,8 @@ export default {
       autoResizeTextarea,
       addNewPost,
       updateTempPost,
-      handlePostFailed
+      handlePostFailed,
+      handleLike
     }
   }
 }
@@ -512,13 +575,14 @@ export default {
         
         <!-- B站风格互动栏 -->
         <div class="post-interaction-bar">
-          <button class="interaction-btn like-btn" :class="{liked: post.liked}">
-            <img class="icon-like" src="/WebResources/likes.svg" alt="点赞" />
-            <img class="icon-like" src="/WebResources/likes_click.svg" alt="点赞" />
+          <button class="interaction-btn like-btn" :class="{liked: post.liked}" @click="handleLike(post.id)">
+            <img class="icon-like normal" src="/WebResources/likes.svg" alt="点赞" />
+            <img class="icon-like active" src="/WebResources/likes_click.svg" alt="点赞" />
             <span class="interaction-count">{{ post.likes || 0 }}</span>
           </button>
-          <button class="interaction-btn comment-btn" @click="toggleComments(post.id)">
-            <img class="icon-comment" src="/WebResources/comment.svg" alt="评论" />
+          <button class="interaction-btn comment-btn" :class="{active: isCommentsVisible(post.id)}" @click="toggleComments(post.id)">
+            <img class="icon-comment normal" src="/WebResources/comment.svg" alt="评论" />
+            <img class="icon-comment active" src="/WebResources/comment_click.svg" alt="评论" />
             <span class="interaction-count">{{ getCommentsCount(post.id) }}</span>
           </button>
           <button class="interaction-btn share-btn">
@@ -621,7 +685,7 @@ export default {
   display: block;
   column-count: 3;
   column-gap: 15px;
-  column-fill: balance; /* 平衡各列高度 */
+  column-fill: balance;
 }
 
 .post-item {
@@ -630,7 +694,7 @@ export default {
   padding: 20px;
   transition: box-shadow 0.3s ease;
   margin-bottom: 15px;
-  break-inside: avoid; /* 防止帖子被分割到不同列 */
+  break-inside: avoid;
   display: inline-block;
   width: 100%;
   box-sizing: border-box;
@@ -734,11 +798,15 @@ export default {
 }
 
 /* 帖子内容样式 */
-.post-content {
-  width: 100%;
-  height: auto;
-  margin-bottom: 15px;
-}
+.post-content { 
+   width: 100%; 
+   height: auto; 
+   max-height: 700px; 
+   overflow: auto; 
+   scrollbar-width: thin; 
+   overflow-x: hidden; 
+   margin-bottom: 15px; 
+ }
 
 .content-text {
   margin-bottom: 10px;
@@ -749,7 +817,6 @@ export default {
 
 .post-image {
   max-width: 100%;
-  border-radius: 4px;
   transition: all 0.3s ease;
 }
 
@@ -780,15 +847,46 @@ export default {
 .interaction-btn img {
   width: 16px;
   height: auto;
+  transition: opacity 0.3s ease;
+}
+
+/* 点赞按钮样式切换 */
+.like-btn .icon-like.normal,
+.comment-btn .icon-comment.normal {
+  display: block;
+  
+}
+
+.like-btn .icon-like.active,
+.comment-btn .icon-comment.active {
+  display: none;
+  
+}
+
+.like-btn.liked .icon-like.normal,
+.comment-btn.active .icon-comment.normal {
+  display: none;
+  
+}
+
+.like-btn.liked .icon-like.active,
+.comment-btn.active .icon-comment.active {
+  display: block;
+  
 }
 .interaction-btn:hover {
   background-color: #e0e0e0;
 }
 
 .like-btn.liked {
-  color: #ff6b6b;
+  color: #393939;
+  background-color: rgb(53, 142, 215);
 }
 
+.comment-btn.active {
+  background-color: rgb(123, 215, 53);
+  color: black;
+}
 
 /* 评论区域样式 */
 .comments-section {
@@ -799,32 +897,42 @@ export default {
 
 .comment-input-wrapper {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
 .comment-input {
-  flex: 1;
   padding: 10px;
   border: 1px solid #ddd;
-  border-radius: 20px;
-  resize: none;
-  font-size: 14px;
-}
-
-.comment-submit-btn {
-  padding: 10px 20px;
-  background-color: #4CAF50;
+  background-color: #00050e;
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 5px;
+  resize: none;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+.comment-input:focus {
+  outline: none;
+  border: 1px solid #499deb;
+}
+.comment-submit-btn {
+  width: 60px;
+  height: 36px;
+  text-align: center;
+  line-height: 36px;
+  background-color: #499deb;
+  color: white;
+  border: none;
+  border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
   align-self: flex-end;
 }
 
 .comment-submit-btn:hover:not(:disabled) {
-  background-color: #45a049;
+  background-color: #5ba5ea;
 }
 
 .comment-submit-btn:disabled {

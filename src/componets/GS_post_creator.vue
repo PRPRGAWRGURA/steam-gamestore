@@ -16,6 +16,9 @@ export default {
     const loading = ref(false)
     const fileInput = ref(null)
     
+    //切换属性
+    const isEditing = ref(false)
+
     // 计算属性
     const canSubmitPost = computed(() => {
       // 当有文字内容或有选择的图片时，允许提交
@@ -177,22 +180,25 @@ export default {
       previewImage,
       loading,
       canSubmitPost,
+      isEditing,
       handleImageSelect,
       removeImage,
-      submitPost
+      submitPost,
     }
   }
 }
 </script>
 
 <template>
-  <div class="post-create-section">
-    <div class="post-form-container">
+  
+  <div class="post-create-section" >
+    <div class="edit-btn" :class="{'edit-btn-active': isEditing}" @click="isEditing = !isEditing">{{ isEditing ? '取消' : '发布' }}</div>
+    <div class="post-title" v-if="!isEditing">发布一条帖子吧</div>
+    <div class="post-form-container" v-if="isEditing">
       <textarea 
         v-model="newPostContent" 
         class="post-content-input"
         placeholder="分享你的游戏心得..."
-        rows="3"
       ></textarea>
       
       <!-- 图片上传区域 -->
@@ -236,15 +242,77 @@ export default {
 </template>
 
 <style scoped>
+.edit-btn {
+  position: absolute;
+  z-index: 10;
+  width: 72px;
+  height: 43px;
+  bottom: 20px;
+  right: 100px;
+  transform: translateX(80px);
+  text-align: center;
+  line-height: 48px;
+  font-size: 16px;
+  color: #464646;
+  border-radius: 5px;
+  background-color: #3593eb;
+  color: white;
+  border: none;
+}
+.edit-btn-active {
+  color: #ffffff;
+  background-color: transparent;
+  transform: translateX(0%);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.edit-btn-active:hover {
+  background-color: #f15f45;
+}
+.post-title {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, 20%);
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  position: relative;
+  display: inline-block;
+  /* 使用渐变背景并只作用于文字 */
+  background: linear-gradient(
+    90deg,
+    #5fbefafb 0%,
+    #5fbefafb 25%,
+    #ffffff 50%,
+    #5fbefafb 75%,
+    #5fbefafb 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lightShine 2s ease-in-out infinite;
+}
+
+@keyframes lightShine {
+  100% {
+    background-position: 0% 50%;
+  }
+  0% {
+    background-position: 100% 50%;
+  }
+}
 /* 发布消息区域 */
 .post-create-section {
   position: fixed;
   z-index: 100;
   width: 40%;
+  min-height: 50px;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #f8f9fa;
+  background-color: #07121f;
+  border: 2px solid #3ba0de;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -253,22 +321,25 @@ export default {
 .post-content-input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid #ddd;
+  border: none;
   box-sizing: border-box;
   border-radius: 10px;
   font-size: 16px;
-  background-color: #f8f9fa;
+  background-color: #00050e;
   transition: all 0.3s ease;
-  max-height: 200px;
-  overflow: hidden;
+  min-height: 200px;
+  overflow: auto;
   text-overflow: ellipsis;
+  color: white;
+  font-size: 16px;
+  font-weight: 500;
   resize: none;
-  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .post-content-input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border: 1px solid #393939;
 }
 
 .image-upload-section {
@@ -278,15 +349,17 @@ export default {
 .image-upload-btn {
   margin-top: 10px;
   padding: 8px 16px;
-  background-color: #e0e0e0;
-  border: none;
+  background-color: transparent;
+  color: rgb(224, 237, 241);
+  border: 2px solid #44bbf6d0;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s;
 }
 
 .image-upload-btn:hover:not(:disabled) {
-  background-color: #d0d0d0;
+  background-color: #cfcfcf;
+  color: #210942;
 }
 
 .image-upload-btn:disabled {
@@ -323,7 +396,7 @@ export default {
 
 .post-submit-btn {
   padding: 10px 20px;
-  background-color: #4CAF50;
+  background-color: #499deb;;
   color: white;
   border: none;
   border-radius: 4px;
@@ -333,7 +406,7 @@ export default {
 }
 
 .post-submit-btn:hover:not(:disabled) {
-  background-color: #45a049;
+  background-color: #5ba5ea;
 }
 
 .post-submit-btn:disabled {

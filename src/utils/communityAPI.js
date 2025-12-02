@@ -2,6 +2,79 @@
 import supabase from './supabase.js'
 
 /**
+ * 压缩图片至适合展示框的大小
+ * @param {File} file - 原始图片文件
+ * @param {Object} options - 压缩选项
+ * @returns {Promise<File>} - 压缩后的新File对象
+ */
+async function compressImageForDisplay(file, options = {}) {
+  const {
+    maxWidth = 700,   // 目标最大宽度（2倍于显示尺寸）
+    maxHeight = 700,  // 目标最大高度
+    quality = 0.82,   // JPEG质量 (0.8-0.85在质量和体积间取得平衡)
+    outputType = 'image/jpeg'
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    img.onload = () => {
+      // 1. 计算等比缩放后的尺寸
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = Math.floor(width * ratio);
+        height = Math.floor(height * ratio);
+      }
+
+      // 2. 设置Canvas尺寸并绘制
+      canvas.width = width;
+      canvas.height = height;
+      
+      // 可选：使用高质量缩放算法
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // 3. 转换为Blob并生成新File
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Canvas转换失败'));
+            return;
+          }
+          // 生成新文件名
+          const newFileName = file.name.replace(
+            /(\.[\w\d_-]+)$/i,
+            `_compressed${Date.now()}$1`
+          );
+          const compressedFile = new File([blob], newFileName, {
+            type: outputType,
+            lastModified: Date.now()
+          });
+          
+          console.log('压缩完成:', {
+            原始大小: `${(file.size / 1024).toFixed(2)}KB`,
+            压缩后: `${(blob.size / 1024).toFixed(2)}KB`,
+            尺寸: `${width}×${height}px`
+          });
+          
+          resolve(compressedFile);
+        },
+        outputType,
+        quality // 应用质量参数
+      );
+    };
+
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
  * 社区聊天相关的API集合
  * 提供消息和评论的查询、增加、删除、修改功能
  */
@@ -48,34 +121,46 @@ export const communityAPI = {
         return this._handleError(new Error('文件过大'), '图片大小不能超过15MB');
       }
       
+      // 压缩图片
+      let processedFile = file;
+      try {
+        // 对于SVG图片，跳过压缩（Canvas不支持SVG）
+        if (file.type !== 'image/svg+xml') {
+          processedFile = await compressImageForDisplay(file);
+        }
+      } catch (compressionError) {
+        console.error('图片压缩失败，使用原始图片:', compressionError);
+        // 压缩失败时使用原始图片继续上传
+      }
+      
       // 生成唯一的文件名，直接上传到根目录
       // 使用用户ID的哈希值代替用户名，避免中文字符问题
       const userIdHash = userId.toString().split('').reduce((acc, char) => {
         return acc + char.charCodeAt(0);
       }, 0);
       const timestamp = Date.now();
-      const extension = file.name.split('.').pop().toLowerCase();
+      const extension = processedFile.name.split('.').pop().toLowerCase();
       const fileName = `${userIdHash}_${timestamp}.${extension}`;
       const filePath = fileName; // 直接使用文件名，上传到根目录
       
-      console.log('准备上传图片:', { fileName, filePath, size: file.size, type: file.type });
+      console.log('准备上传图片:', { fileName, filePath, size: processedFile.size, type: processedFile.type });
       
       // 上传文件到Supabase Storage的images桶
       console.log('开始Supabase上传操作:', {
         bucket: 'images',
         filePath: filePath,
-        fileType: file.type,
-        fileName: file.name,
-        fileSize: file.size
+        fileType: processedFile.type,
+        fileName: processedFile.name,
+        fileSize: processedFile.size
       });
       
       const { data, error } = await supabase
         .storage
         .from('images')
-        .upload(filePath, file, {
+        .upload(filePath, processedFile, {
           cacheControl: '3600',
           upsert: false,
-          contentType: file.type // 明确指定content-type
+          contentType: processedFile.type // 明确指定content-type
         });
       
       if (error) {
@@ -504,6 +589,114 @@ export const communityAPI = {
       }
     } catch (err) {
       return this._handleError(err, '删除评论时发生错误')
+    }
+  },
+
+  // ---------------- 点赞相关API ----------------
+
+  /**
+   * 切换帖子点赞状态
+   * @param {string} postId - 帖子ID
+   * @param {string} userId - 用户ID
+   * @returns {Promise<{success: boolean, data: {liked: boolean, likes: number}, error: string|null}>} 操作结果
+   */
+  async toggleLike(postId, userId) {
+    try {
+      // 1. 从本地存储获取用户点赞状态
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
+      const isLiked = likedPosts.includes(postId);
+      
+      // 2. 获取当前帖子点赞数量
+      const { data: post, error: getError } = await supabase
+        .from('community_post')
+        .select('id, like')
+        .eq('id', postId)
+        .single();
+
+      if (getError) {
+        return this._handleError(getError, '获取帖子信息失败')
+      }
+
+      if (!post) {
+        return this._handleError(new Error('帖子不存在'), '帖子不存在')
+      }
+
+      // 3. 计算新的点赞数量
+      const currentLikes = post.like || 0;
+      let newLikes;
+      let newLiked = false;
+      let updatedLikedPosts;
+
+      if (isLiked) {
+        // 取消点赞，点赞数减1
+        newLikes = Math.max(0, currentLikes - 1);
+        updatedLikedPosts = likedPosts.filter(id => id !== postId);
+      } else {
+        // 添加点赞，点赞数加1
+        newLikes = currentLikes + 1;
+        newLiked = true;
+        updatedLikedPosts = [...likedPosts, postId];
+      }
+
+      // 4. 更新本地存储
+      localStorage.setItem(`liked_posts_${userId}`, JSON.stringify(updatedLikedPosts));
+
+      // 5. 更新服务器点赞数量
+      const { error: updateError } = await supabase
+        .from('community_post')
+        .update({ like: newLikes })
+        .eq('id', postId);
+
+      if (updateError) {
+        return this._handleError(updateError, '更新点赞数量失败')
+      }
+
+      return {
+        success: true,
+        data: {
+          liked: newLiked,
+          likes: newLikes
+        },
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '切换点赞状态时发生错误')
+    }
+  },
+
+  /**
+   * 获取帖子的点赞状态
+   * @param {string} postId - 帖子ID
+   * @param {string} userId - 用户ID
+   * @returns {Promise<{success: boolean, data: {liked: boolean, likes: number}, error: string|null}>} 操作结果
+   */
+  async getLikeStatus(postId, userId) {
+    try {
+      // 1. 从本地存储获取点赞状态
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
+      const isLiked = likedPosts.includes(postId);
+      
+      // 2. 获取当前帖子点赞数量
+      const { data: post, error: getError } = await supabase
+        .from('community_post')
+        .select('id, like')
+        .eq('id', postId)
+        .single();
+
+      if (getError) {
+        return this._handleError(getError, '获取帖子信息失败')
+      }
+
+      return {
+        success: true,
+        data: {
+          liked: isLiked,
+          likes: post.like || 0
+        },
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '获取点赞状态时发生错误')
     }
   }
 }
