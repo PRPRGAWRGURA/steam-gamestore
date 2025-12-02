@@ -191,7 +191,7 @@ export default {
 
 <template>
   
-  <div class="post-create-section" >
+  <div class="post-create-section" :class="{'active': isEditing}" >
     <div class="edit-btn" :class="{'edit-btn-active': isEditing}" @click="isEditing = !isEditing">{{ isEditing ? '取消' : '发布' }}</div>
     <div class="post-title" v-if="!isEditing">发布一条帖子吧</div>
     <div class="post-form-container" v-if="isEditing">
@@ -306,18 +306,21 @@ export default {
 .post-create-section {
   position: fixed;
   z-index: 100;
-  width: 40%;
+  width: 20%;
   min-height: 50px;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
+  transition: width 0.3s ease;
   background-color: #07121f;
   border: 2px solid #3ba0de;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
+.post-create-section.active {
+  width: 40%;
+}
 .post-content-input {
   width: 100%;
   padding: 12px 16px;

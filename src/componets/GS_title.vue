@@ -108,12 +108,18 @@ export default {
     }
     .box-bottom {
         width: 1220px;
+        overflow: hidden;
     }
     .expand-enter-active {
-        transition: all 0.3s ease-in-out;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        max-height: 1000px;
+    }
+    .expand-leave-active {
+        transition: none;
     }
     .expand-enter-from, .expand-leave-to {
+        max-height: 0;
+        overflow: hidden;
         opacity: 0;
-        transform: translateY(-10px);
     }
 </style>
