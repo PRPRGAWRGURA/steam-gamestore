@@ -14,17 +14,35 @@ export default {
     const previewImage = ref('')
     const selectedFile = ref(null)
     const loading = ref(false)
+    const fileInput = ref(null)
     
     // 计算属性
     const canSubmitPost = computed(() => {
-      return newPostContent.value.trim().length > 0
+      // 当有文字内容或有选择的图片时，允许提交
+      return newPostContent.value.trim().length > 0 || !!selectedFile.value
     })
     
     // 图片处理
     const handleImageSelect = (event) => {
       const file = event.target.files[0]
       if (file) {
+        // 前端文件验证
+        // 验证文件类型
+        const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+        if (!validTypes.includes(file.type)) {
+          alert('只支持以下图片格式: jpg, jpeg, png, gif, webp, svg')
+          return
+        }
+        
+        // 验证文件大小（限制为15MB）
+        const maxSize = 15 * 1024 * 1024 // 15MB
+        if (file.size > maxSize) {
+          alert('图片大小不能超过15MB')
+          return
+        }
+        
         selectedFile.value = file
+        console.log('选择图片文件:', { name: file.name, size: file.size, type: file.type })
         const reader = new FileReader()
         reader.onload = (e) => {
           previewImage.value = e.target.result
@@ -36,29 +54,13 @@ export default {
     const removeImage = () => {
       previewImage.value = ''
       selectedFile.value = null
-      // 重置文件输入
-      const fileInput = document.querySelector('[ref="fileInput"]')
-      if (fileInput) {
-        fileInput.value = ''
+      // 重置文件输入，使用Vue的引用
+      if (fileInput.value) {
+        fileInput.value.value = ''
       }
     }
     
-    // 模拟图片上传函数
-    const uploadImage = async (file) => {
-      try {
-        // 在实际项目中，这里应该调用真实的文件上传API
-        // 这里我们模拟上传过程和返回一个临时URL
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            // 返回原始预览URL作为临时解决方案
-            resolve(previewImage.value)
-          }, 500)
-        })
-      } catch (error) {
-        console.error('图片上传失败:', error)
-        throw new Error('图片上传失败')
-      }
-    }
+    // 图片上传现在通过communityAPI直接处理，不再需要单独的上传函数
     
     // 发布消息
     const submitPost = async () => {
@@ -94,50 +96,79 @@ export default {
       // 2. 立即发送到父组件，添加到列表顶部
       emit('postCreated', tempPost)
       
-      // 3. 重置表单
-      newPostContent.value = ''
-      removeImage()
-      
       // 4. 后台异步上传到服务器
-      let imageUrl = null
       try {
         // 显示加载状态
         loading.value = true
         
-        // 如果有选择图片，则上传图片
-        if (selectedFile.value) {
-          console.log('上传图片中...')
-          imageUrl = await uploadImage(selectedFile.value)
-        }
-        
-        // 准备消息数据
+        // 准备消息数据，直接传入图片文件
         const postData = {
           user_id: currentUser.user_name, // 外键约束连接的是normal_user表的user_name字段
           content: tempPost.content,
-          image_url: imageUrl || null
+          image: selectedFile.value // 直接传递File对象给API
         }
+        console.log('发布消息中:', {
+          user_id: postData.user_id,
+          contentLength: postData.content.length,
+          hasImage: !!postData.image,
+          imageInfo: postData.image ? {
+            name: postData.image.name,
+            size: postData.image.size,
+            type: postData.image.type
+          } : null
+        })
         
-        console.log('发布消息中:', postData)
-        const response = await communityAPI.createPost(postData)
-        
-        if (response.success) {
-          console.log('发布成功:', response.data)
-          // 5. 上传成功，通知父组件更新帖子ID和状态
-          emit('postUpdated', {
-            tempId: tempPost.id,
-            realPost: response.data
+        try {
+          const response = await communityAPI.createPost(postData)
+          
+          if (response.success) {
+            console.log('发布成功:', response.data)
+            // 5. 上传成功，通知父组件更新帖子ID和状态
+            emit('postUpdated', {
+              tempId: tempPost.id,
+              realPost: response.data
+            })
+          } else {
+            console.error('发布失败:', {
+              errorCode: response.error?.code || 'unknown',
+              errorMessage: response.error?.message || response.error
+            })
+            // 6. 上传失败，通知父组件并显示具体错误
+            emit('postFailed', {
+              tempId: tempPost.id,
+              error: response.error
+            })
+          }
+        } catch (apiError) {
+          console.error('API调用异常:', {
+            error: apiError,
+            errorName: apiError.name,
+            errorMessage: apiError.message,
+            errorStack: apiError.stack
           })
-        } else {
-          console.error('发布失败:', response.error)
-          // 6. 上传失败，通知父组件
-          emit('postFailed', tempPost.id)
+          // 7. API调用出错，通知父组件
+          emit('postFailed', {
+            tempId: tempPost.id,
+            error: apiError
+          })
         }
       } catch (error) {
-        console.error('发布消息出错:', error)
+        console.error('全局错误捕获:', {
+          error: error,
+          errorName: error.name,
+          errorMessage: error.message,
+          errorStack: error.stack
+        })
         // 7. 上传出错，通知父组件
-        emit('postFailed', tempPost.id)
+        emit('postFailed', {
+          tempId: tempPost.id,
+          error: error
+        })
       } finally {
         loading.value = false
+        // 重置表单，在API调用完成后执行
+        newPostContent.value = ''
+        removeImage()
       }
     }
     
@@ -207,10 +238,14 @@ export default {
 <style scoped>
 /* 发布消息区域 */
 .post-create-section {
+  position: fixed;
+  width: 40%;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 20px;
-  margin-bottom: 30px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

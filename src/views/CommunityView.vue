@@ -70,7 +70,8 @@ export default {
 
 <style scoped>
 .community-container {
-  height: 100%;
+  position: relative;
+  height: 2000px;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -82,6 +83,6 @@ export default {
   font-size: 28px;
   margin-bottom: 30px;
   text-align: center;
-  color: #333;
+  color: #ffffff;
 }
 </style>

@@ -151,6 +151,18 @@ export default {
             updatedPosts = [...tempPosts, ...newPosts]
           }
           
+          // 处理每个帖子的用户信息，确保在设置posts.value之前完成
+          updatedPosts.forEach(post => {
+            // 检查是否为当前用户的帖子
+            const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
+            
+            // 为每个帖子设置user对象，确保立即显示正确的用户名和头像
+            post.user = {
+              user_name: isCurrentUserPost ? store.currentUser.user_name : (post.normal_user?.user_name || ' '),
+              user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (post.normal_user?.user_image || defaultAvatar)
+            }
+          })
+          
           posts.value = updatedPosts
           
           // 更新偏移量
@@ -158,28 +170,8 @@ export default {
           
           // 判断是否还有更多数据
           hasMore.value = response.data.length === limit
-                  
-          // 处理每个帖子的用户信息
-          updatedPosts.forEach(post => {
-            // 检查是否为当前用户的帖子
-            const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
-            
-            // 如果是当前用户的帖子，优先使用store中的用户信息
-            if (isCurrentUserPost) {
-              post.user = {
-                user_name: store.currentUser.user_name,
-                user_image: store.currentUser.user_image || defaultAvatar
-              }
-            } else {
-              // 其他用户的帖子使用服务器返回的信息
-              post.user = {
-                user_name: post.normal_user?.user_name || '匿名用户',
-                user_image: post.normal_user?.user_image || defaultAvatar
-              }
-            }
-          })
           
-          // 自动为每个帖子加载评论，但不展开评论区
+          // 自动为每个帖子加载评论，但不展开评论区。千万不要删这个
           const newPosts = isLoadMore ? response.data : posts.value
           newPosts.forEach(post => {
             if (!comments.value[post.id]) {
@@ -215,7 +207,7 @@ export default {
           ...realPost,
           user: {
             // 如果是当前用户的帖子，优先使用store中的用户信息
-            user_name: isCurrentUserPost ? store.currentUser.user_name : (realPost.normal_user?.user_name || '匿名用户'),
+            user_name: isCurrentUserPost ? store.currentUser.user_name : (realPost.normal_user?.user_name || ' '),
             user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (realPost.normal_user?.user_image || defaultAvatar)
           },
           comment_count: realPost.comment_count || 0,
@@ -227,15 +219,43 @@ export default {
     }
     
     // 处理帖子上传失败（乐观更新失败）
-    const handlePostFailed = (tempId) => {
+    const handlePostFailed = (data) => {
+      // 支持新旧两种调用方式
+      const tempId = data.tempId || data;
+      const error = data.error || null;
+      
       const index = posts.value.findIndex(post => post.id === tempId)
       if (index !== -1) {
         // 从列表中移除失败的临时帖子
         posts.value.splice(index, 1)
         // 保存到缓存
         savePostsToCache()
+        
+        // 根据错误信息显示不同的提示
+        let errorMessage = '消息发布失败，请稍后重试';
+        
+        if (error) {
+          // 将错误转换为字符串，以便进行includes检查
+          const errorStr = typeof error === 'string' ? error : 
+                         error.message || error.error || JSON.stringify(error);
+          
+          if (errorStr.includes('StorageError') || errorStr.includes('storage')) {
+            errorMessage = '图片上传失败，请检查网络或图片格式';
+          } else if (errorStr.includes('File') || errorStr.includes('文件')) {
+            errorMessage = '文件格式不支持或大小超过限制';
+          } else if (errorStr.includes('permission') || errorStr.includes('权限')) {
+            errorMessage = '权限不足，请检查登录状态';
+          } else if (errorStr.includes('Invalid key')) {
+            errorMessage = '图片上传失败，文件名包含不支持的字符';
+          } else {
+            // 尝试提取更具体的错误信息
+            const errorObj = typeof error === 'string' ? { message: error } : error;
+            errorMessage = errorObj.message || errorObj.error || errorMessage;
+          }
+        }
+        
         // 提示用户
-        alert('消息发布失败，请稍后重试')
+        alert(errorMessage);
       }
     }
     
@@ -458,12 +478,12 @@ export default {
           <div class="user-avatar-wrapper">
             <img 
               :src="post.normal_user?.user_image || defaultAvatar" 
-              :alt="post.normal_user?.user_name || '用户'"
+              :alt="post.normal_user?.user_name || ' '"
               class="user-avatar"
             />
           </div>
           <div class="user-info">
-            <div class="user-name">{{ post.normal_user?.user_name || '匿名用户' }}</div>
+            <div class="user-name">{{ post.normal_user?.user_name || ' ' }}</div>
             <div class="post-meta">
               <span class="post-time">{{ formatTime(post.created_at) }}</span>
               <span class="post-views">浏览 {{ post.views || 0 }}</span>
@@ -553,7 +573,7 @@ export default {
                 />
                 <div class="comment-content-wrapper">
                   <div class="comment-header">
-                    <span class="commenter-name">{{ comment.normal_user?.user_name || '匿名用户' }}</span>
+                    <span class="commenter-name">{{ comment.normal_user?.user_name || ' ' }}</span>
                     <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
                     <div class="comment-actions" v-if="isCurrentUser(comment.user_id)">
                       <button @click="deleteComment(comment.id)" class="action-btn delete-btn">
@@ -581,6 +601,10 @@ export default {
 /* 消息列表样式 */
 .posts-list {
   width: 100%;
+  height: 100%;
+  overflow: scroll;
+  scrollbar-width: none;
+  overflow-x: hidden;
 }
 
 .loading-indicator,
@@ -591,9 +615,10 @@ export default {
 }
 
 .posts-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: block;
+  column-count: 3;
+  column-gap: 15px;
+  column-fill: balance; /* 平衡各列高度 */
 }
 
 .post-item {
@@ -602,6 +627,11 @@ export default {
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s ease;
+  margin-bottom: 15px;
+  break-inside: avoid; /* 防止帖子被分割到不同列 */
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .post-item:hover {
@@ -704,6 +734,8 @@ export default {
 
 /* 帖子内容样式 */
 .post-content {
+  width: 100%;
+  height: auto;
   margin-bottom: 15px;
 }
 

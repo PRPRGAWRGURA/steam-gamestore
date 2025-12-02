@@ -5,7 +5,6 @@
 </template>
 <style scoped>
   .GS_container{
-    height: 100%;
     width: 1220px;
     margin: 0 auto;
     box-sizing: border-box;
