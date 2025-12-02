@@ -1,8 +1,7 @@
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { communityAPI } from '../utils/communityAPI'
-import { getCache, setCache, removeCache, removeItemFromListCache } from '../utils/cacheUtils'
 
 export default {
   name: 'PostList',
@@ -24,11 +23,9 @@ export default {
     const loadingComments = ref([])
     const visibleComments = ref(new Set())
     const offset = ref(0)
-    const limit = 5 // 每次加载5条帖子，进一步提高加载速度
+    const limit = 10 // 减少初始加载的帖子数量，提高加载速度
     const hasMore = ref(true)
     const commentInputs = ref({})
-    const isLoadingMore = ref(false)
-    const lastPostId = ref(null) // 用于分页加载
     
     // 默认头像
     const defaultAvatar = '/UserImage/001.png'
@@ -36,44 +33,39 @@ export default {
     // 缓存配置
     const CACHE_KEY = 'community_posts'
     const CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
-    const POST_CACHE_PREFIX = 'post_'
     
-    // 从本地缓存加载帖子列表
+    // 从本地缓存加载帖子
     const loadPostsFromCache = () => {
-      const cachedPosts = getCache(CACHE_KEY)
-      if (cachedPosts) {
-        // 更新当前用户帖子的用户信息
-        if (store.currentUser) {
-          cachedPosts.forEach(post => {
-            if (post.user_id === store.currentUser.user_name) {
-              post.user = {
-                user_name: store.currentUser.user_name,
-                user_image: store.currentUser.user_image || defaultAvatar
+      const cachedPosts = localStorage.getItem(CACHE_KEY)
+      const cacheTime = localStorage.getItem(`${CACHE_KEY}_time`)
+      
+      if (cachedPosts && cacheTime) {
+        const cacheAge = Date.now() - parseInt(cacheTime)
+        // 检查缓存是否在有效期内
+        if (cacheAge < CACHE_EXPIRE_TIME) {
+          const loadedPosts = JSON.parse(cachedPosts)
+          
+          // 更新当前用户帖子的用户信息
+          if (store.currentUser) {
+            loadedPosts.forEach(post => {
+              if (post.user_id === store.currentUser.user_name) {
+                post.user = {
+                  user_name: store.currentUser.user_name,
+                  user_image: store.currentUser.user_image || defaultAvatar
+                }
               }
-            }
-          })
-        }
-        posts.value = cachedPosts
-        // 更新lastPostId为最后一条帖子的id
-        if (cachedPosts.length > 0) {
-          lastPostId.value = cachedPosts[cachedPosts.length - 1].id
+            })
+          }
+          
+          posts.value = loadedPosts
         }
       }
     }
     
-    // 保存帖子列表到本地缓存
+    // 保存帖子到本地缓存
     const savePostsToCache = () => {
-      setCache(CACHE_KEY, posts.value, CACHE_EXPIRE_TIME)
-    }
-    
-    // 从缓存获取单个帖子
-    const getPostFromCache = (postId) => {
-      return getCache(`${POST_CACHE_PREFIX}${postId}`)
-    }
-    
-    // 保存单个帖子到缓存
-    const savePostToCache = (post) => {
-      setCache(`${POST_CACHE_PREFIX}${post.id}`, post, CACHE_EXPIRE_TIME)
+      localStorage.setItem(CACHE_KEY, JSON.stringify(posts.value))
+      localStorage.setItem(`${CACHE_KEY}_time`, Date.now().toString())
     }
     
     // 格式化时间
@@ -133,86 +125,73 @@ export default {
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
     }
     
-    // 加载帖子 - 修复多个问题
+    // 加载帖子
     const loadPosts = async (isLoadMore = false) => {
-      if (loading.value || (isLoadMore && isLoadingMore.value)) return
+      if (loading.value) return
       
-      // 设置加载状态
-      if (isLoadMore) {
-        isLoadingMore.value = true
-      } else {
-        loading.value = true
-      }
-      
+      loading.value = true
       try {
-        // 构建请求参数
-        const params = {
+        const response = await communityAPI.getPosts({
           limit,
           offset: isLoadMore ? offset.value : 0
-        }
-        
-        const response = await communityAPI.getPosts(params)
+        })
         
         if (response.success) {
-          let newPosts = response.data
+          let updatedPosts = []
           
-          if (newPosts.length > 0) {
-            // 处理每个帖子，补充用户信息
-            newPosts = newPosts.map(post => {
-              // 检查是否为当前用户的帖子
-              const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
-              
-              // 补充用户信息
-              post.user = {
-                // 如果是当前用户的帖子，优先使用store中的用户信息
-                user_name: isCurrentUserPost ? store.currentUser.user_name : (post.normal_user?.user_name || '匿名用户'),
-                user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (post.normal_user?.user_image || defaultAvatar)
-              }
-              post.comment_count = post.comment_count || 0
-              post.like_count = post.like_count || 0
-              
-              // 保存单个帖子到缓存
-              savePostToCache(post)
-              
-              return post
-            })
-            
-            // 过滤掉已存在的帖子
+          if (isLoadMore) {
+            // 加载更多时，合并数据并去重
             const existingIds = new Set(posts.value.map(post => post.id))
-            const uniqueNewPosts = newPosts.filter(post => !existingIds.has(post.id))
-            
-            if (uniqueNewPosts.length > 0) {
-              if (isLoadMore) {
-                // 加载更多时，添加到列表末尾
-                posts.value.push(...uniqueNewPosts)
-              } else {
-                // 初始加载时，替换列表并按时间倒序排列
-                // 合并现有临时帖子和新帖子
-                const tempPosts = posts.value.filter(post => post.is_temp)
-                const allPosts = [...tempPosts, ...uniqueNewPosts]
-                
-                // 按时间倒序排列
-                allPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-                
-                posts.value = allPosts
-              }
-              
-              // 更新偏移量
-              offset.value += uniqueNewPosts.length
-              
-              // 判断是否还有更多数据
-              hasMore.value = uniqueNewPosts.length === limit
-              
-              // 保存完整列表到缓存
-              savePostsToCache()
-              
-              // 向父组件发送事件
-              emit('postsLoaded', posts.value)
-            }
+            const newPosts = response.data.filter(post => !existingIds.has(post.id))
+            updatedPosts = [...posts.value, ...newPosts]
           } else {
-            // 没有更多数据
-            hasMore.value = false
+            // 刷新数据时，保留临时帖子
+            const tempPosts = posts.value.filter(post => post.is_temp)
+            const newPosts = response.data.filter(post => !tempPosts.some(temp => temp.content === post.content))
+            updatedPosts = [...tempPosts, ...newPosts]
           }
+          
+          posts.value = updatedPosts
+          
+          // 更新偏移量
+          offset.value += response.data.length
+          
+          // 判断是否还有更多数据
+          hasMore.value = response.data.length === limit
+                  
+          // 处理每个帖子的用户信息
+          updatedPosts.forEach(post => {
+            // 检查是否为当前用户的帖子
+            const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
+            
+            // 如果是当前用户的帖子，优先使用store中的用户信息
+            if (isCurrentUserPost) {
+              post.user = {
+                user_name: store.currentUser.user_name,
+                user_image: store.currentUser.user_image || defaultAvatar
+              }
+            } else {
+              // 其他用户的帖子使用服务器返回的信息
+              post.user = {
+                user_name: post.normal_user?.user_name || '匿名用户',
+                user_image: post.normal_user?.user_image || defaultAvatar
+              }
+            }
+          })
+          
+          // 自动为每个帖子加载评论，但不展开评论区
+          const newPosts = isLoadMore ? response.data : posts.value
+          newPosts.forEach(post => {
+            if (!comments.value[post.id]) {
+              loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
+            }
+          })
+          
+          // 保存到本地缓存
+          savePostsToCache()
+          
+          // 向父组件发送事件
+          emit('postsLoaded', posts.value)
         } else {
           console.error('加载消息失败:', response.error)
           // 不显示错误提示，避免影响用户体验
@@ -221,15 +200,9 @@ export default {
         console.error('加载消息出错:', error)
         // 不显示错误提示，避免影响用户体验
       } finally {
-        // 重置加载状态
-        if (isLoadMore) {
-          isLoadingMore.value = false
-        } else {
-          loading.value = false
-        }
+        loading.value = false
       }
     }
-    
     // 更新临时帖子为真实帖子（乐观更新成功）
     const updateTempPost = (tempId, realPost) => {
       const index = posts.value.findIndex(post => post.id === tempId)
@@ -266,28 +239,9 @@ export default {
       }
     }
     
-    // 防抖定时器
-    let loadMoreTimer = null
-    
-    // 加载更多帖子 - 添加防抖机制
     const loadMorePosts = () => {
-      if (loadMoreTimer) {
-        clearTimeout(loadMoreTimer)
-      }
-      
-      loadMoreTimer = setTimeout(() => {
-        if (hasMore.value) {
-          loadPosts(true)
-        }
-      }, 300) // 300ms防抖
+      loadPosts(true)
     }
-    
-    // 组件卸载时清理定时器
-    onUnmounted(() => {
-      if (loadMoreTimer) {
-        clearTimeout(loadMoreTimer)
-      }
-    })
     
     // 加载评论
     const loadComments = async (postId) => {
@@ -382,53 +336,29 @@ export default {
       }
     }
     
-    // 删除帖子
+    // 删除帖子（这里只包含基本结构，实际实现可能需要更多逻辑）
     const deletePost = async (postId) => {
       if (!confirm('确定要删除这条消息吗？')) {
         return
       }
       
       try {
-        // 1. 先从本地列表中移除帖子（乐观删除）
-        const postIndex = posts.value.findIndex(post => post.id === postId)
-        if (postIndex !== -1) {
-          posts.value.splice(postIndex, 1)
-        }
-        
-        // 2. 同时删除相关评论
-        delete comments.value[postId]
-        
-        // 3. 移除可见状态
-        visibleComments.value.delete(postId)
-        
-        // 4. 删除单个帖子缓存
-        removeCache(`${POST_CACHE_PREFIX}${postId}`)
-        
-        // 5. 更新帖子列表缓存
-        savePostsToCache()
-        
-        // 6. 调用API删除帖子
         const response = await communityAPI.deletePost(postId)
         
         if (response.success) {
+          // 从列表中移除帖子
+          posts.value = posts.value.filter(post => post.id !== postId)
+          // 同时删除相关评论
+          delete comments.value[postId]
+          // 移除可见状态
+          visibleComments.value.delete(postId)
+          
           alert('删除成功！')
         } else {
-          // API删除失败，恢复帖子
-          const deletedPost = getPostFromCache(postId)
-          if (deletedPost) {
-            posts.value.unshift(deletedPost)
-            savePostsToCache()
-          }
           alert(response.error || '删除失败，请稍后重试')
         }
       } catch (error) {
         console.error('删除消息出错:', error)
-        // 网络错误，恢复帖子
-        const deletedPost = getPostFromCache(postId)
-        if (deletedPost) {
-          posts.value.unshift(deletedPost)
-          savePostsToCache()
-        }
         alert('网络错误，请稍后重试')
       }
     }
@@ -462,31 +392,7 @@ export default {
     
     // 添加新帖子（从父组件接收）
     const addNewPost = (newPost) => {
-      // 检查帖子是否已存在
-      const existingIndex = posts.value.findIndex(post => post.id === newPost.id)
-      if (existingIndex === -1) {
-        // 将新帖子添加到列表顶部
-        posts.value.unshift(newPost)
-        // 保存到缓存
-        savePostsToCache()
-      }
-    }
-    
-    // 定期刷新帖子列表，确保与数据库同步
-    let refreshTimer = null
-    
-    const startRefreshTimer = () => {
-      // 每5分钟刷新一次帖子列表
-      refreshTimer = setInterval(() => {
-        loadPosts()
-      }, 1 * 60 * 1000)
-    }
-    
-    const stopRefreshTimer = () => {
-      if (refreshTimer) {
-        clearInterval(refreshTimer)
-        refreshTimer = null
-      }
+      posts.value.unshift(newPost)
     }
     
     // 组件挂载时加载帖子
@@ -502,17 +408,6 @@ export default {
         }, 2000)
       } else {
         loadPosts()
-      }
-      
-      // 启动定期刷新定时器
-      startRefreshTimer()
-    })
-    
-    // 组件卸载时清理定时器
-    onUnmounted(() => {
-      stopRefreshTimer()
-      if (loadMoreTimer) {
-        clearTimeout(loadMoreTimer)
       }
     })
     
@@ -675,14 +570,8 @@ export default {
       </div>
       
       <!-- 加载更多按钮 -->
-      <div class="load-more-section">
-        <button 
-          @click="loadMorePosts" 
-          class="load-more-btn" 
-          :disabled="isLoadingMore || loading || !hasMore"
-        >
-          {{ isLoadingMore ? '加载中...' : hasMore ? '加载更多' : '没有更多了' }}
-        </button>
+      <div class="load-more-section" v-if="hasMore && !loading">
+        <button @click="loadMorePosts" class="load-more-btn">加载更多</button>
       </div>
     </div>
   </div>
