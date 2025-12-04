@@ -234,7 +234,7 @@ export default {
           class="post-submit-btn"
           :disabled="!canSubmitPost || loading"
         >
-          {{ loading ? '发布中...' : '发布' }}
+          {{ loading ? '发布中' : '发布' }}
         </button>
       </div>
     </div>
