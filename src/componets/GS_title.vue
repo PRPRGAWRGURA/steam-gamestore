@@ -17,18 +17,18 @@ export default {
                 { id: 3, name: '畅玩方式' },
                 { id: 4, name: '特别栏目' }
             ],
-            activeIndex: null,
+            activeIndex: -1,
         }
     },
     computed: {
         isExpanded() {
-            return this.activeIndex !== null;
+            return this.activeIndex !== -1;
         }
     },
     methods: {
         handleTitleClick(index) {
             // 切换展开/折叠状态
-            this.activeIndex = this.activeIndex === index ? null : index;
+            this.activeIndex = this.activeIndex === index ? -1 : index;
         },
     },
 }

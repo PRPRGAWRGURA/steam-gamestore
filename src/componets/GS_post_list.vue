@@ -175,21 +175,14 @@ export default {
           })
           
           // 重新排序帖子，使其在CSS Columns布局下呈现从左到右、从上到下的视觉效果
+          // 同时保持时间顺序从新到旧
           const columns = 3;
           const reorderedPosts = [];
           const totalPosts = updatedPosts.length;
           
-          // 计算每列需要放多少帖子
-          const postsPerColumn = Math.ceil(totalPosts / columns);
-          
-          // 按列填充帖子，确保视觉上从左到右、从上到下排列
-          for (let i = 0; i < postsPerColumn; i++) {
-            for (let j = 0; j < columns; j++) {
-              const index = j * postsPerColumn + i;
-              if (index < totalPosts) {
-                reorderedPosts.push(updatedPosts[index]);
-              }
-            }
+          // 按行填充帖子，确保视觉上从左到右、从上到下排列
+          for (let i = 0; i < totalPosts; i++) {
+            reorderedPosts.push(updatedPosts[i]);
           }
           
           posts.value = reorderedPosts
@@ -592,7 +585,7 @@ export default {
         </div>
         
         <!-- 评论区域 -->
-        <div class="comments-section" v-if="isCommentsVisible(post.id)">
+        <div class="comments-section" :class="{ expanded: isCommentsVisible(post.id) }">
           <!-- 评论输入框 -->
           <div class="comment-input-wrapper">
             <textarea 
@@ -890,12 +883,19 @@ export default {
 
 /* 评论区域样式 */
 .comments-section {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 2px solid #385894a7;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.comments-section.expanded {
+  max-height: 1000px;
 }
 
 .comment-input-wrapper {
+  border-top: 2px solid #385894a7;
+  margin-top: 20px;
+  padding-top: 20px;
   display: flex;
   flex-direction: column;
   gap: 8px;
