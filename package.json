@@ -1,6 +1,6 @@
 {
-  "name": "steam-gamestore",
-  "version": "0.0.0",
+  "name": "GS_User",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {

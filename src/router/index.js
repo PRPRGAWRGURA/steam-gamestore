@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // 导入布局组件
 const DefaultLayout = () => import('../layouts/DefaultLayout.vue')
-const DeveloperLayout = () => import('../layouts/DeveloperLayout.vue')
 
 // 导入页面组件
 const Home = () => import('../views/HomeView.vue')
@@ -12,7 +11,6 @@ const Support = () => import('../views/SupportView.vue')
 const Login = () => import('../views/LoginView.vue')
 const Gamebar = () => import('../views/GamebarView.vue')
 const Useritem = () => import('../views/UseritemView.vue')
-const Developer = () => import('../views/DeveloperView.vue')
 
 const routes = [
   // 默认布局路由 - 包含header和footer
@@ -57,18 +55,7 @@ const routes = [
       },
     ]
   },
-  // 开发者布局路由 - 不包含header和footer，包含React应用容器
-  {
-    path: '/developer',
-    component: DeveloperLayout,
-    children: [
-      {
-        path: '',
-        name: 'Developer',
-        component: Developer
-      }
-    ]
-  }
+
 ]
 
 const router = createRouter({

@@ -1,6 +1,7 @@
 <script>
 import GS_body from '../componets/GS_body.vue';
 import GS_container from '../componets/GS_container.vue';
+import GS_game_library from '../componets/GS_game_library.vue';
 import { useUserStore } from '@/stores/userStore';
 import { computed } from 'vue';
 export default {
@@ -8,13 +9,7 @@ export default {
   components: {
     GS_body,
     GS_container,
-  },
-  data() {
-    return {
-      games: [
-        { id: 1, name:'游戏1', image:'/GamesImage/001_header.jpg' },
-      ],
-    }
+    GS_game_library
   },
   setup() {
     const userStore = useUserStore();
@@ -28,7 +23,6 @@ export default {
   }
 }
 </script>
-
 <template>
   <GS_body>
       <div class="gamebar-container">
@@ -39,40 +33,80 @@ export default {
       </div>
       <GS_container>
         <div class="gamebar-content" v-if="currentUser">
-          <h1>游戏栏</h1>
-          <p>这里是游戏栏的内容</p>
-          <div class="game-item" v-for="game in games" :key="game.id">
-            <p>{{ game.name }}</p>
-            <img :src="game.image" alt="{{ game.name }}">
-          </div>
+          <h1 class="gamebar-title">游戏库</h1>
+          <GS_game_library />
         </div>
         <div class="gamebar-content" v-else>
-          <h1>游戏栏</h1>
-          <p>请先登录查看更多内容</p>
+          <h1 class="gamebar-title">游戏库</h1>
+          <div class="login-prompt">
+            <div class="prompt-icon">🔒</div>
+            <h2>请先登录查看您的游戏库</h2>
+            <p>登录后即可访问您的游戏收藏和游戏时间统计</p>
+          </div>
         </div>
       </GS_container>
   </GS_body>
 </template>
-
 <style scoped>
 .gamebar-container {
   background-color: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
+
 .user-info {
-  width: 1220px;
-  padding: 15px;
+  max-width: 1400px;
+  padding: 15px 20px;
   margin: 0 auto;
-  border-radius: 5px;
   color: #fff;
+  font-size: 0.95rem;
 }
-.gamebar-container {
-  display: flex;
+
+.gamebar-content {
+  padding: 20px 0;
 }
-.game-item {
-  margin-right: 20px;
+
+.gamebar-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 30px 0;
+  text-align: center;
+  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-.game-item img{
-  width: 100px;
-  height: 300px;
+
+.login-prompt {
+  text-align: center;
+  padding: 60px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.prompt-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  animation: bounce 2s ease-in-out infinite;
+}
+
+.login-prompt h2 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.login-prompt p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 </style>

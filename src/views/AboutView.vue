@@ -22,7 +22,7 @@ export default {
     }
     
     const goToDeveloperPage = () => {
-      router.push('/developer');
+      window.location.href = 'http://localhost:3001/';
     }
     
     const features = ref([
