@@ -93,6 +93,7 @@ export default {
     width: 30px;
     height: 30px;
     cursor: pointer;
+    object-fit: cover;
     border: 1.5px solid transparent;
     box-sizing: border-box;
 }

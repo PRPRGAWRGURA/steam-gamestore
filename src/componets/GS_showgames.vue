@@ -168,9 +168,10 @@ export default {
 
 <template>
   <div class="GS_container_games">
-    <div 
+    <router-link 
       v-for="game in games" 
       :key="game.id"
+      to="/gamedetail"
       class="game-card"
       @mouseenter="handleGameHover(game, $event)"
       @mouseleave="handleMouseLeave"
@@ -188,7 +189,7 @@ export default {
           ${{ game.price }}
         </div>
       </div>
-    </div>
+    </router-link>
     
     <!-- 悬停详情 -->
     <div 

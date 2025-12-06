@@ -1,7 +1,6 @@
 <script>
 import GS_header_user from './GS_header_user.vue';
 import { useUserStore } from '../stores/userStore';
-import { computed } from 'vue';
 export default {
     components: {
         GS_header_user

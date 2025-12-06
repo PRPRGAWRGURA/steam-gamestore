@@ -2,7 +2,7 @@
 import GS_body from '@/componets/GS_body.vue';
 import GS_container from '@/componets/GS_container.vue';
 export default {
-    name: 'GameitemView',
+    name: 'GameDetailView',
     data() {
         return {
             gameitem: {

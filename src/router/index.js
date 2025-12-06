@@ -11,7 +11,7 @@ const Support = () => import('../views/SupportView.vue')
 const Login = () => import('../views/LoginView.vue')
 const Gamebar = () => import('../views/GamebarView.vue')
 const Useritem = () => import('../views/UseritemView.vue')
-
+const GameDetail = () => import('../views/GameDetailView.vue')
 const routes = [
   // 默认布局路由 - 包含header和footer
   {
@@ -52,6 +52,11 @@ const routes = [
         path: '/useritem',
         name: 'Useritem',
         component: Useritem
+      },
+      {
+        path: '/gamedetail',
+        name: 'GameDetail',
+        component: GameDetail
       },
     ]
   },

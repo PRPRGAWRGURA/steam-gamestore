@@ -8,17 +8,17 @@ export default {
       hoveredShotIndex: 0,
       // 组件内部数据，不需要从外部获取
       gamelite: [
-        { id: 1, GameName:'EA:SPORT', GamePrice: 199, GamePriceSave: 50},
+        { id: 1, GameName:'SPLIT FICTION', GamePrice: 298, GamePriceSave: 50},
         { id: 2, GameName:'三角洲行动', GamePrice: 0, GamePriceSave: 0},
-        { id: 3, GameName:'双影幻境', GamePrice: 298, GamePriceSave: 50},
+        { id: 3, GameName:'EA SPORTS FC™ 26', GamePrice: 199, GamePriceSave: 50},
         { id: 4, GameName:'骑马与砍杀2', GamePrice: 99, GamePriceSave: 60},
         { id: 5, GameName:'霍格沃茨之遗', GamePrice: 298, GamePriceSave: 40},
         { id: 6, GameName:'极限竞速：地平线5', GamePrice: 299, GamePriceSave: 60},
       ],
       gameimage: [
-        { id: 1, header:'/CarouselImage/001_header.jpg', item1:'/CarouselImage/001_item1.jpg', item2:'/CarouselImage/001_item2.jpg', item3:'/CarouselImage/001_item3.jpg', item4:'/CarouselImage/001_item4.jpg', },
+        { id: 1, header:'/CarouselImage/003_header.jpg', item1:'/CarouselImage/003_item1.jpg', item2:'/CarouselImage/003_item2.jpg', item3:'/CarouselImage/003_item3.jpg', item4:'/CarouselImage/003_item4.jpg', },
         { id: 2, header:'/CarouselImage/002_header.jpg', item1:'/CarouselImage/002_item1.jpg', item2:'/CarouselImage/002_item2.jpg', item3:'/CarouselImage/002_item3.jpg', item4:'/CarouselImage/002_item4.jpg', },
-        { id: 3, header:'/CarouselImage/003_header.jpg', item1:'/CarouselImage/003_item1.jpg', item2:'/CarouselImage/003_item2.jpg', item3:'/CarouselImage/003_item3.jpg', item4:'/CarouselImage/003_item4.jpg', },
+        { id: 3, header:'/CarouselImage/001_header.jpg', item1:'/CarouselImage/001_item1.jpg', item2:'/CarouselImage/001_item2.jpg', item3:'/CarouselImage/001_item3.jpg', item4:'/CarouselImage/001_item4.jpg', },
         { id: 4, header:'/CarouselImage/004_header.jpg', item1:'/CarouselImage/004_item1.jpg', item2:'/CarouselImage/004_item2.jpg', item3:'/CarouselImage/004_item3.jpg', item4:'/CarouselImage/004_item4.jpg', },
         { id: 5, header:'/CarouselImage/005_header.jpg', item1:'/CarouselImage/005_item1.jpg', item2:'/CarouselImage/005_item2.jpg', item3:'/CarouselImage/005_item3.jpg', item4:'/CarouselImage/005_item4.jpg', },
         { id: 6, header:'/CarouselImage/006_header.jpg', item1:'/CarouselImage/006_item1.jpg', item2:'/CarouselImage/006_item2.jpg', item3:'/CarouselImage/006_item3.jpg', item4:'/CarouselImage/006_item4.jpg', },
@@ -82,7 +82,7 @@ export default {
       </div>
       
       <!-- 轮播图内容容器 -->
-      <div class="game_item_container">
+      <router-link class="game_item_container" to="/gamedetail">
         <a href="#" class="game_item" v-for="item in gamelite" :key="item.id" :class="{'active': item.id === GameId}">
           <!-- 游戏截图区域 - 修改为动态显示图片 -->
           <div class="screenshot">
@@ -119,7 +119,7 @@ export default {
             <div v-else class="free_game">免费游玩</div>
           </div>
         </a>
-      </div>
+      </router-link>
       
       <!-- 右箭头按钮 -->
       <div class="right_btn">

@@ -2,6 +2,84 @@
 import supabase from './supabase.js'
 
 /**
+ * 压缩图片至适合头像的大小，并裁剪为1:1正方形
+ * @param {File} file - 原始图片文件
+ * @param {Object} options - 压缩选项
+ * @returns {Promise<File>} - 压缩后的新File对象
+ */
+async function compressImageForAvatar(file, options = {}) {
+  const {
+    targetSize = 300,   // 目标正方形尺寸（宽高相同）
+    quality = 0.82,     // JPEG质量 (0.8-0.85在质量和体积间取得平衡)
+    outputType = 'image/jpeg'
+  } = options;
+
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    img.onload = () => {
+      // 1. 设置Canvas为正方形
+      canvas.width = targetSize;
+      canvas.height = targetSize;
+      
+      // 2. 计算图片缩放比例，确保图片至少一个维度达到目标尺寸
+      const scale = Math.max(targetSize / img.width, targetSize / img.height);
+      const scaledWidth = Math.floor(img.width * scale);
+      const scaledHeight = Math.floor(img.height * scale);
+      
+      // 3. 计算裁剪区域，居中裁剪为1:1正方形
+      const offsetX = Math.floor((scaledWidth - targetSize) / 2);
+      const offsetY = Math.floor((scaledHeight - targetSize) / 2);
+      
+      // 4. 使用高质量缩放算法
+      ctx.imageSmoothingQuality = 'high';
+      
+      // 5. 绘制裁剪后的图片到Canvas
+      // 参数说明：(image, sourceX, sourceY, sourceWidth, sourceHeight, destX, destY, destWidth, destHeight)
+      ctx.drawImage(
+        img, 
+        0, 0, img.width, img.height,  // 原始图片区域
+        -offsetX, -offsetY, scaledWidth, scaledHeight  // 缩放并居中裁剪
+      );
+
+      // 6. 转换为Blob并生成新File
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            reject(new Error('Canvas转换失败'));
+            return;
+          }
+          // 生成新文件名
+          const newFileName = file.name.replace(
+            /(\.[\w\d_-]+)$/i,
+            `_compressed${Date.now()}$1`
+          );
+          const compressedFile = new File([blob], newFileName, {
+            type: outputType,
+            lastModified: Date.now()
+          });
+          
+          console.log('头像压缩完成:', {
+            原始大小: `${(file.size / 1024).toFixed(2)}KB`,
+            压缩后: `${(blob.size / 1024).toFixed(2)}KB`,
+            尺寸: `${targetSize}×${targetSize}px`
+          });
+          
+          resolve(compressedFile);
+        },
+        outputType,
+        quality // 应用质量参数
+      );
+    };
+
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+/**
  * normal_user表的API集合
  * 提供查询、增加、删除、修改功能
  */
@@ -18,6 +96,120 @@ export const normalUserAPI = {
       success: false,
       data: null,
       error: err?.message || defaultMessage
+    }
+  },
+
+  /**
+   * 上传头像到Supabase Storage
+   * @param {File} file - 要上传的头像文件
+   * @param {string} userId - 用户ID，用于生成唯一的文件名
+   * @returns {Promise<{success: boolean, data: string|null, error: string|null}>} 操作结果，成功时返回头像URL
+   */
+  async uploadAvatar(file, userId) {
+    try {
+      // 添加文件验证
+      if (!file || !(file instanceof File)) {
+        return this._handleError(new Error('无效的文件对象'), '请选择有效的图片文件');
+      }
+      
+      // 验证文件类型
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
+      if (!validTypes.includes(file.type)) {
+        return this._handleError(new Error('不支持的文件类型'), `只支持以下图片格式: jpg, jpeg, png, gif, webp, svg`);
+      }
+      
+      // 验证文件大小（限制为15MB）
+      const maxSize = 15 * 1024 * 1024; // 15MB
+      if (file.size > maxSize) {
+        return this._handleError(new Error('文件过大'), '图片大小不能超过15MB');
+      }
+      
+      // 压缩图片
+      let processedFile = file;
+      try {
+        // 对于SVG图片，跳过压缩（Canvas不支持SVG）
+        if (file.type !== 'image/svg+xml') {
+          processedFile = await compressImageForAvatar(file);
+        }
+      } catch (compressionError) {
+        console.error('头像压缩失败，使用原始图片:', compressionError);
+        // 压缩失败时使用原始图片继续上传
+      }
+      
+      // 生成唯一的文件名，直接上传到根目录
+      // 使用用户ID的哈希值代替用户名，避免中文字符问题
+      const userIdHash = userId.toString().split('').reduce((acc, char) => {
+        return acc + char.charCodeAt(0);
+      }, 0);
+      const timestamp = Date.now();
+      const extension = processedFile.name.split('.').pop().toLowerCase();
+      const fileName = `${userIdHash}_${timestamp}.${extension}`;
+      const filePath = fileName; // 直接使用文件名，上传到根目录
+      
+      console.log('准备上传头像:', { fileName, filePath, size: processedFile.size, type: processedFile.type });
+      
+      // 上传文件到Supabase Storage的UserAvatar桶
+      console.log('开始Supabase上传操作:', {
+        bucket: 'UserAvatar',
+        filePath: filePath,
+        fileType: processedFile.type,
+        fileName: processedFile.name,
+        fileSize: processedFile.size
+      });
+      
+      const { data, error } = await supabase
+        .storage
+        .from('UserAvatar')
+        .upload(filePath, processedFile, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: processedFile.type // 明确指定content-type
+        });
+      
+      if (error) {
+        console.error('Supabase上传错误详情:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        // 处理特定的Supabase错误
+        if (error.code === '401' || error.code === '403') {
+          return this._handleError(error, `没有上传权限: ${error.message}`);
+        } else if (error.code === '413') {
+          return this._handleError(error, '文件大小超过Supabase限制');
+        } else if (error.code === '500') {
+          return this._handleError(error, 'Supabase服务器错误，请稍后重试');
+        } else {
+          return this._handleError(error, `头像上传失败: ${error.message}`);
+        }
+      }
+      
+      console.log('Supabase上传成功:', data);
+      
+      console.log('上传成功，正在获取公开URL');
+      
+      // 获取公开访问URL
+      const { data: urlData, error: urlError } = await supabase
+        .storage
+        .from('UserAvatar')
+        .getPublicUrl(filePath);
+      
+      if (urlError) {
+        console.error('获取URL错误:', urlError);
+        return this._handleError(urlError, '获取头像URL失败');
+      }
+      
+      console.log('头像上传成功:', { publicUrl: urlData.publicUrl });
+      
+      return {
+        success: true,
+        data: urlData.publicUrl,
+        error: null
+      };
+    } catch (err) {
+      console.error('头像上传异常:', err);
+      return this._handleError(err, '头像上传时发生错误');
     }
   },
 
@@ -182,7 +374,7 @@ export const normalUserAPI = {
         id: uniqueId,  // 数字类型ID
         user_name: userName,
         password: password,
-        user_image: '/UserImage/001.png' // 默认头像为空
+        user_image: 'https://uunfvyozplyovhrffnqn.supabase.co/storage/v1/object/public/UserAvatar/683_1764995455209.png' // 默认头像为空
       }])
       .select('id, user_name, user_image') // 不返回密码
       .single()
@@ -283,18 +475,102 @@ export const normalUserAPI = {
   },
 
   /**
+   * 修改用户名
+   * @param {string} currentUserName - 当前用户名
+   * @param {string} newUserName - 新用户名
+   * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 修改结果
+   */
+  async changeUserName(currentUserName, newUserName) {
+    try {
+      // 验证参数
+      if (!currentUserName || !newUserName) {
+        return {
+          success: false,
+          data: null,
+          error: '当前用户名和新用户名为必填项'
+        }
+      }
+
+      // 检查新用户名是否与当前用户名相同
+      if (currentUserName === newUserName) {
+        return {
+          success: false,
+          data: null,
+          error: '新用户名与当前用户名相同，请输入不同的用户名'
+        }
+      }
+
+      // 检查新用户名是否已被使用
+      const { exists, error: checkError } = await this._checkUserNameExists(newUserName)
+      if (checkError) {
+        return this._handleError(checkError, '修改用户名过程中发生错误')
+      }
+
+      if (exists) {
+        return {
+          success: false,
+          data: null,
+          error: '该用户名已被注册，请选择其他用户名'
+        }
+      }
+
+      // 更新用户名
+      const { data, error: updateError } = await supabase
+        .from('normal_user')
+        .update({ user_name: newUserName })
+        .eq('user_name', currentUserName)
+        .select()
+        .single()
+
+      if (updateError) {
+        return this._handleError(updateError, '修改用户名失败')
+      }
+
+      // 返回更新后的用户信息（不包含密码）
+      const { password: _, ...userDataWithoutPassword } = data
+
+      return {
+        success: true,
+        data: userDataWithoutPassword,
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '修改用户名时发生未知错误')
+    }
+  },
+
+  /**
    * 更新用户信息（不包括id）
    * @param {string} userName - 用户名（用于定位用户）
    * @param {Object} updateData - 更新数据
    * @param {string} [updateData.user_name] - 新用户名
    * @param {string} [updateData.password] - 新密码
-   * @param {string} [updateData.user_image] - 新头像地址
+   * @param {string|null} [updateData.user_image] - 新头像地址
+   * @param {File|null} [updateData.avatar_file] - 新头像文件（可选，优先于user_image）
    * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 更新结果
    */
   async updateUserByName(userName, updateData) {
     try {
       // 移除可能存在的id字段，确保不修改id
-      const { id, ...validUpdateData } = updateData
+      const { id, avatar_file, ...validUpdateData } = updateData
+
+      // 如果提供了头像文件，则上传头像
+      if (avatar_file && avatar_file instanceof File) {
+        // 先获取用户信息以获取用户ID
+        const user = await this.getUserByName(userName, ['id'])
+        if (!user) {
+          return this._handleError(new Error('用户不存在'), '更新用户失败')
+        }
+
+        // 上传头像
+        const uploadResult = await this.uploadAvatar(avatar_file, user.id)
+        if (!uploadResult.success) {
+          return uploadResult
+        }
+
+        // 将上传后的URL添加到更新数据中
+        validUpdateData.user_image = uploadResult.data
+      }
 
       // 如果没有要更新的字段，直接返回成功
       if (Object.keys(validUpdateData).length === 0) {

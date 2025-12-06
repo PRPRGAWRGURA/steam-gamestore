@@ -74,7 +74,7 @@ export default {
           <div class="stats-container">
             <div class="online-count main-stat">
               <span class="count-label">全球在线玩家</span>
-              <span class="count-number">{{ userStore.user_count || 0 }}</span>
+              <span class="count-number">{{ userStore.user_count + 63786849 }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-label">游戏数量</span>
