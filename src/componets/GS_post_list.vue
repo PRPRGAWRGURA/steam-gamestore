@@ -465,6 +465,23 @@ export default {
       }
     }
     
+    // 格式化内容，将URL转换为可点击的链接
+    const formatContent = (content) => {
+      if (!content) return ''
+      
+      // URL正则表达式，匹配http/https链接
+      const urlRegex = /(https?:\/\/[^\s]+)/g
+      
+      // 将URL转换为a标签
+      return content.replace(urlRegex, (url) => {
+        // 确保URL的完整性
+        let fullUrl = url
+        // 移除可能的标点符号
+        fullUrl = fullUrl.replace(/[.,!?;:)]$/, '')
+        return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="post-link">${fullUrl}</a>`
+      })
+    }
+    
     // 添加新帖子（从父组件接收）
     const addNewPost = (newPost) => {
       posts.value.unshift(newPost)
@@ -507,7 +524,8 @@ export default {
       addNewPost,
       updateTempPost,
       handlePostFailed,
-      handleLike
+      handleLike,
+      formatContent
     }
   }
 }
@@ -555,7 +573,7 @@ export default {
         
         <!-- 消息内容 -->
         <div class="post-content">
-          <div class="content-text">{{ post.content }}</div>
+          <div class="content-text" v-html="formatContent(post.content)"></div>
           <div class="content-image" v-if="post.image_url">
             <img 
               :src="post.image_url" 
@@ -806,6 +824,18 @@ export default {
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* 链接样式 */
+.post-link {
+  color: #499deb;
+  text-decoration: underline;
+  word-break: break-all;
+  transition: color 0.3s ease;
+}
+
+.post-link:hover {
+  color: #6bb7ff;
 }
 
 .post-image {
