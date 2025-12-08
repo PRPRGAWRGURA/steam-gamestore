@@ -232,13 +232,13 @@ export const communityAPI = {
       
       console.log('开始创建帖子:', {
         userId: postData.user_id,
-        hasContent: !!postData.content,
+        hasContent: !!postData.content,  //双逻辑非运算符作用是快速取布尔值
         hasImage: !!postData.image
       });
       
       let imageUrl = null;
       
-      // 如果提供了图片文件，则上传图片
+      // 如果提供了图片文件（instanceof验证有效的图片文件），则上传图片
       if (postData.image && postData.image instanceof File) {
         console.log('开始上传图片');
         const uploadResult = await this.uploadImage(postData.image, postData.user_id);
@@ -283,7 +283,7 @@ export const communityAPI = {
           try {
             const fileName = imageUrl.split('/').pop();
             console.log('尝试删除上传的图片:', fileName);
-            await supabase.storage.from('images').remove([`PostImage/${fileName}`]);
+            await supabase.storage.from('images').remove([fileName]);
           } catch (deleteError) {
             console.error('删除失败的上传图片时出错:', deleteError);
           }

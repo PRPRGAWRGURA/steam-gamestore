@@ -1,21 +1,20 @@
 <script>
-import { ref, reactive } from 'vue';
-
+import { ref, reactive, computed } from 'vue';
+import { useUserStore } from '@/stores/userStore';
+import { supportAPI } from '@/utils/supportAPI';
 export default {
   name: 'GS_support_form',
   setup() {
+    const store = useUserStore()
+
     // 表单数据
     const formData = reactive({
-      issueType: '',
-      title: '',
       description: '',
       attachments: []
     });
 
     // 表单验证状态
     const formErrors = reactive({
-      issueType: '',
-      title: '',
       description: ''
     });
 
@@ -27,48 +26,20 @@ export default {
     const isSubmitting = ref(false);
     const submitSuccess = ref(false);
 
-    // 问题类型选项
-    const issueTypes = [
-      { value: 'account', label: '账户问题' },
-      { value: 'game', label: '游戏相关' },
-      { value: 'payment', label: '支付问题' },
-      { value: 'technical', label: '技术支持' },
-      { value: 'other', label: '其他问题' }
-    ];
+
 
     // 表单验证
     const validateForm = () => {
       let isValid = true;
 
       // 重置错误信息
-      formErrors.issueType = '';
-      formErrors.title = '';
       formErrors.description = '';
-
-      // 验证问题类型
-      if (!formData.issueType) {
-        formErrors.issueType = '请选择问题类型';
-        isValid = false;
-      }
-
-      // 验证标题
-      if (!formData.title.trim()) {
-        formErrors.title = '请输入问题标题';
-        isValid = false;
-      } else if (formData.title.length < 5) {
-        formErrors.title = '标题至少需要5个字符';
-        isValid = false;
-      }
 
       // 验证描述
       if (!formData.description.trim()) {
         formErrors.description = '请输入问题描述';
         isValid = false;
-      } else if (formData.description.length < 20) {
-        formErrors.description = '描述至少需要20个字符';
-        isValid = false;
       }
-
       return isValid;
     };
 
@@ -87,37 +58,48 @@ export default {
 
     // 提交表单
     const submitForm = async () => {
-      if (!validateForm()) {
-        return;
-      }
+  if (!validateForm()) {
+    return;
+  }
 
-      isSubmitting.value = true;
+  if(!store.currentUser) {
+    alert('请先登录后再提交工单')
+    return
+  }
 
-      try {
-        // 模拟API请求
-        await new Promise(resolve => setTimeout(resolve, 2000));
+  const currentUser = store.currentUser
 
-        // 这里可以添加实际的API调用
-        // 例如：await api.submitSupportTicket(formData);
+  isSubmitting.value = true;
 
-        // 提交成功
-        submitSuccess.value = true;
+  try {
+    
+    const response = await supportAPI.createTicket({
+      user_id: currentUser.user_name,
+      description: formData.description,
+      attachments: formData.attachments, // 传递完整的附件数组
+    });
 
-        // 重置表单
-        setTimeout(() => {
-          formData.issueType = '';
-          formData.title = '';
-          formData.description = '';
-          formData.attachments = [];
-          submitSuccess.value = false;
-        }, 3000);
-      } catch (error) {
-        console.error('提交失败:', error);
-        // 这里可以添加错误处理
-      } finally {
-        isSubmitting.value = false;
-      }
-    };
+    if (response.success) {
+      console.log('发布成功:', response.data);
+      // 提交成功
+      submitSuccess.value = true;
+
+      // 重置表单
+      setTimeout(() => {
+        formData.description = '';
+        formData.attachments = [];
+        submitSuccess.value = false;
+      }, 3000);
+    } else {
+      console.log('发布失败:', response.message || '未知错误');
+    }
+  } catch (error) {
+    console.error('提交失败:', error);
+    // 这里可以添加错误处理
+  } finally {
+    isSubmitting.value = false;
+  }
+};
 
     return {
       formData,
@@ -126,7 +108,6 @@ export default {
       uploadProgress,
       isSubmitting,
       submitSuccess,
-      issueTypes,
       validateForm,
       handleFileChange,
       removeAttachment,
@@ -149,40 +130,7 @@ export default {
 
     <!-- 表单 -->
     <form v-else class="support-form" @submit.prevent="submitForm">
-      <!-- 问题类型 -->
-      <div class="form-group">
-        <label for="issueType" class="form-label">问题类型 <span class="required">*</span></label>
-        <select 
-          id="issueType" 
-          v-model="formData.issueType" 
-          class="form-select"
-          :class="{ 'error': formErrors.issueType }"
-        >
-          <option value="">请选择问题类型</option>
-          <option 
-            v-for="type in issueTypes" 
-            :key="type.value" 
-            :value="type.value"
-          >
-            {{ type.label }}
-          </option>
-        </select>
-        <span v-if="formErrors.issueType" class="error-message">{{ formErrors.issueType }}</span>
-      </div>
 
-      <!-- 问题标题 -->
-      <div class="form-group">
-        <label for="title" class="form-label">问题标题 <span class="required">*</span></label>
-        <input 
-          type="text" 
-          id="title" 
-          v-model="formData.title" 
-          class="form-input"
-          :class="{ 'error': formErrors.title }"
-          placeholder="请简要描述您的问题"
-        >
-        <span v-if="formErrors.title" class="error-message">{{ formErrors.title }}</span>
-      </div>
 
       <!-- 问题描述 -->
       <div class="form-group">
@@ -309,6 +257,8 @@ export default {
   color: white;
   font-size: 0.95rem;
 }
+
+
 
 .required {
   color: #ef4444;

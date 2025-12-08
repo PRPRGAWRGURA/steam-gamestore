@@ -2,13 +2,14 @@
 import GS_body from '../componets/GS_body.vue';
 import GS_container from '../componets/GS_container.vue';
 import GS_support_form from '../componets/GS_support_form.vue';
+
 export default {
   name: 'SupportView',
   components: {
     GS_body,
     GS_container,
     GS_support_form
-  }
+  },
 }
 </script>
 <template>
