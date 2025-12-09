@@ -22,7 +22,11 @@ export default {
     }
     
     const goToDeveloperPage = () => {
-      window.location.href = 'http://localhost:3001/';
+      // 跳转到SupportView，并传递type参数表示发行商申请
+      router.push({
+        path: '/support',
+        query: { type: 'developer' }
+      });
     }
     
     const features = ref([

@@ -297,8 +297,8 @@ export const normalUserAPI = {
    */
   async login(userName, password) {
     try {
-      // 根据用户名查询用户信息
-      const userData = await this.getUserByName(userName, ['id', 'user_name', 'user_image', 'password'])
+      // 根据用户名查询用户信息，获取所有字段
+      const userData = await this.getUserByName(userName, ['*'])
       
       if (!userData) {
         return {
@@ -374,9 +374,10 @@ export const normalUserAPI = {
         id: uniqueId,  // 数字类型ID
         user_name: userName,
         password: password,
-        user_image: 'https://uunfvyozplyovhrffnqn.supabase.co/storage/v1/object/public/UserAvatar/683_1764995455209.png' // 默认头像为空
+        user_image: 'https://uunfvyozplyovhrffnqn.supabase.co/storage/v1/object/public/UserAvatar/683_1764995455209.png', // 默认头像
+        introduction: '' // 默认简介为空
       }])
-      .select('id, user_name, user_image') // 不返回密码
+      .select('id, user_name, user_image, introduction') // 不返回密码，包含简介
       .single()
     
     if (createError) {

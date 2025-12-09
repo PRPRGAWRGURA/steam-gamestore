@@ -392,24 +392,36 @@ export default {
       if (!post) return
       
       try {
-        // 显示加载状态（可以添加一个loadingLikes状态数组）
-        const response = await communityAPI.toggleLike(postId, currentUser.user_name)
-        
-        if (response.success) {
-          // 更新帖子的点赞状态和数量
-          post.liked = response.data.liked
-          post.likes = response.data.likes
-          
-          // 保存到缓存
-          savePostsToCache()
-        } else {
-          alert(response.error || '点赞失败，请稍后重试')
-        }
-      } catch (error) {
-        console.error('点赞出错:', error)
-        alert('网络错误，请稍后重试')
+      // 乐观更新：立即更新UI，提升用户体验
+      const wasLiked = post.liked;
+      const currentLikes = post.likes || 0;
+      
+      // 更新本地UI状态
+      post.liked = !wasLiked;
+      post.likes = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+      
+      // 保存到本地缓存
+      savePostsToCache();
+      
+      // 异步更新服务器数据
+      const response = await communityAPI.toggleLike(postId, currentUser.user_name);
+      
+      if (!response.success) {
+        // 服务器更新失败，回滚UI状态
+        post.liked = wasLiked;
+        post.likes = currentLikes;
+        savePostsToCache();
+        alert(response.error || '点赞失败，请稍后重试');
       }
+    } catch (error) {
+      console.error('点赞出错:', error);
+      // 网络错误，回滚UI状态
+      post.liked = !post.liked;
+      post.likes = post.liked ? post.likes + 1 : Math.max(0, post.likes - 1);
+      savePostsToCache();
+      alert('网络错误，请稍后重试');
     }
+  }
     
     // 删除帖子（这里只包含基本结构，实际实现可能需要更多逻辑）
     const deletePost = async (postId) => {

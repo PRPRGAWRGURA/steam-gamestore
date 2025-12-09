@@ -4,7 +4,13 @@ import { useUserStore } from '@/stores/userStore';
 import { supportAPI } from '@/utils/supportAPI';
 export default {
   name: 'GS_support_form',
-  setup() {
+  props: {
+    isDeveloperApplication: {
+      type: Boolean,
+      default: false
+    }
+  },
+  setup(props) {
     const store = useUserStore()
 
     // 表单数据
@@ -25,11 +31,81 @@ export default {
     // 提交状态
     const isSubmitting = ref(false);
     const submitSuccess = ref(false);
-
-
+    
+    // 发行商申请限制：24小时内只能提交一次
+    const canSubmitDeveloperApplication = ref(true);
+    const lastSubmitTime = ref(null);
+    const countdown = ref(0);
+    
+    // 检查是否可以提交发行商申请
+    const checkDeveloperApplicationLimit = () => {
+      if (!props.isDeveloperApplication) return;
+      
+      // 从本地存储获取最后提交时间
+      const storedTime = localStorage.getItem('developer_application_last_submit');
+      if (storedTime) {
+        const now = Date.now();
+        const diff = now - parseInt(storedTime);
+        const oneDay = 24 * 60 * 60 * 1000;
+        
+        if (diff < oneDay) {
+          // 24小时内已提交过
+          canSubmitDeveloperApplication.value = false;
+          lastSubmitTime.value = parseInt(storedTime);
+          // 计算剩余时间（毫秒）
+          countdown.value = oneDay - diff;
+        } else {
+          // 超过24小时，可以提交
+          canSubmitDeveloperApplication.value = true;
+          localStorage.removeItem('developer_application_last_submit');
+        }
+      }
+    };
+    
+    // 开始倒计时
+    const startCountdown = () => {
+      if (canSubmitDeveloperApplication.value) return;
+      
+      const timer = setInterval(() => {
+        countdown.value -= 1000;
+        
+        if (countdown.value <= 0) {
+          // 倒计时结束，可以重新提交
+          canSubmitDeveloperApplication.value = true;
+          lastSubmitTime.value = null;
+          countdown.value = 0;
+          localStorage.removeItem('developer_application_last_submit');
+          clearInterval(timer);
+        }
+      }, 1000);
+      
+      // 组件卸载时清除定时器
+      return () => clearInterval(timer);
+    };
+    
+    // 格式化倒计时时间为 HH:MM:SS
+    const formattedCountdown = computed(() => {
+      if (countdown.value <= 0) return '';
+      
+      const hours = Math.floor(countdown.value / (1000 * 60 * 60));
+      const minutes = Math.floor((countdown.value % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((countdown.value % (1000 * 60)) / 1000);
+      
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    });
+    
+    // 初始化检查
+    checkDeveloperApplicationLimit();
+    // 开始倒计时
+    startCountdown();
 
     // 表单验证
     const validateForm = () => {
+      // 发行商申请不需要验证，直接通过
+      if (props.isDeveloperApplication) {
+        return true;
+      }
+      
       let isValid = true;
 
       // 重置错误信息
@@ -58,6 +134,16 @@ export default {
 
     // 提交表单
     const submitForm = async () => {
+  // 检查发行商申请限制
+  if (props.isDeveloperApplication && !canSubmitDeveloperApplication.value) {
+    return;
+  }
+  
+  // 发行商申请：自动设置描述为"申请发行商账号"
+  if (props.isDeveloperApplication) {
+    formData.description = '申请发行商账号';
+  }
+  
   if (!validateForm()) {
     return;
   }
@@ -76,13 +162,21 @@ export default {
     const response = await supportAPI.createTicket({
       user_id: currentUser.user_name,
       description: formData.description,
-      attachments: formData.attachments, // 传递完整的附件数组
+      attachments: props.isDeveloperApplication ? [] : formData.attachments, // 发行商申请不需要附件
+      type: props.isDeveloperApplication ? '发行商申请' : undefined
     });
 
     if (response.success) {
       console.log('发布成功:', response.data);
       // 提交成功
       submitSuccess.value = true;
+      
+      // 如果是发行商申请，保存提交时间到本地存储
+      if (props.isDeveloperApplication) {
+        const now = Date.now();
+        localStorage.setItem('developer_application_last_submit', now.toString());
+        checkDeveloperApplicationLimit(); // 更新提交限制状态
+      }
 
       // 重置表单
       setTimeout(() => {
@@ -108,6 +202,8 @@ export default {
       uploadProgress,
       isSubmitting,
       submitSuccess,
+      canSubmitDeveloperApplication,
+      formattedCountdown,
       validateForm,
       handleFileChange,
       removeAttachment,
@@ -119,7 +215,7 @@ export default {
 
 <template>
   <div class="gs-support-form">
-    <h2 class="support-form-title">提交支持请求</h2>
+    <h2 class="support-form-title">{{ isDeveloperApplication ? '提交发行者账号申请' : '提交支持请求' }}</h2>
     
     <!-- 成功提示 -->
     <div v-if="submitSuccess" class="success-message">
@@ -130,69 +226,83 @@ export default {
 
     <!-- 表单 -->
     <form v-else class="support-form" @submit.prevent="submitForm">
-
-
-      <!-- 问题描述 -->
-      <div class="form-group">
-        <label for="description" class="form-label">问题描述 <span class="required">*</span></label>
-        <textarea 
-          id="description" 
-          v-model="formData.description" 
-          class="form-textarea"
-          :class="{ 'error': formErrors.description }"
-          rows="6"
-          placeholder="请详细描述您遇到的问题，包括发生时间、具体表现等"
-        ></textarea>
-        <span v-if="formErrors.description" class="error-message">{{ formErrors.description }}</span>
-      </div>
-
-      <!-- 附件上传 -->
-      <div class="form-group">
-        <label class="form-label">附件上传（可选）</label>
-        <div class="file-upload-area">
-          <input 
-            type="file" 
-            id="attachments" 
-            multiple 
-            class="file-input"
-            @change="handleFileChange"
-          >
-          <label for="attachments" class="file-input-label">
-            <span class="upload-icon">📎</span>
-            <span>点击或拖拽文件到此处上传</span>
-          </label>
+      <!-- 发行商申请特殊处理：只显示提交按钮 -->
+      <template v-if="isDeveloperApplication">
+        <div class="developer-application-info">
+          <p v-if="canSubmitDeveloperApplication">点击下方按钮提交发行商账号申请，我们将尽快处理您的请求。</p>
+          <p v-else class="countdown-info">
+            您已提交过发行商申请，请在 <span class="countdown-time">{{ formattedCountdown }}</span> 后再次尝试。
+          </p>
+        </div>
+      </template>
+      
+      <!-- 普通支持请求：显示完整表单 -->
+      <template v-else>
+        <!-- 问题描述 -->
+        <div class="form-group">
+          <label for="description" class="form-label">问题描述 <span class="required">*</span></label>
+          <textarea 
+            id="description" 
+            v-model="formData.description" 
+            class="form-textarea"
+            :class="{ 'error': formErrors.description }"
+            rows="6"
+            placeholder="请详细描述您遇到的问题，包括发生时间、具体表现等"
+          ></textarea>
+          <span v-if="formErrors.description" class="error-message">{{ formErrors.description }}</span>
         </div>
 
-        <!-- 已选择附件列表 -->
-        <div v-if="formData.attachments.length > 0" class="attachments-list">
-          <h4>已选择的附件：</h4>
-          <div 
-            v-for="(file, index) in formData.attachments" 
-            :key="index"
-            class="attachment-item"
-          >
-            <span class="attachment-name">{{ file.name }}</span>
-            <span class="attachment-size">({{ (file.size / 1024).toFixed(2) }} KB)</span>
-            <button 
-              type="button" 
-              class="remove-attachment"
-              @click="removeAttachment(index)"
+        <!-- 附件上传 -->
+        <div class="form-group">
+          <label class="form-label">附件上传（可选）</label>
+          <div class="file-upload-area">
+            <input 
+              type="file" 
+              id="attachments" 
+              multiple 
+              class="file-input"
+              @change="handleFileChange"
             >
-              ×
-            </button>
+            <label for="attachments" class="file-input-label">
+              <span class="upload-icon"></span>
+              <span>点击此处上传</span>
+            </label>
+          </div>
+
+          <!-- 已选择附件列表 -->
+          <div v-if="formData.attachments.length > 0" class="attachments-list">
+            <h4>已选择的附件：</h4>
+            <div 
+              v-for="(file, index) in formData.attachments" 
+              :key="index"
+              class="attachment-item"
+            >
+              <span class="attachment-name">{{ file.name }}</span>
+              <span class="attachment-size">({{ (file.size / 1024).toFixed(2) }} KB)</span>
+              <button 
+                type="button" 
+                class="remove-attachment"
+                @click="removeAttachment(index)"
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </template>
 
       <!-- 提交按钮 -->
       <div class="form-actions">
         <button 
           type="submit" 
           class="submit-button"
-          :disabled="isSubmitting"
+          :disabled="isSubmitting || (isDeveloperApplication && !canSubmitDeveloperApplication)"
         >
           <span v-if="isSubmitting" class="loading">⏳</span>
-          {{ isSubmitting ? '提交中...' : '提交请求' }}
+          {{ isSubmitting ? '提交中...' : 
+             (isDeveloperApplication ? 
+               (canSubmitDeveloperApplication ? '提交发行商申请' : '申请已提交，请稍后再试') : 
+               '提交请求') }}
         </button>
       </div>
     </form>
@@ -268,6 +378,7 @@ export default {
 .form-select,
 .form-textarea {
   width: 100%;
+  box-sizing: border-box;
   padding: 12px 16px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
@@ -292,7 +403,7 @@ export default {
 }
 
 .form-textarea {
-  resize: vertical;
+  resize: none;
   min-height: 150px;
 }
 
@@ -333,6 +444,9 @@ export default {
 }
 
 .upload-icon {
+  width: 40px;
+  height: 40px;
+  background: url('/WebResources/file.svg') center/cover;
   font-size: 2.5rem;
 }
 
@@ -428,9 +542,38 @@ export default {
   animation: spin 1s linear infinite;
 }
 
+.developer-application-info {
+  background: rgba(66, 153, 225, 0.1);
+  border: 1px solid rgba(66, 153, 225, 0.3);
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.developer-application-info p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.countdown-info {
+  color: rgba(239, 68, 68, 0.9);
+  font-weight: 600;
+}
+
+.countdown-time {
+  color: #f59e0b;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }  to { transform: rotate(360deg); }
 }
 
 /* 响应式设计 */

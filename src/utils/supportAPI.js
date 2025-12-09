@@ -247,15 +247,23 @@ export const supportAPI = {
             }
 
             console.log('准备插入数据库记录');
+            // 构建插入数据对象
+            const insertData = {
+                user_name: ticketData.user_id,
+                feedback_msg: ticketData.description || '',
+                feedback_image: imageUrls.length > 0 ? imageUrls.join(',') : null, // 用逗号分隔多个图片URL
+                status: '待处理', // 默认状态为待处理
+                created_at: new Date().toISOString()
+            };
+            
+            // 如果提供了type字段，添加到插入数据中
+            if (ticketData.type) {
+                insertData.type = ticketData.type;
+            }
+            
             const { data, error } = await supabase
                 .from('support_post')
-                .insert([{
-                    user_name: ticketData.user_id,
-                    feedback_msg: ticketData.description || '',
-                    feedback_image: imageUrls.length > 0 ? imageUrls.join(',') : null, // 用逗号分隔多个图片URL
-                    status: '待处理', // 默认状态为待处理
-                    created_at: new Date().toISOString()
-                }])
+                .insert([insertData])
                 .select(`
                     *,
                     normal_user (user_name)

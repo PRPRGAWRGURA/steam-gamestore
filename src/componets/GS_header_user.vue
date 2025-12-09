@@ -16,6 +16,17 @@ export default {
         const currentUser = computed(() => userStore.currentUser);
         
         const logout = () => {
+            // 清除所有相关缓存
+            if (userStore.currentUser) {
+                // 清除用户点赞状态缓存
+                localStorage.removeItem(`liked_posts_${userStore.currentUser.user_name}`);
+            }
+            // 清除社区帖子缓存
+            localStorage.removeItem('community_posts');
+            localStorage.removeItem('community_posts_time');
+            // 清除用户数量缓存
+            localStorage.removeItem('user_count');
+            // 调用userStore的logout方法，清除用户信息
             userStore.logout();
             router.push('/login');
             alert('您已退出登录');

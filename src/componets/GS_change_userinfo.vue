@@ -15,6 +15,11 @@ const currentUsername = computed(() => {
   return userStore.currentUser?.user_name || '';
 });
 
+// 当前用户简介
+const currentIntroduction = computed(() => {
+  return userStore.currentUser?.introduction || '';
+});
+
 // 修改密码表单数据
 const passwordForm = reactive({
   oldPassword: '',
@@ -53,6 +58,18 @@ const changeNameForm = reactive({
 const isChangingName = ref(false);
 const nameValidationErrors = reactive({
   newUserName: ''
+});
+
+// 修改简介相关状态
+const introductionForm = reactive({
+  newIntroduction: currentIntroduction.value
+});
+const isUpdatingIntroduction = ref(false);
+const introductionValidationErrors = reactive({
+  newIntroduction: ''
+});
+const remainingChars = computed(() => {
+  return 200 - introductionForm.newIntroduction.length;
 });
 
 // 初始化头像预览
@@ -267,8 +284,10 @@ const uploadAvatar = async () => {
     );
 
     if (result.success) {
-      // 更新用户存储中的头像
-      userStore.currentUser.user_image = result.data.user_image;
+      // 更新用户存储中的头像，替换整个currentUser对象以确保响应式更新
+      userStore.currentUser = { ...userStore.currentUser, ...result.data };
+      // 将更新后的用户信息保存到localStorage
+      localStorage.setItem('user', JSON.stringify(userStore.currentUser));
       // 更新本地预览
       avatarPreview.value = result.data.user_image;
       successMessage.value = '头像更新成功';
@@ -327,8 +346,10 @@ const changeUserName = async () => {
     );
 
     if (result.success) {
-      // 更新用户存储中的用户名
-      userStore.currentUser.user_name = result.data.user_name;
+      // 更新用户存储中的用户名，替换整个currentUser对象以确保响应式更新
+      userStore.currentUser = { ...userStore.currentUser, ...result.data };
+      // 将更新后的用户信息保存到localStorage
+      localStorage.setItem('user', JSON.stringify(userStore.currentUser));
       // 重置表单
       changeNameForm.newUserName = '';
       successMessage.value = '用户名修改成功';
@@ -342,6 +363,45 @@ const changeUserName = async () => {
     isChangingName.value = false;
   }
 };
+
+/**
+ * 更新用户简介
+ */
+const updateIntroduction = async () => {
+  // 验证简介长度
+  if (introductionForm.newIntroduction.length > 200) {
+    introductionValidationErrors.newIntroduction = '简介不能超过200字';
+    return;
+  }
+  
+  try {
+    isUpdatingIntroduction.value = true;
+    successMessage.value = '';
+    errorMessage.value = '';
+    introductionValidationErrors.newIntroduction = '';
+    
+    // 更新简介
+    const result = await normalUserAPI.updateUserByName(
+      currentUsername.value,
+      { introduction: introductionForm.newIntroduction }
+    );
+    
+    if (result.success) {
+      // 更新用户存储中的简介，替换整个currentUser对象以确保响应式更新
+      userStore.currentUser = { ...userStore.currentUser, ...result.data };
+      // 将更新后的用户信息保存到localStorage，解决刷新后简介不更新的问题
+      localStorage.setItem('user', JSON.stringify(userStore.currentUser));
+      successMessage.value = '简介更新成功';
+    } else {
+      errorMessage.value = result.error || '简介更新失败';
+    }
+  } catch (err) {
+    errorMessage.value = '更新简介过程中发生错误';
+    console.error('更新简介失败:', err);
+  } finally {
+    isUpdatingIntroduction.value = false;
+  }
+};
 </script>
 
 <template>
@@ -351,6 +411,38 @@ const changeUserName = async () => {
   </div>
   <div v-if="errorMessage" class="GlobalErrorMessage">
     {{ errorMessage }}
+  </div>
+
+  <!-- 用户信息展示区域 -->
+  <div class="UserInfoSection">
+    <h3 class="SectionTitle">当前用户信息</h3>
+    <div class="UserInfoContainer">
+      <div class="UserInfoLeft">
+        <div class="UserAvatar">
+          <img :src="avatarPreview" alt="当前用户头像" class="UserAvatarImage" />
+        </div>
+      </div>
+      <div class="UserInfoRight">
+        <div class="UserInfoItem">
+          <span class="UserInfoLabel">用户名:</span>
+          <span class="UserInfoValue">{{ currentUsername }}</span>
+        </div>
+        <div class="UserInfoItem">
+          <span class="UserInfoLabel">账户状态:</span>
+          <span class="UserInfoValue status-active">已激活</span>
+        </div>
+        <div class="UserInfoItem">
+          <span class="UserInfoLabel">最后登录:</span>
+          <span class="UserInfoValue">{{ new Date().toLocaleString() }}</span>
+        </div>
+        <div class="UserInfoItem full-width">
+          <span class="UserInfoLabel">个人简介:</span>
+          <div class="UserInfoValue introduction">
+            {{ currentIntroduction }}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 修改头像区域 -->
@@ -419,6 +511,43 @@ const changeUserName = async () => {
           :disabled="isChangingName"
         >
           {{ isChangingName ? '处理中...' : '确认修改' }}
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 修改简介区域 -->
+  <div class="ChangeIntroductionSection">
+    <h3 class="SectionTitle">修改简介</h3>
+    
+    <form @submit.prevent="updateIntroduction" class="IntroductionForm">
+      <!-- 新简介 -->
+      <div class="FormGroup">
+        <label for="newIntroduction">个人简介</label>
+        <textarea
+          id="newIntroduction"
+          v-model="introductionForm.newIntroduction"
+          :class="{ 'error': introductionValidationErrors.newIntroduction }"
+          placeholder="请输入个人简介（最多200字）"
+          rows="4"
+          maxlength="200"
+        ></textarea>
+        <div class="CharCount" :class="{ 'char-limit': remainingChars < 50 }">
+          {{ remainingChars }}/200
+        </div>
+        <div v-if="introductionValidationErrors.newIntroduction" class="ErrorText">
+          {{ introductionValidationErrors.newIntroduction }}
+        </div>
+      </div>
+      
+      <!-- 按钮区域 -->
+      <div class="ButtonGroup">
+        <button
+          type="submit"
+          class="SubmitBtn"
+          :disabled="isUpdatingIntroduction"
+        >
+          {{ isUpdatingIntroduction ? '处理中...' : '更新简介' }}
         </button>
       </div>
     </form>
@@ -535,40 +664,231 @@ const changeUserName = async () => {
 <style scoped>
 /* 全局消息提示样式 */
 .GlobalSuccessMessage {
-  background-color: rgba(46, 204, 113, 0.2);
+  background: rgba(46, 204, 113, 0.1);
   border: 1px solid #2ecc71;
   color: #2ecc71;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
   font-size: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
 }
 
 .GlobalErrorMessage {
-  background-color: rgba(231, 76, 60, 0.2);
+  background: rgba(231, 76, 60, 0.1);
   border: 1px solid #e74c3c;
   color: #e74c3c;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 25px;
   font-size: 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
 }
 
 /* 区域通用样式 */
+.UserInfoSection,
 .ChangeAvatarSection,
 .ChangeNameSection,
-.ChangePasswordSection {
-  background-color: #2a475e;
+.ChangePasswordSection,
+.ChangeIntroductionSection {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 30px;
+  margin-bottom: 25px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.UserInfoSection:hover,
+.ChangeAvatarSection:hover,
+.ChangeNameSection:hover,
+.ChangePasswordSection:hover,
+.ChangeIntroductionSection:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border-color: rgba(66, 153, 225, 0.3);
+}
+
+/* 用户信息展示区域样式 */
+.UserInfoContainer {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
+.UserInfoLeft {
+  flex-shrink: 0;
+}
+
+.UserAvatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 3px solid rgba(66, 153, 225, 0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.UserAvatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  border-color: rgba(66, 153, 225, 0.5);
+}
+
+.UserAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.UserInfoRight {
+  flex: 1;
+  min-width: 250px;
+}
+
+.UserInfoItem {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.UserInfoItem:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.UserInfoLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 80px;
+}
+
+.UserInfoValue {
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+}
+
+.UserInfoValue.status-active {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.UserInfoValue.status-active::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #2ecc71;
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 个人简介展示样式 */
+.UserInfoItem.full-width {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding-top: 15px;
+}
+
+.UserInfoValue.introduction {
+  width: 100%;
+  text-align: left;
+  line-height: 1.6;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
   border-radius: 6px;
-  padding: 20px;
-  margin-bottom: 20px;
+  border-left: 3px solid #4299e1;
+  font-size: 15px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+}
+
+/* 简介表单样式 */
+.IntroductionForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 500px;
+}
+
+/* 文本域样式 */
+.FormGroup textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  resize: none;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+.FormGroup textarea:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.FormGroup textarea.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+}
+
+/* 字符计数样式 */
+.CharCount {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 4px;
+  text-align: right;
+  transition: color 0.3s ease;
+}
+
+.CharCount.char-limit {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.CharCount::before {
+  content: '';
+  display: block;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
 }
 
 .SectionTitle {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 20px;
-  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 25px;
+  color: white;
+  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* 表单通用样式 */
@@ -576,47 +896,53 @@ const changeUserName = async () => {
 .ChangeNameForm {
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  max-width: 400px;
+  gap: 20px;
+  max-width: 500px;
 }
 
 .FormGroup {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .FormGroup label {
   font-size: 14px;
   font-weight: 500;
-  color: #c7d5e0;
+  color: rgba(255, 255, 255, 0.8);
+  transition: color 0.3s;
 }
 
 .FormGroup input {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #385169;
-  border-radius: 4px;
-  background-color: #1b2838;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
   color: white;
   font-size: 14px;
-  transition: border-color 0.3s;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
 }
 
 .FormGroup input:focus {
   outline: none;
-  border-color: #66c0f4;
-  box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.2);
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .FormGroup input.error {
   border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
 }
 
 .ErrorText {
   font-size: 12px;
   color: #e74c3c;
   margin-top: 4px;
+  font-weight: 500;
 }
 
 /* 密码输入容器样式 */
@@ -628,101 +954,160 @@ const changeUserName = async () => {
 
 .TogglePasswordBtn {
   position: absolute;
-  right: 8px;
-  background: none;
-  border: none;
-  color: #66c0f4;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #4299e1;
   cursor: pointer;
   font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 2px;
-  transition: background-color 0.3s;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
 }
 
 .TogglePasswordBtn:hover {
-  background-color: rgba(102, 192, 244, 0.1);
+  background: rgba(66, 153, 225, 0.2);
+  border-color: rgba(66, 153, 225, 0.4);
+  color: #6366f1;
 }
 
 .PasswordHint {
   font-size: 12px;
-  color: #8f98a0;
-  margin-top: 4px;
-  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 6px;
+  line-height: 1.5;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  border-left: 3px solid #4299e1;
 }
 
 /* 按钮通用样式 */
 .ButtonGroup {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 15px;
+  margin-top: 15px;
+  flex-wrap: wrap;
 }
 
 .SubmitBtn,
 .ResetBtn,
-.UploadBtn {
-  padding: 10px 20px;
+.UploadBtn,
+.FileLabel {
+  padding: 12px 25px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.SubmitBtn::before,
+.UploadBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.SubmitBtn:hover::before,
+.UploadBtn:hover::before {
+  left: 100%;
 }
 
 .SubmitBtn,
 .UploadBtn {
-  background-color: #66c0f4;
-  color: #1b2838;
+  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
+  color: white;
   flex: 1;
+  min-width: 120px;
 }
 
 .SubmitBtn:hover:not(:disabled),
 .UploadBtn:hover:not(:disabled) {
-  background-color: #5aa9e6;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(66, 153, 225, 0.4);
+  background: linear-gradient(45deg, #3182ce 0%, #4f46e5 100%);
+}
+
+.SubmitBtn:active:not(:disabled),
+.UploadBtn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .SubmitBtn:disabled,
 .UploadBtn:disabled {
-  background-color: #385169;
-  color: #8f98a0;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .ResetBtn {
-  background-color: #385169;
-  color: #c7d5e0;
-  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 25px;
+  min-width: 100px;
 }
 
 .ResetBtn:hover:not(:disabled) {
-  background-color: #4b6988;
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(66, 153, 225, 0.3);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
 }
 
 .ResetBtn:disabled {
-  background-color: #2a475e;
-  color: #666;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* 头像上传样式 */
 .AvatarUploadContainer {
   display: flex;
   align-items: center;
-  gap: 30px;
+  gap: 40px;
+  flex-wrap: wrap;
 }
 
 /* 头像预览 */
 .AvatarPreview {
-  width: 150px;
-  height: 150px;
+  width: 180px;
+  height: 180px;
   overflow: hidden;
-  background-color: #1b2838;
-  border: 2px solid #385169;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.AvatarPreview:hover {
+  border-color: rgba(66, 153, 225, 0.5);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  transform: scale(1.05);
 }
 
 .AvatarPreviewBorder {
@@ -730,21 +1115,30 @@ const changeUserName = async () => {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 40px;
-  line-height: 50px;
+  height: 50px;
+  line-height: 60px;
   text-align: center;
-  background: linear-gradient(to top, #000000aa 0%, #00000000 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
   box-sizing: border-box;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.8;
 }
 
 .AvatarImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.AvatarPreview:hover .AvatarImage {
+  transform: scale(1.1);
 }
 
 .AvatarPlaceholder {
-  color: #8f98a0;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 14px;
   text-align: center;
   padding: 20px;
@@ -754,9 +1148,9 @@ const changeUserName = async () => {
 .AvatarUploadControls {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 20px;
   flex: 1;
-  max-width: 400px;
+  max-width: 500px;
 }
 
 .FileInputContainer {
@@ -772,19 +1166,58 @@ const changeUserName = async () => {
 
 .FileLabel {
   display: inline-block;
-  background-color: #385169;
-  color: #c7d5e0;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: background-color 0.3s;
+  background: linear-gradient(45deg, #6b7280 0%, #4b5563 100%);
+  color: white;
   text-align: center;
-  border: 1px solid #4b6988;
+  min-width: 150px;
+  transition: all 0.3s ease;
+  border: none;
 }
 
 .FileLabel:hover {
-  background-color: #4b6988;
+  background: linear-gradient(45deg, #4b5563 0%, #374151 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .AvatarUploadContainer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .AvatarPreview {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+  }
+  
+  .PasswordForm,
+  .ChangeNameForm {
+    max-width: 100%;
+  }
+  
+  .ButtonGroup {
+    flex-direction: column;
+  }
+  
+  .SubmitBtn,
+  .ResetBtn,
+  .UploadBtn {
+    min-width: auto;
+  }
 }
 </style>

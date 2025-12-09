@@ -2,6 +2,7 @@
 import GS_body from '../componets/GS_body.vue';
 import GS_container from '../componets/GS_container.vue';
 import GS_support_form from '../componets/GS_support_form.vue';
+import { useRoute } from 'vue-router';
 
 export default {
   name: 'SupportView',
@@ -10,15 +11,25 @@ export default {
     GS_container,
     GS_support_form
   },
+  setup() {
+    const route = useRoute();
+    
+    // 获取路由参数，判断是否为发行商申请
+    const isDeveloperApplication = route.query.type === 'developer';
+    
+    return {
+      isDeveloperApplication
+    };
+  }
 }
 </script>
 <template>
   <GS_body>
       <GS_container>
         <div class="support">
-          <h1 class="support-title">客服页面</h1>
-          <p class="support-subtitle">获取Steam客户支持！</p>
-          <GS_support_form />
+          <h1 class="support-title">{{ isDeveloperApplication ? '发行商申请' : '客服页面' }}</h1>
+          <p class="support-subtitle">{{ isDeveloperApplication ? '申请成为游戏发行商，将你的游戏带给全球玩家！' : '获取Steam客户支持！' }}</p>
+          <GS_support_form :is-developer-application="isDeveloperApplication" />
         </div>
       </GS_container>
   </GS_body>
