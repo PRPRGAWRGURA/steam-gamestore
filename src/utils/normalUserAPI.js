@@ -513,30 +513,7 @@ export const normalUserAPI = {
   }
   },
 
-  /**
-   * 根据用户名删除用户
-   * @param {string} userName - 用户名
-   * @returns {Promise<{success: boolean, error: string|null}>} 删除结果
-   */
-  async deleteUserByName(userName) {
-    try {
-      const { error } = await supabase
-        .from('normal_user')
-        .delete()
-        .eq('user_name', userName)
-      
-      if (error) {
-        return this._handleError(error, '删除用户失败')
-      }
-      
-      return {
-        success: true,
-        error: null
-      }
-    } catch (err) {
-      return this._handleError(err, '删除用户时发生未知错误')
-    }
-  },
+
 
   /**
    * 修改用户名
