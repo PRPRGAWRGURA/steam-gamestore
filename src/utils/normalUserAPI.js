@@ -231,6 +231,69 @@ export const normalUserAPI = {
   },
 
   /**
+   * 获取最近7天的用户增长数据
+   * @returns {Promise<{success: boolean, data: Array|null, error: string|null}>} 最近7天的用户增长数据
+   */
+  async getUserGrowthData() {
+    try {
+      // 获取当前日期和7天前的日期
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 6); // 包括今天在内的7天
+      
+      // 格式化日期为YYYY-MM-DD格式
+      const formatDate = (date) => {
+        return date.toISOString().split('T')[0];
+      };
+      
+      const { data, error } = await supabase
+        .from('normal_user')
+        .select('created_at')
+        .gte('created_at', formatDate(startDate))
+        .lte('created_at', formatDate(endDate) + 'T23:59:59.999Z');
+      
+      if (error) {
+        return this._handleError(error, '获取用户增长数据失败');
+      }
+      
+      // 初始化7天数据数组
+      const growthDataArray = [];
+      const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      
+      // 初始化每天的用户数为0
+      for (let i = 0; i < 7; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i); // 使用新的日期对象，避免修改startDate
+        const dateKey = formatDate(currentDate);
+        const dayName = dayNames[currentDate.getDay()];
+        
+        growthDataArray.push({
+          date: dateKey,
+          day: dayName,
+          count: 0
+        });
+      }
+      
+      // 统计每天的用户数
+      data.forEach(user => {
+        const userDate = formatDate(new Date(user.created_at));
+        const dataItem = growthDataArray.find(item => item.date === userDate);
+        if (dataItem) {
+          dataItem.count++;
+        }
+      });
+      
+      return {
+        success: true,
+        data: growthDataArray,
+        error: null
+      };
+    } catch (err) {
+      return this._handleError(err, '获取用户增长数据时发生错误');
+    }
+  },
+
+  /**
    * 检查用户名是否已存在
    * @param {string} userName - 要检查的用户名
    * @param {string} [excludeName=null] - 要排除的用户名（用于更新操作）

@@ -3,8 +3,9 @@ import GS_body from '@/componets/GS_body.vue';
 import GS_title from '@/componets/GS_title.vue';
 import GS_container from '@/componets/GS_container.vue';
 import { useUserStore } from '@/stores/userStore';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { normalUserAPI } from '@/utils/normalUserAPI';
 
 export default {
   name: 'AboutView',
@@ -52,15 +53,49 @@ export default {
       }
     ]);
     
+    // 用户增长数据
+    const userGrowthData = ref([]);
+    const isLoadingGrowthData = ref(false);
+    
+    // 获取用户增长数据
+    const fetchUserGrowthData = async () => {
+      isLoadingGrowthData.value = true;
+      try {
+        const response = await normalUserAPI.getUserGrowthData();
+        if (response.success) {
+          userGrowthData.value = response.data;
+        } else {
+          console.error('获取用户增长数据失败:', response.error);
+        }
+      } catch (error) {
+        console.error('获取用户增长数据时发生错误:', error);
+      } finally {
+        isLoadingGrowthData.value = false;
+      }
+    };
+    
+    // 计算最高值，用于图表高度计算
+    const maxCount = computed(() => {
+      if (userGrowthData.value.length === 0) return 1;
+      const max = Math.max(...userGrowthData.value.map(item => item.count));
+      // 确保最大值至少为1，避免除以0
+      return Math.max(max, 1);
+    });
+    
     return {
       userStore,
       updateCount,
       features,
-      goToDeveloperPage
+      goToDeveloperPage,
+      userGrowthData,
+      isLoadingGrowthData,
+      maxCount,
+      fetchUserGrowthData
     }
   },
   mounted() {
     this.updateCount();
+    this.fetchUserGrowthData();
   }
 }
 </script>
@@ -97,24 +132,33 @@ export default {
       <section class="chart-section">
         <h2 class="section-title">新用户注册趋势</h2>
         <div class="chart-container">
-          <div class="chart-placeholder">
+          <!-- 加载状态 -->
+          <div v-if="isLoadingGrowthData" class="loading-state">
+            <div class="loading-spinner">⏳</div>
+            <p>加载用户增长数据中...</p>
+          </div>
+          
+          <!-- 空数据状态 -->
+          <div v-else-if="userGrowthData.length === 0" class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>暂无用户增长数据</p>
+          </div>
+          
+          <!-- 图表内容 -->
+          <div v-else class="chart-placeholder">
             <div class="chart-bars">
-              <div class="chart-bar" style="height: 60%;"></div>
-              <div class="chart-bar" style="height: 75%;"></div>
-              <div class="chart-bar" style="height: 55%;"></div>
-              <div class="chart-bar" style="height: 85%;"></div>
-              <div class="chart-bar" style="height: 70%;"></div>
-              <div class="chart-bar" style="height: 90%;"></div>
-              <div class="chart-bar" style="height: 95%;"></div>
+              <div 
+                v-for="(item, index) in userGrowthData" 
+                :key="index"
+                class="chart-bar"
+                :style="{ height: `${Math.max(5, (item.count / maxCount) * 100)}%` }"
+                :title="`${item.day}: ${item.count}人`"
+              >
+                <div class="chart-bar-count">{{ item.count }}</div>
+              </div>
             </div>
             <div class="chart-labels">
-              <span>周一</span>
-              <span>周二</span>
-              <span>周三</span>
-              <span>周四</span>
-              <span>周五</span>
-              <span>周六</span>
-              <span>周日</span>
+              <span v-for="(item, index) in userGrowthData" :key="index">{{ item.day }}</span>
             </div>
           </div>
         </div>
@@ -363,9 +407,9 @@ export default {
   flex: 1;
   background: linear-gradient(180deg, #4299e1 0%, #6366f1 100%);
   border-radius: 4px 4px 0 0;
-  animation: growUp 1s ease-out 1.2s both;
   position: relative;
   max-width: 60px;
+  transition: height 1s ease-out;
 }
 
 .chart-bar::after {
@@ -379,16 +423,56 @@ export default {
   border-radius: 4px 4px 0 0;
 }
 
-@keyframes growUp {
-  from {
-    height: 0;
-    opacity: 0;
-  }
-  to {
-    height: var(--height, 100%);
-    opacity: 1;
-  }
+/* 柱状图上的数字 */
+.chart-bar-count {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.loading-spinner {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 空数据状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-icon {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  opacity: 0.5;
+}
+
+
 
 .chart-labels {
   display: flex;

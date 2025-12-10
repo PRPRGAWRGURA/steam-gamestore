@@ -1,5 +1,5 @@
 <script>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { supportAPI } from '@/utils/supportAPI';
 export default {
@@ -37,6 +37,10 @@ export default {
     const lastSubmitTime = ref(null);
     const countdown = ref(0);
     
+    // 用户请求列表
+    const userTickets = ref([]);
+    const isLoadingTickets = ref(false);
+    
     // 检查是否可以提交发行商申请
     const checkDeveloperApplicationLimit = () => {
       if (!props.isDeveloperApplication) return;
@@ -46,14 +50,14 @@ export default {
       if (storedTime) {
         const now = Date.now();
         const diff = now - parseInt(storedTime);
-        const oneDay = 24 * 60 * 60 * 1000;
+        const setTime = 1 * 60 * 1000;
         
-        if (diff < oneDay) {
+        if (diff < setTime) {
           // 24小时内已提交过
           canSubmitDeveloperApplication.value = false;
           lastSubmitTime.value = parseInt(storedTime);
           // 计算剩余时间（毫秒）
-          countdown.value = oneDay - diff;
+          countdown.value = setTime - diff;
         } else {
           // 超过24小时，可以提交
           canSubmitDeveloperApplication.value = true;
@@ -94,10 +98,34 @@ export default {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     });
     
+    // 获取用户的所有请求
+    const fetchUserTickets = async () => {
+      if (!store.currentUser) return;
+      
+      isLoadingTickets.value = true;
+      try {
+        const response = await supportAPI.getUserTickets(store.currentUser.user_name);
+        if (response.success) {
+          userTickets.value = response.data;
+        } else {
+          console.error('获取用户请求失败:', response.error);
+        }
+      } catch (error) {
+        console.error('获取用户请求时发生错误:', error);
+      } finally {
+        isLoadingTickets.value = false;
+      }
+    };
+    
     // 初始化检查
     checkDeveloperApplicationLimit();
     // 开始倒计时
     startCountdown();
+    
+    // 组件挂载时获取用户请求列表
+    onMounted(() => {
+      fetchUserTickets();
+    });
 
     // 表单验证
     const validateForm = () => {
@@ -183,6 +211,8 @@ export default {
         formData.description = '';
         formData.attachments = [];
         submitSuccess.value = false;
+        // 重新获取用户请求列表
+        fetchUserTickets();
       }, 3000);
     } else {
       console.log('发布失败:', response.message || '未知错误');
@@ -207,7 +237,10 @@ export default {
       validateForm,
       handleFileChange,
       removeAttachment,
-      submitForm
+      submitForm,
+      userTickets,
+      isLoadingTickets,
+      fetchUserTickets
     };
   }
 };
@@ -306,6 +339,77 @@ export default {
         </button>
       </div>
     </form>
+
+    <!-- 用户请求列表 -->
+    <div class="user-tickets-section">
+      <div class="section-header">
+        <h2 class="section-title">我的请求</h2>
+        <button class="refresh-button" @click="fetchUserTickets" :disabled="isLoadingTickets">
+          <span v-if="isLoadingTickets" class="loading">⏳</span>
+          刷新
+        </button>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="isLoadingTickets" class="loading-state">
+        <div class="loading-spinner">⏳</div>
+        <p>加载中...</p>
+      </div>
+
+      <!-- 空状态 -->
+      <div v-else-if="userTickets.length === 0" class="empty-state">
+        <div class="empty-icon">📝</div>
+        <h3>暂无请求记录</h3>
+        <p>您还没有提交任何请求，点击上方按钮提交您的第一个请求吧！</p>
+      </div>
+
+      <!-- 请求列表 -->
+      <div v-else class="tickets-list">
+        <div class="ticket-item" v-for="ticket in userTickets" :key="ticket.id">
+          <div class="ticket-header">
+            <div class="ticket-type-badge" :class="ticket.type ? 'developer' : 'support'">
+              {{ ticket.type || '普通请求' }}
+            </div>
+            <div class="ticket-status-badge" :class="ticket.status.toLowerCase()">
+              {{ ticket.status }}
+            </div>
+          </div>
+          <h3 class="ticket-title">{{ ticket.feedback_msg }}</h3>
+          <div class="ticket-meta">
+            <span class="ticket-date">
+              <strong>提交时间：</strong>
+              {{ new Date(ticket.created_at).toLocaleString('zh-CN') }}
+            </span>
+            <span class="ticket-id">
+              <strong>请求ID：</strong>
+              {{ ticket.id }}
+            </span>
+          </div>
+          <!-- 如果有图片附件，显示图片预览 -->
+          <div v-if="ticket.feedback_image" class="ticket-attachments">
+            <strong>附件：</strong>
+            <div class="attachments-preview">
+              <img 
+                v-for="(imageUrl, index) in ticket.feedback_image.split(',')" 
+                :key="index"
+                :src="imageUrl" 
+                alt="附件图片"
+                class="attachment-image"
+              >
+            </div>
+          </div>
+          <!-- 如果状态为已处理且有管理员回复，显示回复内容 -->
+          <div v-if="ticket.status === '已处理' && ticket.callback" class="ticket-callback">
+            <div class="callback-header">
+              <strong>管理员回复：</strong>
+            </div>
+            <div class="callback-content">
+              {{ ticket.callback }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -572,6 +676,256 @@ export default {
   border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+/* 用户请求列表样式 */
+.user-tickets-section {
+  margin-top: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.refresh-button {
+  background: rgba(66, 153, 225, 0.2);
+  color: #4299e1;
+  border: 1px solid rgba(66, 153, 225, 0.3);
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(66, 153, 225, 0.3);
+  border-color: #4299e1;
+}
+
+.refresh-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* 加载状态 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.loading-spinner {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  animation: spin 1s linear infinite;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 1.3rem;
+  margin-bottom: 10px;
+  color: white;
+}
+
+.empty-state p {
+  font-size: 1rem;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* 请求列表 */
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ticket-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.ticket-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ticket-type-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ticket-type-badge.support {
+  background: rgba(66, 153, 225, 0.2);
+  color: #4299e1;
+}
+
+.ticket-type-badge.developer {
+  background: rgba(107, 114, 128, 0.2);
+  color: #9ca3af;
+}
+
+.ticket-status-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ticket-status-badge.待处理 {
+  background: rgba(255, 159, 64, 0.2);
+  color: #f59e0b;
+}
+
+.ticket-status-badge.处理中 {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.ticket-status-badge.已处理 {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.ticket-status-badge.已通过 {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+}
+
+.ticket-status-badge.已拒绝 {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.ticket-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.ticket-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 10px;
+}
+
+.ticket-meta strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 附件预览 */
+.ticket-attachments {
+  margin-top: 10px;
+}
+
+.attachments-preview {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+  flex-wrap: wrap;
+}
+
+.attachment-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.attachment-image:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* 管理员回复 */
+.ticket-callback {
+  margin-top: 15px;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  border-radius: 6px;
+}
+
+.callback-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+  color: #4caf50;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.callback-content {
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }  to { transform: rotate(360deg); }
 }
@@ -600,6 +954,28 @@ export default {
 
   .upload-icon {
     font-size: 2rem;
+  }
+
+  /* 响应式请求列表 */
+  .user-tickets-section {
+    padding: 15px;
+  }
+
+  .section-title {
+    font-size: 1.3rem;
+  }
+
+  .ticket-item {
+    padding: 12px;
+  }
+
+  .ticket-title {
+    font-size: 0.95rem;
+  }
+
+  .attachment-image {
+    width: 60px;
+    height: 60px;
   }
 }
 </style>

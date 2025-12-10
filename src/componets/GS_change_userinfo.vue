@@ -20,6 +20,11 @@ const currentIntroduction = computed(() => {
   return userStore.currentUser?.introduction || '';
 });
 
+//当前用户注册时间
+const currentRegisterTime = computed(() => {
+  return new Date(userStore.currentUser?.created_at).toLocaleString('zh-CN') || '';
+})
+
 // 修改密码表单数据
 const passwordForm = reactive({
   oldPassword: '',
@@ -435,10 +440,14 @@ const updateIntroduction = async () => {
           <span class="UserInfoLabel">最后登录:</span>
           <span class="UserInfoValue">{{ new Date().toLocaleString() }}</span>
         </div>
+        <div class="UserInfoItem">
+          <span class="UserInfoLabel">注册时间:</span>
+          <span class="UserInfoValue">{{ currentRegisterTime }}</span>
+        </div>
         <div class="UserInfoItem full-width">
           <span class="UserInfoLabel">个人简介:</span>
           <div class="UserInfoValue introduction">
-            {{ currentIntroduction }}
+            {{ currentIntroduction || '暂无简介' }}
           </div>
         </div>
       </div>

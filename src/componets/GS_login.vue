@@ -30,7 +30,9 @@ export default {
             validationErrors: {
                 regUsername: '',
                 regPassword: ''
-            }
+            },
+            // 防重复提交状态
+            loading: false
         }
     },
     setup() {
@@ -108,25 +110,47 @@ export default {
         
         // 登录提交
         async handleLogin() {
+            // 防止重复提交
+            if (this.loading) {
+                return;
+            }
+            
             if (!this.loginData.username || !this.loginData.password) {
                 alert('请输入账号和密码');
                 return;
             }
-            const user = await normalUserAPI.login(this.loginData.username, this.loginData.password)
-            if(user.success){
-                alert('登录成功！');
-                // 使用Pinia store保存用户信息
-                this.userStore.login(this.loginData.username, this.loginData.password, this.rememberMe)
-                // 记住我功能由store内部处理
-                this.$router.push('/')
-            }else{
-                this.errorMsg = user.error
-                alert('登录失败:' + this.errorMsg);
+            
+            try {
+                // 开始加载
+                this.loading = true;
+                
+                const user = await normalUserAPI.login(this.loginData.username, this.loginData.password)
+                if(user.success){
+                    alert('登录成功！');
+                    // 使用Pinia store保存用户信息
+                    this.userStore.login(this.loginData.username, this.loginData.password, this.rememberMe)
+                    // 记住我功能由store内部处理
+                    this.$router.push('/')
+                }else{
+                    this.errorMsg = user.error
+                    alert('登录失败:' + this.errorMsg);
+                }
+            } catch (error) {
+                console.error('登录过程中发生错误:', error);
+                alert('登录过程中发生错误，请稍后重试');
+            } finally {
+                // 结束加载
+                this.loading = false;
             }
         },
         
         // 注册提交
         async handleRegister() {
+            // 防止重复提交
+            if (this.loading) {
+                return;
+            }
+            
             // 验证注册表单
             this.validationErrors.regUsername = this.validateUsername(this.registerData.username);
             this.validationErrors.regPassword = this.validatePassword(this.registerData.password);
@@ -137,15 +161,26 @@ export default {
                 return;
             }
             
-            const user = await normalUserAPI.register(this.registerData.username, this.registerData.password)
-            if(user.success){
-                alert('注册成功！');
-                // 使用Pinia store保存用户信息
-                this.userStore.login(this.registerData.username, this.registerData.password, false)
-                this.$router.push('/')
-            }else{
-                this.errorMsg = user.error
-                alert('注册失败:' + this.errorMsg);
+            try {
+                // 开始加载
+                this.loading = true;
+                
+                const user = await normalUserAPI.register(this.registerData.username, this.registerData.password)
+                if(user.success){
+                    alert('注册成功！');
+                    // 使用Pinia store保存用户信息
+                    this.userStore.login(this.registerData.username, this.registerData.password, false)
+                    this.$router.push('/')
+                }else{
+                    this.errorMsg = user.error
+                    alert('注册失败:' + this.errorMsg);
+                }
+            } catch (error) {
+                console.error('注册过程中发生错误:', error);
+                alert('注册过程中发生错误，请稍后重试');
+            } finally {
+                // 结束加载
+                this.loading = false;
             }
         },
         
@@ -235,7 +270,9 @@ export default {
                         </label>
                     </div>
                     <div class="GS_login_form_item">
-                        <button type="button" @click="handleLogin">登录</button>
+                        <button type="button" @click="handleLogin" :disabled="loading">
+                            {{ loading ? '登录中...' : '登录' }}
+                        </button>
                     </div>
                 </div>
                 
@@ -299,7 +336,9 @@ export default {
                         </div>
                     </div>
                     <div class="GS_login_form_item">
-                        <button type="button" @click="handleRegister">注册</button>
+                        <button type="button" @click="handleRegister" :disabled="loading">
+                            {{ loading ? '注册中...' : '注册' }}
+                        </button>
                     </div>
                 </div>
             </div>            

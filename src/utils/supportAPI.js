@@ -348,6 +348,36 @@ export const supportAPI = {
     },
 
     /**
+     * 获取当前用户的所有请求
+     * @param {string} userId - 用户ID
+     * @returns {Promise<{success: boolean, data: Array|null, error: string|null}>} 操作结果
+     */
+    async getUserTickets(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('support_post')
+                .select(`
+                    *,
+                    normal_user (user_name)
+                `)
+                .eq('user_name', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                return this._handleError(error, '获取用户请求列表失败');
+            }
+
+            return {
+                success: true,
+                data,
+                error: null
+            };
+        } catch (err) {
+            return this._handleError(err, '获取用户请求列表时发生错误');
+        }
+    },
+
+    /**
      * 根据ID获取工单详情
      * @param {string} ticketId - 工单ID
      * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 操作结果
