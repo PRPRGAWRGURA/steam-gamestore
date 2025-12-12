@@ -52,9 +52,298 @@ const successMessage = ref('');
 const errorMessage = ref('');
 
 // 修改头像相关状态
+const croppedAvatar = ref(null);
+const openCropper =() => {
+  if (avatarFile.value) {
+    croppedAvatar.value = avatarPreview.value;
+    // 重置裁剪参数
+    resetCropParams();
+  } else {
+    return;
+  }
+}
+const closeCropper =() => {
+  croppedAvatar.value = null;
+}
 const avatarFile = ref(null);
 const avatarPreview = ref('');
 const isUploading = ref(false);
+
+// 裁剪相关状态
+const croppedImage = ref(null);
+const cropFrame = ref(null);
+const previewImage = ref(null);
+const imageContainer = ref(null);
+const isDragging = ref(false);
+const isResizing = ref(false);
+const dragStart = ref({ x: 0, y: 0 });
+const resizeStart = ref({ x: 0, y: 0 });
+const cropParams = ref({ x: 0, y: 0, width: 200, height: 200 });
+const imageInfo = ref({ width: 0, height: 0 });
+const containerInfo = ref({ width: 0, height: 0 });
+const resizeHandle = ref('');
+
+// 初始化裁剪参数
+const resetCropParams = () => {
+  cropParams.value = { x: 0, y: 0, width: 200, height: 200 };
+  isDragging.value = false;
+  isResizing.value = false;
+  resizeHandle.value = '';
+};
+
+// 监听图片加载完成事件
+const onImageLoad = () => {
+  if (croppedImage.value && imageContainer.value) {
+    // 获取图片实际尺寸
+    imageInfo.value = {
+      width: croppedImage.value.naturalWidth,
+      height: croppedImage.value.naturalHeight
+    };
+    
+    // 获取容器尺寸
+    containerInfo.value = {
+      width: imageContainer.value.clientWidth,
+      height: imageContainer.value.clientHeight
+    };
+    
+    // 计算图片在容器中的缩放比例
+    const scale = Math.min(
+      containerInfo.value.width / imageInfo.value.width,
+      containerInfo.value.height / imageInfo.value.height
+    );
+    
+    // 更新图片实际显示尺寸
+    imageInfo.value.displayWidth = imageInfo.value.width * scale;
+    imageInfo.value.displayHeight = imageInfo.value.height * scale;
+    
+    // 计算图片在容器中的偏移量（因为object-fit: contain会居中显示）
+    imageInfo.value.offsetX = (containerInfo.value.width - imageInfo.value.displayWidth) / 2;
+    imageInfo.value.offsetY = (containerInfo.value.height - imageInfo.value.displayHeight) / 2;
+    imageInfo.value.scale = scale;
+    
+    // 初始化裁剪框位置和大小
+    const initialSize = Math.min(200, containerInfo.value.width * 0.6, containerInfo.value.height * 0.6);
+    cropParams.value = {
+      x: (containerInfo.value.width - initialSize) / 2,
+      y: (containerInfo.value.height - initialSize) / 2,
+      width: initialSize,
+      height: initialSize
+    };
+    
+    // 更新裁剪预览
+    updateCropPreview();
+  }
+};
+
+// 开始拖拽
+const startDrag = (e) => {
+  isDragging.value = true;
+  dragStart.value = {
+    x: e.clientX - cropParams.value.x,
+    y: e.clientY - cropParams.value.y
+  };
+  
+  // 添加全局事件监听
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', stopDrag);
+};
+
+// 拖拽中
+const onDrag = (e) => {
+  if (!isDragging.value) return;
+  
+  // 计算新位置
+  let newX = e.clientX - dragStart.value.x;
+  let newY = e.clientY - dragStart.value.y;
+  
+  // 限制裁剪框不超出图片实际显示范围
+  const minX = imageInfo.value.offsetX;
+  const minY = imageInfo.value.offsetY;
+  const maxX = imageInfo.value.offsetX + imageInfo.value.displayWidth - cropParams.value.width;
+  const maxY = imageInfo.value.offsetY + imageInfo.value.displayHeight - cropParams.value.height;
+  
+  newX = Math.max(minX, Math.min(newX, maxX));
+  newY = Math.max(minY, Math.min(newY, maxY));
+  
+  // 更新裁剪参数
+  cropParams.value = {
+    ...cropParams.value,
+    x: newX,
+    y: newY
+  };
+  
+  // 更新预览
+  updateCropPreview();
+};
+
+// 停止拖拽
+const stopDrag = () => {
+  isDragging.value = false;
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+};
+
+// 开始调整大小
+const startResize = (e) => {
+  isResizing.value = true;
+  resizeStart.value = {
+    x: e.clientX,
+    y: e.clientY
+  };
+  resizeHandle.value = e.target.dataset.handle;
+  
+  // 添加全局事件监听
+  document.addEventListener('mousemove', onResize);
+  document.addEventListener('mouseup', stopResize);
+};
+
+// 调整大小中
+const onResize = (e) => {
+  if (!isResizing.value) return;
+  
+  const deltaX = e.clientX - resizeStart.value.x;
+  const deltaY = e.clientY - resizeStart.value.y;
+  
+  // 根据不同手柄位置调整delta方向
+  let adjustedDeltaX = deltaX;
+  let adjustedDeltaY = deltaY;
+  
+  // 左上角和左下角手柄：向左/上移动应该增大裁剪框
+  if (resizeHandle.value.includes('left')) {
+    adjustedDeltaX = -deltaX;
+  }
+  // 左上角和右上角手柄：向上移动应该增大裁剪框
+  if (resizeHandle.value.includes('top')) {
+    adjustedDeltaY = -deltaY;
+  }
+  
+  // 计算新的宽度和高度（保持1:1比例）
+  const deltaSize = Math.abs(adjustedDeltaX) > Math.abs(adjustedDeltaY) ? adjustedDeltaX : adjustedDeltaY;
+  let newWidth = cropParams.value.width + deltaSize;
+  let newHeight = cropParams.value.height + deltaSize;
+  
+  // 限制最小和最大尺寸
+  const minSize = 50;
+  const maxSize = Math.min(containerInfo.value.width, containerInfo.value.height);
+  newWidth = Math.max(minSize, Math.min(newWidth, maxSize));
+  newHeight = newWidth; // 保持1:1比例
+  
+  // 根据拖拽的手柄调整位置
+  let newX = cropParams.value.x;
+  let newY = cropParams.value.y;
+  
+  if (resizeHandle.value.includes('left')) {
+    newX += cropParams.value.width - newWidth;
+  }
+  if (resizeHandle.value.includes('top')) {
+    newY += cropParams.value.height - newHeight;
+  }
+  
+  // 限制裁剪框不超出图片实际显示范围
+  const minX = imageInfo.value.offsetX;
+  const minY = imageInfo.value.offsetY;
+  const maxX = imageInfo.value.offsetX + imageInfo.value.displayWidth - newWidth;
+  const maxY = imageInfo.value.offsetY + imageInfo.value.displayHeight - newHeight;
+  newX = Math.max(minX, Math.min(newX, maxX));
+  newY = Math.max(minY, Math.min(newY, maxY));
+  
+  // 再次检查并限制最大尺寸，确保不超出图片范围
+  const actualMaxWidth = imageInfo.value.displayWidth - (newX - minX);
+  const actualMaxHeight = imageInfo.value.displayHeight - (newY - minY);
+  const finalMaxSize = Math.min(newWidth, actualMaxWidth, actualMaxHeight);
+  newWidth = finalMaxSize;
+  newHeight = finalMaxSize;
+  
+  // 更新裁剪参数
+  cropParams.value = {
+    x: newX,
+    y: newY,
+    width: newWidth,
+    height: newHeight
+  };
+  
+  // 更新预览
+  updateCropPreview();
+  
+  // 更新起始位置
+  resizeStart.value = {
+    x: e.clientX,
+    y: e.clientY
+  };
+};
+
+// 停止调整大小
+const stopResize = () => {
+  isResizing.value = false;
+  resizeHandle.value = '';
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', stopResize);
+};
+
+// 更新裁剪预览
+const updateCropPreview = () => {
+  if (!croppedImage.value || !previewImage.value) return;
+  
+  // 创建canvas用于裁剪
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // 设置canvas尺寸为裁剪框尺寸
+  canvas.width = cropParams.value.width;
+  canvas.height = cropParams.value.height;
+  
+  // 计算裁剪区域在原始图片中的位置和尺寸
+  // 考虑图片在容器中的偏移量和缩放比例
+  const relativeX = cropParams.value.x - imageInfo.value.offsetX;
+  const relativeY = cropParams.value.y - imageInfo.value.offsetY;
+  
+  // 计算原始图片上的坐标
+  const sourceX = relativeX / imageInfo.value.scale;
+  const sourceY = relativeY / imageInfo.value.scale;
+  const sourceWidth = cropParams.value.width / imageInfo.value.scale;
+  const sourceHeight = cropParams.value.height / imageInfo.value.scale;
+  
+  // 执行裁剪
+  ctx.drawImage(
+    croppedImage.value,
+    sourceX, sourceY, sourceWidth, sourceHeight,
+    0, 0, cropParams.value.width, cropParams.value.height
+  );
+  
+  // 将裁剪结果转换为dataURL并设置到预览图片
+  previewImage.value.src = canvas.toDataURL('image/jpeg', 0.82);
+};
+
+// 确认裁剪
+const confirmCrop = () => {
+  if (!previewImage.value || !previewImage.value.src) return;
+  
+  // 将裁剪后的图片设置为新的头像预览
+  avatarPreview.value = previewImage.value.src;
+  
+  // 将DataURL转换为File对象
+  const dataURLtoFile = (dataURL, filename) => {
+    const arr = dataURL.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+  
+  // 生成唯一文件名
+  const timestamp = Date.now();
+  const filename = `avatar_${timestamp}.jpg`;
+  
+  // 转换并赋值
+  avatarFile.value = dataURLtoFile(previewImage.value.src, filename);
+  
+  // 关闭裁剪界面
+  closeCropper();
+};
 
 // 修改用户名相关状态
 const changeNameForm = reactive({
@@ -309,6 +598,24 @@ const uploadAvatar = async () => {
   }
 };
 
+/**
+ * 取消上传头像
+ */
+const cancelUploadAvatar = () => {
+  // 清空文件输入
+  avatarFile.value = null;
+  // 重置头像预览为当前用户头像
+  avatarPreview.value = userStore.currentUser?.user_image || '';
+  // 清空文件输入框
+  const fileInput = document.getElementById('avatarFile');
+  if (fileInput) {
+    fileInput.value = '';
+  }
+  // 清空相关消息
+  errorMessage.value = '';
+  successMessage.value = '';
+};
+
 // ---------------- 修改用户名相关函数 ----------------
 
 /**
@@ -424,7 +731,7 @@ const updateIntroduction = async () => {
     <div class="UserInfoContainer">
       <div class="UserInfoLeft">
         <div class="UserAvatar">
-          <img :src="avatarPreview" alt="当前用户头像" class="UserAvatarImage" />
+          <img :src="currentUser?.user_image" alt="当前用户头像" class="UserAvatarImage" />
         </div>
       </div>
       <div class="UserInfoRight">
@@ -444,27 +751,25 @@ const updateIntroduction = async () => {
           <span class="UserInfoLabel">注册时间:</span>
           <span class="UserInfoValue">{{ currentRegisterTime }}</span>
         </div>
-        <div class="UserInfoItem full-width">
+      </div>
+      <div class="UserInfoItem full-width">
           <span class="UserInfoLabel">个人简介:</span>
           <div class="UserInfoValue introduction">
             {{ currentIntroduction || '暂无简介' }}
           </div>
         </div>
-      </div>
     </div>
   </div>
-
   <!-- 修改头像区域 -->
   <div class="ChangeAvatarSection">
     <h3 class="SectionTitle">修改头像</h3>
     
     <div class="AvatarUploadContainer">
       <!-- 头像预览 -->
-      <div class="AvatarPreview">
-        <div class="AvatarPreviewBorder">预览头像</div>
-        <img :src="avatarPreview" alt="头像预览" class="AvatarImage" />
+      <div class="AvatarPreview" @click="openCropper">
+        <div class="AvatarPreviewBorder">{{ !!avatarFile ? '点击裁剪头像':'预览头像' }}</div>
+        <img :src="avatarPreview" alt="裁剪头像" class="AvatarImage" />
       </div>
-      
       <!-- 上传控件 -->
       <div class="AvatarUploadControls">
         <div class="FileInputContainer">
@@ -478,20 +783,98 @@ const updateIntroduction = async () => {
           <label for="avatarFile" class="FileLabel">
             选择头像
           </label>
+          <button
+            type="button"
+            class="CancelBtn"
+            @click="cancelUploadAvatar"
+            :disabled="isUploading || !avatarFile"
+          >
+            取消上传
+          </button>
         </div>
         
-        <button
-          type="button"
-          class="UploadBtn"
-          @click="uploadAvatar"
-          :disabled="isUploading"
-        >
-          {{ isUploading ? '上传中...' : '上传头像' }}
-        </button>
+        <div class="AvatarActionButtons">
+          <button
+            type="button"
+            class="UploadBtn"
+            @click="uploadAvatar"
+            :disabled="isUploading"
+          >
+            {{ isUploading ? '上传中...' : '上传头像' }}
+          </button>
+          
+          
+        </div>
       </div>
     </div>
   </div>
-
+  <!-- 头像裁剪区域 -->
+  <div v-if="croppedAvatar" class="CropperAvatarSection">
+    <div class="CropperAvatarContainer">
+      <div class="ContainerLeft" ref="imageContainer">
+        <img 
+          :src="croppedAvatar" 
+          class="CroppedAvatarImage" 
+          ref="croppedImage"
+          @load="onImageLoad"
+        />
+        <div 
+          class="CropFrame" 
+          ref="cropFrame"
+          :style="{
+            left: cropParams.x + 'px',
+            top: cropParams.y + 'px',
+            width: cropParams.width + 'px',
+            height: cropParams.height + 'px'
+          }"
+          @mousedown="startDrag"
+        >
+          <div 
+            class="crop-handle top-left" 
+            data-handle="top-left"
+            @mousedown.stop="startResize"
+          ></div>
+          <div 
+            class="crop-handle top-right" 
+            data-handle="top-right"
+            @mousedown.stop="startResize"
+          ></div>
+          <div 
+            class="crop-handle bottom-left" 
+            data-handle="bottom-left"
+            @mousedown.stop="startResize"
+          ></div>
+          <div 
+            class="crop-handle bottom-right" 
+            data-handle="bottom-right"
+            @mousedown.stop="startResize"
+          ></div>
+        </div>
+      </div>
+      <div class="ContainerRight">
+        <button @click="closeCropper" class="action-btn">
+          <img src="/WebResources/close.svg" class="icon action" alt="">
+          <img src="/WebResources/close_red.svg" class="icon close" alt="">
+        </button>
+        <div class="CropperPreview">
+          <img 
+            class="CroppedPreviewImage" 
+            ref="previewImage"
+          />
+          <div class="CropInfo1">
+            裁剪区域：{{ cropParams.width }}px x {{ cropParams.height }}px
+          </div>
+          <div class="CropInfo2">
+            裁剪位置：{{ cropParams.x }}px, {{ cropParams.y }}px
+          </div>
+        </div>
+        <button class="cropping" @click="confirmCrop">
+          确认裁剪
+        </button>
+      </div>
+      
+    </div>
+  </div>
   <!-- 修改用户名区域 -->
   <div class="ChangeNameSection">
     <h3 class="SectionTitle">修改用户名</h3>
@@ -703,7 +1086,8 @@ const updateIntroduction = async () => {
 .ChangeAvatarSection,
 .ChangeNameSection,
 .ChangePasswordSection,
-.ChangeIntroductionSection {
+.ChangeIntroductionSection,
+.CropperAvatarContainer {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -737,12 +1121,11 @@ const updateIntroduction = async () => {
 }
 
 .UserAvatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 50%;
+  width: 160px;
+  height: 160px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
-  border: 3px solid rgba(66, 153, 225, 0.3);
+  border: 2px solid rgba(66, 153, 225, 0.3);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
 }
@@ -767,6 +1150,7 @@ const updateIntroduction = async () => {
 .UserInfoItem {
   display: flex;
   align-items: center;
+  width: 100%;
   gap: 15px;
   margin-bottom: 15px;
   padding: 10px 0;
@@ -1003,7 +1387,8 @@ const updateIntroduction = async () => {
 .SubmitBtn,
 .ResetBtn,
 .UploadBtn,
-.FileLabel {
+.FileLabel,
+.cropping {
   padding: 12px 25px;
   border: none;
   border-radius: 6px;
@@ -1018,7 +1403,8 @@ const updateIntroduction = async () => {
 }
 
 .SubmitBtn::before,
-.UploadBtn::before {
+.UploadBtn::before,
+.cropping::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1030,12 +1416,14 @@ const updateIntroduction = async () => {
 }
 
 .SubmitBtn:hover::before,
-.UploadBtn:hover::before {
+.UploadBtn:hover::before,
+.cropping:hover::before {
   left: 100%;
 }
 
 .SubmitBtn,
-.UploadBtn {
+.UploadBtn,
+.cropping {
   background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
   color: white;
   flex: 1;
@@ -1043,19 +1431,22 @@ const updateIntroduction = async () => {
 }
 
 .SubmitBtn:hover:not(:disabled),
-.UploadBtn:hover:not(:disabled) {
+.UploadBtn:hover:not(:disabled),
+.cropping:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 6px 18px rgba(66, 153, 225, 0.4);
   background: linear-gradient(45deg, #3182ce 0%, #4f46e5 100%);
 }
 
 .SubmitBtn:active:not(:disabled),
-.UploadBtn:active:not(:disabled) {
+.UploadBtn:active:not(:disabled),
+.cropping:active:not(:disabled) {
   transform: translateY(0);
 }
 
 .SubmitBtn:disabled,
-.UploadBtn:disabled {
+.UploadBtn:disabled,
+.cropping:disabled {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.5);
   cursor: not-allowed;
@@ -1088,6 +1479,47 @@ const updateIntroduction = async () => {
   box-shadow: none;
 }
 
+.CancelBtn {
+  position: relative;
+  top: -16.5px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+  text-align: center;
+  height: 43.5px;
+  line-height: 43.5px;
+  min-width: 240px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin-left: 10px;
+}
+
+.CancelBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(231, 76, 60, 0.3);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.CancelBtn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.AvatarActionButtons {
+  display: flex;
+}
+
 /* 头像上传样式 */
 .AvatarUploadContainer {
   display: flex;
@@ -1103,7 +1535,6 @@ const updateIntroduction = async () => {
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
   position: relative;
   display: flex;
   align-items: center;
@@ -1129,21 +1560,180 @@ const updateIntroduction = async () => {
   text-align: center;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
   box-sizing: border-box;
-  color: white;
-  font-size: 14px;
+  color: rgb(255, 255, 255);
+  font-size: 16px;
   font-weight: 500;
-  opacity: 0.8;
+}
+.CropperAvatarSection {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.599);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.CropperAvatarContainer {
+  margin-top: 100px;
+  padding: 0;
+  position: relative;
+  display: flex;
+  width: 1220px;
+  height: 900px;
+  overflow: hidden;
+}
+.ContainerLeft {
+  flex: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+.CroppedAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* 禁止图片被选中和拖动 */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  pointer-events: none;
+}
+.ContainerRight {
+  background-color: #1b2838;
+  flex: 1;
+  height: 100%;
+  position: relative;
 }
 
+/* 裁剪框样式 */
+.CropFrame {
+  position: absolute;
+  border: 2px solid #1a9efe;
+  background-color: rgba(255, 255, 255, 0.1);
+  cursor: move;
+  box-sizing: border-box;
+}
+
+/* 裁剪手柄样式 */
+.crop-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background-color: #1a9efe;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+/* 四个角的手柄位置 */
+.crop-handle.top-left {
+  top: -6px;
+  left: -6px;
+}
+
+.crop-handle.top-right {
+  top: -6px;
+  right: -6px;
+}
+
+.crop-handle.bottom-left {
+  bottom: -6px;
+  left: -6px;
+}
+
+.crop-handle.bottom-right {
+  bottom: -6px;
+  right: -6px;
+}
+
+/* 预览区域样式 */
+.CropperPreview {
+  width: 380px;
+  height: 380px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  border-radius: 8px;
+  position: relative;
+  top: 45%;
+  margin: 0 auto;
+  transform: translateY(-50%);
+  text-align: center;
+  line-height: 700px;
+  font-size: 24px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 预览图片样式 */
+.CroppedPreviewImage {
+  width: 100%;
+  height: 100%;
+}
+.CropInfo1 {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+.CropInfo2 {
+  position: absolute;
+  bottom: -10px;
+  left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+.action-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: white;
+  transition: color 0.3s ease;
+}
+.icon {
+  width: 30px;
+  height: 30px;
+}
+.icon.action {
+  display: block;
+}
+.icon.close {
+  display: none;
+}
+.action-btn:hover .icon.action {
+  display: none;
+}
+.action-btn:hover .icon.close {
+  display: block;
+}
+.cropping {
+  position: absolute;
+  bottom: 20px;
+  width: 300px;
+  left: calc(50% - 150px);
+}
 .AvatarImage {
   width: 100%;
   height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
-}
-
-.AvatarPreview:hover .AvatarImage {
-  transform: scale(1.1);
 }
 
 .AvatarPlaceholder {
@@ -1178,7 +1768,7 @@ const updateIntroduction = async () => {
   background: linear-gradient(45deg, #6b7280 0%, #4b5563 100%);
   color: white;
   text-align: center;
-  min-width: 150px;
+  min-width: 200px;
   transition: all 0.3s ease;
   border: none;
 }
