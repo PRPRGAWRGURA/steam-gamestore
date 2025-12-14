@@ -171,7 +171,7 @@ export default {
     <router-link 
       v-for="game in games" 
       :key="game.id"
-      to="/gamedetail"
+      :to="{ path: '/gamedetail/' + game.id }"
       class="game-card"
       @mouseenter="handleGameHover(game, $event)"
       @mouseleave="handleMouseLeave"

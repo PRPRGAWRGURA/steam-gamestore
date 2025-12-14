@@ -26,6 +26,8 @@ export default {
     const limit = 10 // 减少初始加载的帖子数量，提高加载速度
     const hasMore = ref(true)
     const commentInputs = ref({})
+    // 图片放大显示功能相关状态
+    const enlargedImage = ref(null)
     
     // 默认头像
     const defaultAvatar = '/UserImage/001.png'
@@ -118,6 +120,53 @@ export default {
       return getComments(postId).length
     }
     
+    // 点赞相关状态
+    const likesCount = ref({}); // 存储每个帖子的点赞数量
+    const isLoadingLikes = ref(new Set()); // 存储正在加载点赞的帖子ID
+    
+    // 加载帖子的点赞数量
+    const loadLikesCount = async (postId) => {
+      if (isLoadingLikes.value.has(postId)) return;
+      
+      try {
+        isLoadingLikes.value.add(postId);
+        const response = await communityAPI.getLikesByPostId(postId);
+        
+        if (response.success) {
+          likesCount.value[postId] = response.data.length;
+        } else {
+          console.error('加载点赞数量失败:', response.error);
+          likesCount.value[postId] = 0;
+        }
+      } catch (error) {
+        console.error('加载点赞数量出错:', error);
+        likesCount.value[postId] = 0;
+      } finally {
+        isLoadingLikes.value.delete(postId);
+      }
+    };
+    
+    // 批量加载点赞数量
+    const loadLikesForPosts = async (postIds) => {
+      // 过滤掉已经加载或正在加载的帖子ID
+      const postsToLoad = postIds.filter(id => !likesCount.value[id] && !isLoadingLikes.value.has(id));
+      
+      if (postsToLoad.length > 0) {
+        // 并行加载所有帖子的点赞数量
+        await Promise.all(postsToLoad.map(id => loadLikesCount(id)));
+      }
+    };
+    
+    // 获取点赞数量
+    const getLikesCount = (postId) => {
+      // 如果还没有加载点赞数量，触发加载
+      if (likesCount.value[postId] === undefined) {
+        loadLikesCount(postId);
+        return 0;
+      }
+      return likesCount.value[postId];
+    };
+    
     // 自动调整textarea高度
     const autoResizeTextarea = (event) => {
       const textarea = event.target;
@@ -131,10 +180,13 @@ export default {
       
       loading.value = true
       try {
+        // 获取当前用户ID（使用user_name，因为外键关联的是normal_user表的user_name字段）
+        const currentUserId = store.currentUser?.user_name || null
+        
         const response = await communityAPI.getPosts({
           limit,
           offset: isLoadMore ? offset.value : 0
-        })
+        }, currentUserId)
         
         if (response.success) {
           let updatedPosts = []
@@ -151,7 +203,7 @@ export default {
             updatedPosts = [...tempPosts, ...newPosts]
           }
           
-          // 处理每个帖子的用户信息和点赞状态，确保在设置posts.value之前完成
+          // 处理每个帖子的用户信息，确保在设置posts.value之前完成
           updatedPosts.forEach(post => {
             // 检查是否为当前用户的帖子
             const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
@@ -162,16 +214,7 @@ export default {
               user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (post.normal_user?.user_image || defaultAvatar)
             }
             
-            // 设置点赞数量，从数据库获取
-            post.likes = post.like || 0
-            
-            // 如果用户已登录，从本地存储获取点赞状态
-            if (store.currentUser) {
-              const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${store.currentUser.user_name}`) || '[]')
-              post.liked = likedPosts.includes(post.id)
-            } else {
-              post.liked = false
-            }
+            // 点赞状态已由API返回，无需手动设置
           })
           
           // 重新排序帖子，使其在CSS Columns布局下呈现从左到右、从上到下的视觉效果
@@ -192,6 +235,10 @@ export default {
           
           // 判断是否还有更多数据
           hasMore.value = response.data.length === limit
+          
+          // 批量加载点赞数量
+          const postIds = response.data.map(post => post.id);
+          await loadLikesForPosts(postIds);
           
           // 自动为每个帖子加载评论，但不展开评论区。千万不要删这个
           const newPosts = isLoadMore ? response.data : posts.value
@@ -394,30 +441,50 @@ export default {
       try {
       // 乐观更新：立即更新UI，提升用户体验
       const wasLiked = post.liked;
-      const currentLikes = post.likes || 0;
+      const currentLikes = likesCount.value[postId] || 0;
       
       // 更新本地UI状态
       post.liked = !wasLiked;
-      post.likes = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+      // 使用likesCount状态而不是post.likes
+      likesCount.value[postId] = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+      
+      // 更新本地存储（仍使用id作为标识，确保用户名改变时点赞状态保持一致）
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${currentUser.id}`) || '[]');
+      let updatedLikedPosts;
+      if (post.liked) {
+        updatedLikedPosts = [...new Set([...likedPosts, postId])];
+      } else {
+        updatedLikedPosts = likedPosts.filter(id => id !== postId);
+      }
+      localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(updatedLikedPosts));
       
       // 保存到本地缓存
       savePostsToCache();
       
-      // 异步更新服务器数据
-      const response = await communityAPI.toggleLike(postId, currentUser.user_name);
+      // 异步更新服务器数据（使用user_name作为userId，因为外键关联的是normal_user.user_name）
+      const response = await communityAPI.toggleLike(currentUser.user_name, postId);
       
-      if (!response.success) {
+      if (response.success) {
+        // 服务器更新成功，更新点赞数量
+        likesCount.value[postId] = response.data.likes;
+      } else {
         // 服务器更新失败，回滚UI状态
         post.liked = wasLiked;
-        post.likes = currentLikes;
+        likesCount.value[postId] = currentLikes;
+        
+        // 回滚本地存储
+        localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(likedPosts));
         savePostsToCache();
         alert(response.error || '点赞失败，请稍后重试');
       }
     } catch (error) {
       console.error('点赞出错:', error);
       // 网络错误，回滚UI状态
-      post.liked = !post.liked;
-      post.likes = post.liked ? post.likes + 1 : Math.max(0, post.likes - 1);
+      post.liked = wasLiked;
+      likesCount.value[postId] = currentLikes;
+      
+      // 回滚本地存储
+      localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(likedPosts));
       savePostsToCache();
       alert('网络错误，请稍后重试');
     }
@@ -494,6 +561,17 @@ export default {
       })
     }
     
+    // 图片放大显示功能相关方法
+    // 放大显示指定图片
+    const enlargeImage = (imageUrl) => {
+      enlargedImage.value = imageUrl
+    }
+    
+    // 关闭放大显示的图片
+    const closeImage = () => {
+      enlargedImage.value = null
+    }
+    
     // 添加新帖子（从父组件接收）
     const addNewPost = (newPost) => {
       posts.value.unshift(newPost)
@@ -537,7 +615,17 @@ export default {
       updateTempPost,
       handlePostFailed,
       handleLike,
-      formatContent
+      formatContent,
+      // 点赞相关
+      likesCount,
+      isLoadingLikes,
+      loadLikesCount,
+      loadLikesForPosts,
+      getLikesCount,
+      // 图片放大显示功能相关
+      enlargedImage,
+      enlargeImage,
+      closeImage
     }
   }
 }
@@ -592,6 +680,8 @@ export default {
               :alt="'图片'" 
               class="post-image" 
               loading="lazy"
+              @click="enlargeImage(post.image_url)"
+              style="cursor: pointer;"
             />
           </div>
         </div>
@@ -601,7 +691,7 @@ export default {
           <button class="interaction-btn like-btn" :class="{liked: post.liked}" @click="handleLike(post.id)">
             <img class="icon-like normal" src="/WebResources/likes.svg" alt="点赞" />
             <img class="icon-like active" src="/WebResources/likes_click.svg" alt="点赞" />
-            <span class="interaction-count">{{ post.likes || 0 }}</span>
+            <span class="interaction-count">{{ getLikesCount(post.id) }}</span>
           </button>
           <button class="interaction-btn comment-btn" :class="{active: isCommentsVisible(post.id)}" @click="toggleComments(post.id)">
             <img class="icon-comment normal" src="/WebResources/comment.svg" alt="评论" />
@@ -678,6 +768,16 @@ export default {
     <!-- 加载更多按钮 -->
       <div class="load-more-section" v-if="hasMore && !loading">
         <button @click="loadMorePosts" class="load-more-btn">加载更多</button>
+      </div>
+      
+      <!-- 图片放大显示模态框 -->
+      <div v-if="enlargedImage" class="image-modal" @click="closeImage">
+        <div class="image-modal-content" @click.stop>
+          <span class="close-button" @click="closeImage">
+            <img src="/WebResources/close.svg" alt="关闭" class="close-icon">
+          </span>
+          <img :src="enlargedImage" alt="放大图片" class="enlarged-image">
+        </div>
       </div>
   </div>
 </template>
@@ -1067,5 +1167,71 @@ export default {
 
 .load-more-btn:hover {
   background-color: #345f7fb6;
+}
+
+/* 图片放大显示功能样式 */
+/* 模态框背景 */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  cursor: pointer;
+}
+
+/* 图片容器 */
+.image-modal-content {
+  background-color: #171a21;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  cursor: default;
+}
+
+/* 放大图片 */
+.enlarged-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+/* 关闭按钮 */
+.close-button {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.close-button:hover {
+  background-color: #dc3545;
+  transform: scale(1.1);
+}
+
+.close-icon {
+  width: 16px;
+  height: 16px;
 }
 </style>

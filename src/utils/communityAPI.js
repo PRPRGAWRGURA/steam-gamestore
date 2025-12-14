@@ -328,27 +328,58 @@ export const communityAPI = {
    * @param {Object} options - 查询选项
    * @param {number} options.limit - 返回数量限制
    * @param {number} options.offset - 偏移量
+   * @param {string|null} userId - 当前用户ID，用于获取点赞状态
    * @returns {Promise<{success: boolean, data: Array|null, error: string|null}>} 操作结果
    */
-  async getPosts(options = { limit: 20, offset: 0 }) {
+  async getPosts(options = { limit: 20, offset: 0 }, userId = null) {
     try {
-      const { data, error } = await supabase
+      const { data: posts, error: postsError } = await supabase
         .from('community_post')
         .select(`
-          *, 
+          *,
           normal_user (user_name, user_image)
         `)
         .order('created_at', { ascending: false })
         .limit(options.limit)
         .range(options.offset, options.offset + options.limit - 1)
 
-      if (error) {
-        return this._handleError(error, '获取消息列表失败')
+      if (postsError) {
+        return this._handleError(postsError, '获取消息列表失败')
+      }
+
+      // 如果提供了userId，获取每个帖子的点赞状态
+      if (userId) {
+        // 获取当前用户对这些帖子的点赞记录
+        const postIds = posts.map(post => post.id)
+        
+        const { data: likes, error: likesError } = await supabase
+          .from('community_like')
+          .select('post_id')
+          .eq('user_id', userId)
+          .in('post_id', postIds)
+
+        if (likesError) {
+          console.error('获取点赞状态失败:', likesError)
+          // 继续执行，不影响帖子列表的获取
+        } else {
+          // 构建点赞的帖子ID集合
+          const likedPostIds = new Set(likes.map(like => like.post_id))
+          
+          // 为每个帖子添加liked字段
+          posts.forEach(post => {
+            post.liked = likedPostIds.has(post.id)
+          })
+        }
+      } else {
+        // 如果没有提供userId，默认设置为未点赞
+        posts.forEach(post => {
+          post.liked = false
+        })
       }
 
       return {
         success: true,
-        data,
+        data: posts,
         error: null
       }
     } catch (err) {
@@ -596,66 +627,83 @@ export const communityAPI = {
 
   /**
    * 切换帖子点赞状态
+   * @param {string} userId - 用户ID（外键关联normal_user.user_name）
    * @param {string} postId - 帖子ID
-   * @param {string} userId - 用户ID
    * @returns {Promise<{success: boolean, data: {liked: boolean, likes: number}, error: string|null}>} 操作结果
    */
-  async toggleLike(postId, userId) {
+  async toggleLike(userId, postId) {
     try {
-      // 1. 从本地存储获取用户点赞状态
-      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
-      const isLiked = likedPosts.includes(postId);
-      
-      // 2. 获取当前帖子点赞数量
-      const { data: post, error: getError } = await supabase
-        .from('community_post')
-        .select('id, like')
-        .eq('id', postId)
+      // 1. 检查用户是否已点赞
+      const { data: existingLike, error: checkError } = await supabase
+        .from('community_like')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .limit(1)
         .single();
 
-      if (getError) {
-        return this._handleError(getError, '获取帖子信息失败')
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116是未找到记录的错误码
+        return this._handleError(checkError, '检查点赞状态失败')
       }
 
-      if (!post) {
-        return this._handleError(new Error('帖子不存在'), '帖子不存在')
-      }
-
-      // 3. 计算新的点赞数量
-      const currentLikes = post.like || 0;
-      let newLikes;
       let newLiked = false;
-      let updatedLikedPosts;
 
-      if (isLiked) {
-        // 取消点赞，点赞数减1
-        newLikes = Math.max(0, currentLikes - 1);
-        updatedLikedPosts = likedPosts.filter(id => id !== postId);
+      if (existingLike) {
+        // 2. 已点赞，取消点赞
+        const { error: deleteError } = await supabase
+          .from('community_like')
+          .delete()
+          .eq('id', existingLike.id);
+
+        if (deleteError) {
+          return this._handleError(deleteError, '取消点赞失败')
+        }
       } else {
-        // 添加点赞，点赞数加1
-        newLikes = currentLikes + 1;
+        // 3. 未点赞，添加点赞
+        const { error: insertError } = await supabase
+          .from('community_like')
+          .insert([{
+            post_id: postId,
+            user_id: userId,
+            created_at: new Date().toISOString()
+          }]);
+
+        if (insertError) {
+          return this._handleError(insertError, '添加点赞失败')
+        }
         newLiked = true;
-        updatedLikedPosts = [...likedPosts, postId];
       }
 
-      // 4. 更新本地存储
+      // 4. 获取更新后的点赞数量
+      const { data: likesCount, error: countError } = await supabase
+        .from('community_like')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', postId);
+
+      if (countError) {
+        return this._handleError(countError, '获取点赞数量失败')
+      }
+
+      // 不再更新community_post表中的likes字段，直接从community_like表统计
+
+      // 6. 更新本地存储的点赞状态
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
+      let updatedLikedPosts;
+      
+      if (newLiked) {
+        // 添加到本地存储
+        updatedLikedPosts = [...new Set([...likedPosts, postId])];
+      } else {
+        // 从本地存储移除
+        updatedLikedPosts = likedPosts.filter(id => id !== postId);
+      }
       localStorage.setItem(`liked_posts_${userId}`, JSON.stringify(updatedLikedPosts));
-
-      // 5. 更新服务器点赞数量
-      const { error: updateError } = await supabase
-        .from('community_post')
-        .update({ like: newLikes })
-        .eq('id', postId);
-
-      if (updateError) {
-        return this._handleError(updateError, '更新点赞数量失败')
-      }
 
       return {
         success: true,
         data: {
           liked: newLiked,
-          likes: newLikes
+          likes: likesCount
         },
         error: null
       }
@@ -666,37 +714,77 @@ export const communityAPI = {
 
   /**
    * 获取帖子的点赞状态
-   * @param {string} postId - 帖子ID
    * @param {string} userId - 用户ID
+   * @param {string} postId - 帖子ID
    * @returns {Promise<{success: boolean, data: {liked: boolean, likes: number}, error: string|null}>} 操作结果
    */
-  async getLikeStatus(postId, userId) {
+  async getLikeStatus(userId, postId) {
     try {
-      // 1. 从本地存储获取点赞状态
-      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
-      const isLiked = likedPosts.includes(postId);
-      
-      // 2. 获取当前帖子点赞数量
-      const { data: post, error: getError } = await supabase
-        .from('community_post')
-        .select('id, like')
-        .eq('id', postId)
+      // 1. 检查用户是否已点赞
+      const { data: existingLike, error: checkError } = await supabase
+        .from('community_like')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', userId)
+        .limit(1)
         .single();
 
-      if (getError) {
-        return this._handleError(getError, '获取帖子信息失败')
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116是未找到记录的错误码
+        return this._handleError(checkError, '检查点赞状态失败')
+      }
+
+      const isLiked = !!existingLike;
+
+      // 2. 获取点赞数量
+      const { data: likesCount, error: countError } = await supabase
+        .from('community_like')
+        .select('id', { count: 'exact', head: true })
+        .eq('post_id', postId);
+
+      if (countError) {
+        return this._handleError(countError, '获取点赞数量失败')
       }
 
       return {
         success: true,
         data: {
           liked: isLiked,
-          likes: post.like || 0
+          likes: likesCount || 0
         },
         error: null
       }
     } catch (err) {
       return this._handleError(err, '获取点赞状态时发生错误')
+    }
+  },
+
+  /**
+   * 获取帖子的点赞列表
+   * @param {string} postId - 帖子ID
+   * @returns {Promise<{success: boolean, data: Array, error: string|null}>} 操作结果
+   */
+  async getLikesByPostId(postId) {
+    try {
+      const { data, error } = await supabase
+        .from('community_like')
+        .select(`
+          *, 
+          normal_user (user_name, user_image)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        return this._handleError(error, '获取点赞列表失败')
+      }
+
+      return {
+        success: true,
+        data,
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '获取点赞列表时发生错误')
     }
   }
 }

@@ -90,10 +90,7 @@ export const useUserStore = defineStore('user', {
       // 清除记住密码相关缓存
       localStorage.removeItem('rememberedUsername')
       localStorage.removeItem('rememberedPassword')
-      
-      // 如果有当前用户信息，清除其点赞状态缓存
-      // 注意：这里this.currentUser已经为null，所以不需要在这里处理点赞缓存
-      // 点赞缓存的清除需要在调用logout之前处理
+    
     }
   }
 })

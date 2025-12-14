@@ -53,10 +53,10 @@ const routes = [
         name: 'Useritem',
         component: Useritem
       },
-      {
-        path: '/gamedetail',
-        name: 'GameDetail',
-        component: GameDetail
+      {        
+        path: '/gamedetail/:id?',
+        name: 'GameDetail',        
+        component: GameDetail      
       },
     ]
   },
