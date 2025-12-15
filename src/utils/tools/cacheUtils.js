@@ -1,5 +1,9 @@
 // 缓存工具函数
 
+// 社区帖子缓存常量
+export const COMMUNITY_POSTS_CACHE_KEY = 'community_posts'
+export const COMMUNITY_POSTS_CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
+
 /**
  * 设置缓存
  * @param {string} key - 缓存键
@@ -65,4 +69,27 @@ export const removeItemFromListCache = (listKey, itemId, expireTime) => {
     const updatedList = listData.filter(item => item.id !== itemId)
     setCache(listKey, updatedList, expireTime)
   }
+}
+
+/**
+ * 社区帖子缓存管理方法
+ */
+// 从缓存加载社区帖子
+export const loadPostsFromCache = () => {
+  return getCache(COMMUNITY_POSTS_CACHE_KEY)
+}
+
+// 保存社区帖子到缓存
+export const savePostsToCache = (posts) => {
+  setCache(COMMUNITY_POSTS_CACHE_KEY, posts, COMMUNITY_POSTS_CACHE_EXPIRE_TIME)
+}
+
+// 删除社区帖子缓存
+export const removePostsCache = () => {
+  removeCache(COMMUNITY_POSTS_CACHE_KEY)
+}
+
+// 从社区帖子缓存中移除指定帖子
+export const removePostFromCache = (postId) => {
+  removeItemFromListCache(COMMUNITY_POSTS_CACHE_KEY, postId, COMMUNITY_POSTS_CACHE_EXPIRE_TIME)
 }

@@ -5,7 +5,7 @@ import GS_container from '@/componets/GS_container.vue';
 import { useUserStore } from '@/stores/userStore';
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { normalUserAPI } from '@/utils/normalUserAPI';
+import { normalUserAPI } from '@/utils/api/normalUserAPI';
 
 export default {
   name: 'AboutView',

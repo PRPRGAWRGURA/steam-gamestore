@@ -1,8 +1,8 @@
 <script>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
-import { communityAPI } from '../utils/communityAPI'
-import { setCache, getCache } from '../utils/cacheUtils'
+import { communityAPI } from '../utils/api/communityAPI'
+import { loadPostsFromCache, savePostsToCache } from '../utils/tools/cacheUtils'
 
 export default {
   name: 'PostList',
@@ -25,7 +25,7 @@ export default {
     const visibleComments = ref(new Set())
     const offset = ref(0)
     // 优化加载策略：初始加载30条，后续每次加载20条
-    const initialLimit = 30 // 初始加载30条，减少用户初期的加载次数
+    const initialLimit = 20 // 初始加载20条，减少用户初期的加载次数
     const loadMoreLimit = 20 // 后续每次加载20条，平衡加载速度和数据量
     const hasMore = ref(true)
     const commentInputs = ref({})
@@ -35,23 +35,14 @@ export default {
     // 默认头像
     const defaultAvatar = '/UserImage/001.png'
     
-    // 缓存配置
-    const CACHE_KEY = 'community_posts'
-    const CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
-    
     // 从本地缓存加载帖子
-    const loadPostsFromCache = () => {
-      const cachedPosts = getCache(CACHE_KEY)
+    const loadPostsFromCacheLocal = () => {
+      const cachedPosts = loadPostsFromCache()
       if (cachedPosts) {
         posts.value = cachedPosts
         // 设置offset为缓存帖子的数量，确保下次加载更多时从正确位置开始
         offset.value = cachedPosts.length
       }
-    }
-    
-    // 保存帖子到本地缓存
-    const savePostsToCache = () => {
-      setCache(CACHE_KEY, posts.value, CACHE_EXPIRE_TIME)
     }
     
     // 判断是否为当前用户
@@ -159,7 +150,7 @@ export default {
           })
           
           // 保存到本地缓存
-          savePostsToCache()
+          savePostsToCache(posts.value)
           
           // 向父组件发送事件
           emit('postsLoaded', posts.value)
@@ -182,7 +173,7 @@ export default {
         // API已经返回完整的帖子数据，直接替换
         posts.value[index] = realPost
         // 保存到缓存
-        savePostsToCache()
+        savePostsToCache(posts.value)
       }
     }
     
@@ -197,7 +188,7 @@ export default {
         // 从列表中移除失败的临时帖子
         posts.value.splice(index, 1)
         // 保存到缓存
-        savePostsToCache()
+        savePostsToCache(posts.value)
         
         // 根据错误信息显示不同的提示
         let errorMessage = '消息发布失败，请稍后重试';
@@ -348,6 +339,8 @@ export default {
           post.liked = response.data.liked;
           post.likes_count = response.data.likes_count;
           post.comments_count = response.data.comments_count;
+          // 更新缓存
+          savePostsToCache(posts.value);
         } else {
           // 服务器更新失败，回滚UI状态
           post.liked = wasLiked;
@@ -379,6 +372,8 @@ export default {
           delete comments.value[postId]
           // 移除可见状态
           visibleComments.value.delete(postId)
+          // 更新缓存
+          savePostsToCache(posts.value)
           
           alert('删除成功！')
         } else {
@@ -412,6 +407,8 @@ export default {
             const post = posts.value.find(p => p.id === response.data.post_id)
             if (post) {
               post.comments_count = response.data.comments_count
+              // 更新缓存
+              savePostsToCache(posts.value)
             }
           }
           
@@ -456,7 +453,7 @@ export default {
     // 组件挂载时加载帖子
     onMounted(() => {
       // 先从本地缓存加载数据
-      loadPostsFromCache()
+      loadPostsFromCacheLocal()
       
       // 如果缓存中有数据，延迟2秒后再从服务器获取最新数据，避免阻塞初始渲染
       // 如果缓存中没有数据，立即从服务器获取数据
@@ -572,7 +569,7 @@ export default {
           </div>
         </div>
         
-        <!-- B站风格互动栏 -->
+        <!-- 互动栏 -->
         <div class="post-interaction-bar">
           <button class="interaction-btn like-btn" :class="{liked: post.liked}" @click="handleLike(post.id)">
             <img class="icon-like normal" src="/WebResources/likes.svg" alt="点赞" />
@@ -760,13 +757,7 @@ export default {
   transition: background-color 0.3s;
 }
 
-.edit-btn {
-  background-color: #e0e0e0;
-}
 
-.edit-btn:hover {
-  background-color: #d0d0d0;
-}
 
 .delete-btn {
   background-color: transparent;
@@ -824,28 +815,16 @@ export default {
   word-break: break-word;
 }
 
-/* 链接样式 */
-.post-link {
-  color: #499deb;
-  text-decoration: underline;
-  word-break: break-all;
-  transition: color 0.3s ease;
-}
 
-.post-link:hover {
-  color: #6bb7ff;
-}
 
 .post-image {
   max-width: 100%;
   transition: all 0.3s ease;
   opacity: 0;
-  transform: scale(1.02);
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .post-image:hover {
-  transform: scale(1.01);
   box-shadow: 0 0 10px rgba(41, 104, 163, 0.34);
 }
 
@@ -858,7 +837,6 @@ export default {
 
 .image-placeholder {
   width: 100%;
-  aspect-ratio: 16/9;
   background-color: #1a1a1a;
   display: flex;
   align-items: center;

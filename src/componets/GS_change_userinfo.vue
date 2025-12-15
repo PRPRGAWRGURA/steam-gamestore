@@ -1,7 +1,16 @@
 <script setup>
-import normalUserAPI from '@/utils/normalUserAPI';
+import normalUserAPI from '@/utils/api/normalUserAPI';
 import { useUserStore } from '@/stores/userStore';
-import { computed, ref, reactive } from 'vue';
+import { computed, ref, reactive, onUnmounted } from 'vue';
+import { ImageCropper } from '@/utils/tools/canvasAPI';
+// 导入验证工具函数
+import {
+  validatePassword,
+  validateConfirmPassword,
+  validateUsername,
+  validateIntroduction,
+  validateImageFile
+} from '@/utils/tools/validation';
 
 const userStore = useUserStore();
 
@@ -71,7 +80,6 @@ const isUploading = ref(false);
 
 // 裁剪相关状态
 const croppedImage = ref(null);
-const cropFrame = ref(null);
 const previewImage = ref(null);
 const imageContainer = ref(null);
 const isDragging = ref(false);
@@ -79,13 +87,15 @@ const isResizing = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
 const resizeStart = ref({ x: 0, y: 0 });
 const cropParams = ref({ x: 0, y: 0, width: 200, height: 200 });
-const imageInfo = ref({ width: 0, height: 0 });
-const containerInfo = ref({ width: 0, height: 0 });
 const resizeHandle = ref('');
+
+// 创建裁剪器实例
+const cropper = new ImageCropper();
 
 // 初始化裁剪参数
 const resetCropParams = () => {
-  cropParams.value = { x: 0, y: 0, width: 200, height: 200 };
+  cropper.reset();
+  cropParams.value = cropper.getCropParams();
   isDragging.value = false;
   isResizing.value = false;
   resizeHandle.value = '';
@@ -94,43 +104,11 @@ const resetCropParams = () => {
 // 监听图片加载完成事件
 const onImageLoad = () => {
   if (croppedImage.value && imageContainer.value) {
-    // 获取图片实际尺寸
-    imageInfo.value = {
-      width: croppedImage.value.naturalWidth,
-      height: croppedImage.value.naturalHeight
-    };
-    
-    // 获取容器尺寸
-    containerInfo.value = {
-      width: imageContainer.value.clientWidth,
-      height: imageContainer.value.clientHeight
-    };
-    
-    // 计算图片在容器中的缩放比例
-    const scale = Math.min(
-      containerInfo.value.width / imageInfo.value.width,
-      containerInfo.value.height / imageInfo.value.height
-    );
-    
-    // 更新图片实际显示尺寸
-    imageInfo.value.displayWidth = imageInfo.value.width * scale;
-    imageInfo.value.displayHeight = imageInfo.value.height * scale;
-    
-    // 计算图片在容器中的偏移量（因为object-fit: contain会居中显示）
-    imageInfo.value.offsetX = (containerInfo.value.width - imageInfo.value.displayWidth) / 2;
-    imageInfo.value.offsetY = (containerInfo.value.height - imageInfo.value.displayHeight) / 2;
-    imageInfo.value.scale = scale;
-    
-    // 初始化裁剪框位置和大小
-    const initialSize = Math.min(200, containerInfo.value.width * 0.6, containerInfo.value.height * 0.6);
-    cropParams.value = {
-      x: (containerInfo.value.width - initialSize) / 2,
-      y: (containerInfo.value.height - initialSize) / 2,
-      width: initialSize,
-      height: initialSize
-    };
-    
-    // 更新裁剪预览
+    // 使用裁剪器初始化
+    cropper.init(croppedImage.value, imageContainer.value);
+    // 更新裁剪参数
+    cropParams.value = cropper.getCropParams();
+    // 更新预览
     updateCropPreview();
   }
 };
@@ -152,25 +130,13 @@ const startDrag = (e) => {
 const onDrag = (e) => {
   if (!isDragging.value) return;
   
-  // 计算新位置
-  let newX = e.clientX - dragStart.value.x;
-  let newY = e.clientY - dragStart.value.y;
+  // 计算拖拽距离
+  const deltaX = e.clientX - (dragStart.value.x + cropParams.value.x);
+  const deltaY = e.clientY - (dragStart.value.y + cropParams.value.y);
   
-  // 限制裁剪框不超出图片实际显示范围
-  const minX = imageInfo.value.offsetX;
-  const minY = imageInfo.value.offsetY;
-  const maxX = imageInfo.value.offsetX + imageInfo.value.displayWidth - cropParams.value.width;
-  const maxY = imageInfo.value.offsetY + imageInfo.value.displayHeight - cropParams.value.height;
-  
-  newX = Math.max(minX, Math.min(newX, maxX));
-  newY = Math.max(minY, Math.min(newY, maxY));
-  
-  // 更新裁剪参数
-  cropParams.value = {
-    ...cropParams.value,
-    x: newX,
-    y: newY
-  };
+  // 使用裁剪器计算新位置
+  const newParams = cropper.calculateDragPosition(deltaX, deltaY);
+  cropParams.value = newParams;
   
   // 更新预览
   updateCropPreview();
@@ -201,66 +167,13 @@ const startResize = (e) => {
 const onResize = (e) => {
   if (!isResizing.value) return;
   
+  // 计算调整距离
   const deltaX = e.clientX - resizeStart.value.x;
   const deltaY = e.clientY - resizeStart.value.y;
   
-  // 根据不同手柄位置调整delta方向
-  let adjustedDeltaX = deltaX;
-  let adjustedDeltaY = deltaY;
-  
-  // 左上角和左下角手柄：向左/上移动应该增大裁剪框
-  if (resizeHandle.value.includes('left')) {
-    adjustedDeltaX = -deltaX;
-  }
-  // 左上角和右上角手柄：向上移动应该增大裁剪框
-  if (resizeHandle.value.includes('top')) {
-    adjustedDeltaY = -deltaY;
-  }
-  
-  // 计算新的宽度和高度（保持1:1比例）
-  const deltaSize = Math.abs(adjustedDeltaX) > Math.abs(adjustedDeltaY) ? adjustedDeltaX : adjustedDeltaY;
-  let newWidth = cropParams.value.width + deltaSize;
-  let newHeight = cropParams.value.height + deltaSize;
-  
-  // 限制最小和最大尺寸
-  const minSize = 50;
-  const maxSize = Math.min(containerInfo.value.width, containerInfo.value.height);
-  newWidth = Math.max(minSize, Math.min(newWidth, maxSize));
-  newHeight = newWidth; // 保持1:1比例
-  
-  // 根据拖拽的手柄调整位置
-  let newX = cropParams.value.x;
-  let newY = cropParams.value.y;
-  
-  if (resizeHandle.value.includes('left')) {
-    newX += cropParams.value.width - newWidth;
-  }
-  if (resizeHandle.value.includes('top')) {
-    newY += cropParams.value.height - newHeight;
-  }
-  
-  // 限制裁剪框不超出图片实际显示范围
-  const minX = imageInfo.value.offsetX;
-  const minY = imageInfo.value.offsetY;
-  const maxX = imageInfo.value.offsetX + imageInfo.value.displayWidth - newWidth;
-  const maxY = imageInfo.value.offsetY + imageInfo.value.displayHeight - newHeight;
-  newX = Math.max(minX, Math.min(newX, maxX));
-  newY = Math.max(minY, Math.min(newY, maxY));
-  
-  // 再次检查并限制最大尺寸，确保不超出图片范围
-  const actualMaxWidth = imageInfo.value.displayWidth - (newX - minX);
-  const actualMaxHeight = imageInfo.value.displayHeight - (newY - minY);
-  const finalMaxSize = Math.min(newWidth, actualMaxWidth, actualMaxHeight);
-  newWidth = finalMaxSize;
-  newHeight = finalMaxSize;
-  
-  // 更新裁剪参数
-  cropParams.value = {
-    x: newX,
-    y: newY,
-    width: newWidth,
-    height: newHeight
-  };
+  // 使用裁剪器计算新尺寸
+  const newParams = cropper.calculateResizeParams(deltaX, deltaY, resizeHandle.value);
+  cropParams.value = newParams;
   
   // 更新预览
   updateCropPreview();
@@ -284,62 +197,28 @@ const stopResize = () => {
 const updateCropPreview = () => {
   if (!croppedImage.value || !previewImage.value) return;
   
-  // 创建canvas用于裁剪
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  // 设置canvas尺寸为裁剪框尺寸
-  canvas.width = cropParams.value.width;
-  canvas.height = cropParams.value.height;
-  
-  // 计算裁剪区域在原始图片中的位置和尺寸
-  // 考虑图片在容器中的偏移量和缩放比例
-  const relativeX = cropParams.value.x - imageInfo.value.offsetX;
-  const relativeY = cropParams.value.y - imageInfo.value.offsetY;
-  
-  // 计算原始图片上的坐标
-  const sourceX = relativeX / imageInfo.value.scale;
-  const sourceY = relativeY / imageInfo.value.scale;
-  const sourceWidth = cropParams.value.width / imageInfo.value.scale;
-  const sourceHeight = cropParams.value.height / imageInfo.value.scale;
-  
-  // 执行裁剪
-  ctx.drawImage(
-    croppedImage.value,
-    sourceX, sourceY, sourceWidth, sourceHeight,
-    0, 0, cropParams.value.width, cropParams.value.height
-  );
-  
-  // 将裁剪结果转换为dataURL并设置到预览图片
-  previewImage.value.src = canvas.toDataURL('image/jpeg', 0.82);
+  // 使用裁剪器执行裁剪
+  const croppedDataURL = cropper.cropImage(croppedImage.value);
+  if (croppedDataURL) {
+    previewImage.value.src = croppedDataURL;
+  }
 };
 
 // 确认裁剪
 const confirmCrop = () => {
-  if (!previewImage.value || !previewImage.value.src) return;
+  if (!croppedImage.value) return;
+  
+  // 使用裁剪器执行最终裁剪
+  const croppedDataURL = cropper.cropImage(croppedImage.value);
+  if (!croppedDataURL) return;
   
   // 将裁剪后的图片设置为新的头像预览
-  avatarPreview.value = previewImage.value.src;
+  avatarPreview.value = croppedDataURL;
   
-  // 将DataURL转换为File对象
-  const dataURLtoFile = (dataURL, filename) => {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  };
-  
-  // 生成唯一文件名
+  // 使用裁剪器将DataURL转换为File对象
   const timestamp = Date.now();
   const filename = `avatar_${timestamp}.jpg`;
-  
-  // 转换并赋值
-  avatarFile.value = dataURLtoFile(previewImage.value.src, filename);
+  avatarFile.value = cropper.dataURLtoFile(croppedDataURL, filename);
   
   // 关闭裁剪界面
   closeCropper();
@@ -372,50 +251,6 @@ if (currentUser.value?.user_image) {
 }
 
 /**
- * 验证密码格式
- * @param {string} password - 要验证的密码
- * @returns {string} 错误信息，为空表示验证通过
- */
-const validatePassword = (password) => {
-  // 检查长度
-  if (password.length < 8) {
-    return '密码长度至少为8个字符';
-  }
-  if (password.length > 25) {
-    return '密码长度不能超过25个字符';
-  }
-  
-  // 检查是否包含字母
-  if (!/[a-zA-Z]/.test(password)) {
-    return '密码必须包含至少一个字母';
-  }
-  
-  // 检查是否包含数字
-  if (!/[0-9]/.test(password)) {
-    return '密码必须包含至少一个数字';
-  }
-  
-  // 检查是否包含特殊字符
-  if (!/[^a-zA-Z0-9]/.test(password)) {
-    return '密码必须包含至少一个特殊字符';
-  }
-  
-  return '';
-};
-
-/**
- * 验证确认密码是否与新密码一致
- * @returns {string} 错误信息，为空表示验证通过
- */
-const validateConfirmPassword = () => {
-  if (passwordForm.newPassword && 
-      passwordForm.confirmPassword !== passwordForm.newPassword) {
-    return '两次输入的新密码不一致';
-  }
-  return '';
-};
-
-/**
  * 处理密码输入，实时验证
  * @param {string} field - 字段名
  * @param {string} value - 输入值
@@ -427,9 +262,15 @@ const handlePasswordInput = (field, value) => {
   if (field === 'newPassword') {
     passwordValidationErrors.newPassword = validatePassword(value);
     // 重新验证确认密码
-    passwordValidationErrors.confirmPassword = validateConfirmPassword();
+    passwordValidationErrors.confirmPassword = validateConfirmPassword(
+      passwordForm.newPassword, 
+      passwordForm.confirmPassword
+    );
   } else if (field === 'confirmPassword') {
-    passwordValidationErrors.confirmPassword = validateConfirmPassword();
+    passwordValidationErrors.confirmPassword = validateConfirmPassword(
+      passwordForm.newPassword, 
+      passwordForm.confirmPassword
+    );
   }
 };
 
@@ -547,6 +388,13 @@ const submitChangePassword = async () => {
 const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
+    // 验证图片文件
+    const validationError = validateImageFile(file, 5); // 限制5MB
+    if (validationError) {
+      errorMessage.value = validationError;
+      return;
+    }
+    
     avatarFile.value = file;
     // 预览图片
     const reader = new FileReader();
@@ -587,6 +435,11 @@ const uploadAvatar = async () => {
       successMessage.value = '头像更新成功';
       // 清空文件输入
       avatarFile.value = null;
+      // 清空文件输入框
+      const fileInput = document.getElementById('avatarFile');
+      if (fileInput) {
+        fileInput.value = '';
+      }
     } else {
       errorMessage.value = result.error || '头像更新失败';
     }
@@ -597,6 +450,15 @@ const uploadAvatar = async () => {
     isUploading.value = false;
   }
 };
+
+// 组件卸载时清理事件监听
+onUnmounted(() => {
+  // 清理拖拽和调整大小的事件监听
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', stopDrag);
+  document.removeEventListener('mousemove', onResize);
+  document.removeEventListener('mouseup', stopResize);
+});
 
 /**
  * 取消上传头像
@@ -624,10 +486,9 @@ const cancelUploadAvatar = () => {
  */
 const validateChangeNameForm = () => {
   let isValid = true;
-  nameValidationErrors.newUserName = '';
-
-  if (!changeNameForm.newUserName.trim()) {
-    nameValidationErrors.newUserName = '请输入新用户名';
+  nameValidationErrors.newUserName = validateUsername(changeNameForm.newUserName);
+  
+  if (nameValidationErrors.newUserName) {
     isValid = false;
   }
 
@@ -681,8 +542,12 @@ const changeUserName = async () => {
  */
 const updateIntroduction = async () => {
   // 验证简介长度
-  if (introductionForm.newIntroduction.length > 200) {
-    introductionValidationErrors.newIntroduction = '简介不能超过200字';
+  introductionValidationErrors.newIntroduction = validateIntroduction(
+    introductionForm.newIntroduction, 
+    200
+  );
+  
+  if (introductionValidationErrors.newIntroduction) {
     return;
   }
   
@@ -820,7 +685,6 @@ const updateIntroduction = async () => {
         />
         <div 
           class="CropFrame" 
-          ref="cropFrame"
           :style="{
             left: cropParams.x + 'px',
             top: cropParams.y + 'px',

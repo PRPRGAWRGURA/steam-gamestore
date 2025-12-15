@@ -1,6 +1,11 @@
 <script>
-import { normalUserAPI } from '@/utils/normalUserAPI'
+import { normalUserAPI } from '@/utils/api/normalUserAPI'
 import { useUserStore } from '@/stores/userStore'
+// 导入验证工具函数
+import {
+  validatePassword,
+  validateUsername
+} from '@/utils/tools/validation'
 export default {
     data() {
         return {
@@ -62,40 +67,21 @@ export default {
             this.focusStates[field] = isFocused;
         },
         
-        // 验证用户名
+        // 直接使用导入的验证函数，不再需要本地实现
+        
+        // 验证用户名 - 使用导入的验证函数
         validateUsername(username) {
-            if (username.length > 12) {
+            const error = validateUsername(username);
+            // 额外添加账号长度限制（不超过12个字符）
+            if (!error && username.length > 12) {
                 return '账号名称不能超过12个字符';
             }
-            return '';
+            return error;
         },
         
-        // 验证密码
+        // 验证密码 - 直接使用导入的验证函数
         validatePassword(password) {
-            // 检查长度
-            if (password.length < 8) {
-                return '密码长度至少为8个字符';
-            }
-            if (password.length > 25) {
-                return '密码长度不能超过25个字符';
-            }
-            
-            // 检查是否包含字母
-            if (!/[a-zA-Z]/.test(password)) {
-                return '密码必须包含至少一个字母';
-            }
-            
-            // 检查是否包含数字
-            if (!/[0-9]/.test(password)) {
-                return '密码必须包含至少一个数字';
-            }
-            
-            // 检查是否包含特殊字符
-            if (!/[^a-zA-Z0-9]/.test(password)) {
-                return '密码必须包含至少一个特殊字符';
-            }
-            
-            return '';
+            return validatePassword(password);
         },
         
         // 处理用户名输入

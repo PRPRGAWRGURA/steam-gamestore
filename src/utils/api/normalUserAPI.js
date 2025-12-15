@@ -1,5 +1,5 @@
 // 导入共享的Supabase客户端实例
-import supabase from './supabase.js'
+import supabase from '../core/supabase.js'
 
 /**
  * 压缩图片至适合头像的大小，并裁剪为1:1正方形
@@ -8,6 +8,13 @@ import supabase from './supabase.js'
  * @returns {Promise<File>} - 压缩后的新File对象
  */
 async function compressImageForAvatar(file, options = {}) {
+  // 检查文件是否已经是经过裁剪的头像（通过文件名判断）
+  // 如果文件名包含"avatar_"，说明是前端裁剪过的，直接返回
+  if (file.name.includes('avatar_')) {
+    console.log('检测到已裁剪的头像，跳过压缩:', file.name);
+    return file;
+  }
+
   const {
     targetSize = 300,   // 目标正方形尺寸（宽高相同）
     quality = 0.82,     // JPEG质量 (0.8-0.85在质量和体积间取得平衡)
@@ -133,7 +140,6 @@ export const normalUserAPI = {
         }
       } catch (compressionError) {
         console.error('头像压缩失败，使用原始图片:', compressionError);
-        // 压缩失败时使用原始图片继续上传
       }
       
       // 生成唯一的文件名，直接上传到根目录

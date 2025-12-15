@@ -1,7 +1,7 @@
 <script>
 import { ref, computed } from 'vue'
 import { useUserStore } from '../stores/userStore'
-import { communityAPI } from '../utils/communityAPI'
+import { communityAPI } from '../utils/api/communityAPI'
 
 export default {
   name: 'PostCreator',

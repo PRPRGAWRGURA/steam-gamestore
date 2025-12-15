@@ -1,8 +1,8 @@
 <script>
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
-import { supportAPI } from '@/utils/supportAPI';
-import { setCache, getCache, removeCache } from '@/utils/cacheUtils';
+import { supportAPI } from '@/utils/api/supportAPI';
+import { setCache, getCache, removeCache } from '@/utils/tools/cacheUtils';
 export default {
   name: 'GS_support_form',
   props: {

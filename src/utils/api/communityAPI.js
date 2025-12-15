@@ -1,5 +1,5 @@
 // 导入共享的Supabase客户端实例
-import supabase from './supabase.js'
+import supabase from '../core/supabase.js'
 
 /**
  * 压缩图片至适合展示框的大小
