@@ -82,7 +82,7 @@ export default {
 }
 
 .community-title {
-  background-color: transparent;
+  background: linear-gradient(to bottom, #0d1723 0%, transparent 100%);
 }
 .community-title-line {
   height: 3px;

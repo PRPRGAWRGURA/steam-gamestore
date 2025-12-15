@@ -106,7 +106,7 @@ export default {
       <div class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">
-            <span class="hero-title-1">Steam</span>
+            <span class="hero-title-1">CHAINHUB</span>
             <span class="hero-title-2">游戏商城</span>
           </h1>
           <p class="hero-subtitle">畅玩游戏、讨论游戏、创造游戏的快乐所在</p>

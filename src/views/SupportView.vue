@@ -28,7 +28,7 @@ export default {
       <BaseContainer>
         <div class="support">
           <h1 class="support-title">{{ isDeveloperApplication ? '发行商申请' : '客服页面' }}</h1>
-          <p class="support-subtitle">{{ isDeveloperApplication ? '申请成为游戏发行商，将你的游戏带给全球玩家！' : '获取Steam客户支持！' }}</p>
+          <p class="support-subtitle">{{ isDeveloperApplication ? '申请成为游戏发行商，将你的游戏带给全球玩家！' : '获取CHAINHUB客户支持！' }}</p>
           <SupportForm :is-developer-application="isDeveloperApplication" />
         </div>
       </BaseContainer>

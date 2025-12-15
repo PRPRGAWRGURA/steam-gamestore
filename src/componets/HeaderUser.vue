@@ -29,7 +29,6 @@ export default {
             // 调用userStore的logout方法，清除用户信息
             userStore.logout();
             router.push('/login');
-            alert('您已退出登录');
         };
         
         return {

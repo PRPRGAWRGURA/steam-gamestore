@@ -112,7 +112,6 @@ export default {
                 
                 const user = await normalUserAPI.login(this.loginData.username, this.loginData.password)
                 if(user.success){
-                    alert('登录成功！');
                     // 使用Pinia store保存用户信息
                     this.userStore.login(this.loginData.username, this.loginData.password, this.rememberMe)
                     // 记住我功能由store内部处理
@@ -153,9 +152,8 @@ export default {
                 
                 const user = await normalUserAPI.register(this.registerData.username, this.registerData.password)
                 if(user.success){
-                    alert('注册成功！');
                     // 使用Pinia store保存用户信息
-                    this.userStore.login(this.registerData.username, this.registerData.password, false)
+                    this.userStore.login(this.registerData.username, this.registerData.password, this.rememberMe)
                     this.$router.push('/')
                 }else{
                     this.errorMsg = user.error

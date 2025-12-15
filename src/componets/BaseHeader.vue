@@ -62,7 +62,7 @@ export default {
         <div class="GS_header">
             <div class="GS_header_left">
                 <div class="STEAM">
-                    <img src="/WebResources/STEAM.png" alt=""><a href="/">STEAM™</a>
+                    <img src="/WebResources/CHAIN.png" alt=""><a href="/">CHAINHUB™</a>
                 </div>
                 <div class="GS_header_left_nav">
                     <router-link 
@@ -110,6 +110,7 @@ export default {
         width: 60px;
         height: 60px;
         border-radius: 50%;
+        transform: rotate(-90deg);
     }
     .GS_header_left .STEAM a{
         font-size: 24px;

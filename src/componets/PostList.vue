@@ -139,7 +139,8 @@ export default {
           offset.value += response.data.length
           
           // 使用当前请求的limit值判断是否还有更多数据
-          hasMore.value = response.data.length === currentLimit
+          // 如果返回的数据长度小于请求的limit，说明没有更多数据了
+          hasMore.value = response.data.length >= currentLimit
           
           // 自动为每个帖子加载评论，但不展开评论区
           const newPosts = isLoadMore ? response.data : posts.value
@@ -356,7 +357,7 @@ export default {
       }
     }
     
-    // 删除帖子（这里只包含基本结构，实际实现可能需要更多逻辑）
+    // 删除帖子
     const deletePost = async (postId) => {
       if (!confirm('确定要删除这条消息吗？')) {
         return
@@ -439,10 +440,13 @@ export default {
     }
     
     // 滚动处理函数，实现预加载
-    const handleScroll = () => {
-      const scrollHeight = document.documentElement.scrollHeight
-      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
-      const clientHeight = document.documentElement.clientHeight
+    const handleScroll = (event) => {
+      const target = event.target || document.querySelector('.posts-list')
+      if (!target) return
+      
+      const scrollHeight = target.scrollHeight
+      const scrollTop = target.scrollTop
+      const clientHeight = target.clientHeight
       
       // 当滚动到距离底部200px时，预加载下一页
       if (scrollHeight - scrollTop - clientHeight < 200 && !loading.value && hasMore.value) {
@@ -466,12 +470,18 @@ export default {
       }
       
       // 添加滚动监听，实现预加载
-      window.addEventListener('scroll', handleScroll)
+      const postsListElement = document.querySelector('.posts-list')
+      if (postsListElement) {
+        postsListElement.addEventListener('scroll', handleScroll)
+      }
     })
     
     // 组件卸载时移除滚动监听，避免内存泄漏
     onUnmounted(() => {
-      window.removeEventListener('scroll', handleScroll)
+      const postsListElement = document.querySelector('.posts-list')
+      if (postsListElement) {
+        postsListElement.removeEventListener('scroll', handleScroll)
+      }
     })
     
     return {
@@ -648,10 +658,7 @@ export default {
       
       
     </div>
-    <!-- 加载更多按钮 -->
-      <div class="load-more-section" v-if="hasMore && !loading">
-        <button @click="loadMorePosts" class="load-more-btn">加载更多</button>
-      </div>
+
       
       <!-- 图片放大显示模态框 -->
       <div v-if="enlargedImage" class="image-modal" @click="closeImage">
@@ -1088,27 +1095,7 @@ export default {
   padding: 2px 8px;
 }
 
-/* 加载更多按钮 */
-.load-more-section {
-  width: 100%;
-  text-align: center;
-  padding: 20px 0;
-}
 
-.load-more-btn {
-  width: 100%;
-  padding: 10px 20px;
-  background-color: #274760b6;
-  color: #dce3e6;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.load-more-btn:hover {
-  background-color: #345f7fb6;
-}
 
 /* 图片放大显示功能样式 */
 /* 模态框背景 */
