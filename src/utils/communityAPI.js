@@ -324,7 +324,7 @@ export const communityAPI = {
   },
 
   /**
-   * 获取消息列表
+   * 获取消息列表，包含点赞状态、点赞数量和评论数量
    * @param {Object} options - 查询选项
    * @param {number} options.limit - 返回数量限制
    * @param {number} options.offset - 偏移量
@@ -333,6 +333,7 @@ export const communityAPI = {
    */
   async getPosts(options = { limit: 20, offset: 0 }, userId = null) {
     try {
+      // 1. 获取帖子列表
       const { data: posts, error: postsError } = await supabase
         .from('community_post')
         .select(`
@@ -347,69 +348,169 @@ export const communityAPI = {
         return this._handleError(postsError, '获取消息列表失败')
       }
 
-      // 如果提供了userId，获取每个帖子的点赞状态
-      if (userId) {
-        // 获取当前用户对这些帖子的点赞记录
-        const postIds = posts.map(post => post.id)
-        
-        const { data: likes, error: likesError } = await supabase
+      if (posts.length === 0) {
+        return {
+          success: true,
+          data: [],
+          error: null
+        }
+      }
+
+      // 2. 获取帖子ID列表
+      const postIds = posts.map(post => post.id)
+
+      // 3. 并行获取点赞状态、点赞数量和评论数量，提高效率
+      const [likesResponse, allLikesResponse, allCommentsResponse] = await Promise.all([
+        // 获取当前用户的点赞记录
+        userId ? supabase
           .from('community_like')
           .select('post_id')
           .eq('user_id', userId)
+          .in('post_id', postIds) : Promise.resolve({ data: [] }),
+        
+        // 获取所有帖子的点赞记录
+        supabase
+          .from('community_like')
+          .select('post_id')
+          .in('post_id', postIds),
+        
+        // 获取所有帖子的评论记录
+        supabase
+          .from('community_comment')
+          .select('post_id')
           .in('post_id', postIds)
+      ])
 
-        if (likesError) {
-          console.error('获取点赞状态失败:', likesError)
-          // 继续执行，不影响帖子列表的获取
-        } else {
-          // 构建点赞的帖子ID集合
-          const likedPostIds = new Set(likes.map(like => like.post_id))
-          
-          // 为每个帖子添加liked字段
-          posts.forEach(post => {
-            post.liked = likedPostIds.has(post.id)
-          })
-        }
-      } else {
-        // 如果没有提供userId，默认设置为未点赞
-        posts.forEach(post => {
-          post.liked = false
+      // 4. 处理点赞状态
+      const likedPostIds = new Set()
+      if (likesResponse.data) {
+        likesResponse.data.forEach(like => likedPostIds.add(like.post_id))
+      }
+
+      // 5. 处理点赞数量，使用JavaScript进行分组
+      const likesCountMap = new Map()
+      if (allLikesResponse.data) {
+        // 初始化所有帖子的点赞数量为0
+        postIds.forEach(postId => likesCountMap.set(postId, 0))
+        
+        // 统计每个帖子的点赞数量
+        allLikesResponse.data.forEach(like => {
+          likesCountMap.set(like.post_id, (likesCountMap.get(like.post_id) || 0) + 1)
         })
       }
 
+      // 6. 处理评论数量，使用JavaScript进行分组
+      const commentsCountMap = new Map()
+      if (allCommentsResponse.data) {
+        // 初始化所有帖子的评论数量为0
+        postIds.forEach(postId => commentsCountMap.set(postId, 0))
+        
+        // 统计每个帖子的评论数量
+        allCommentsResponse.data.forEach(comment => {
+          commentsCountMap.set(comment.post_id, (commentsCountMap.get(comment.post_id) || 0) + 1)
+        })
+      }
+
+      // 7. 合并数据，为每个帖子添加完整的元数据
+      const enrichedPosts = posts.map(post => ({
+        ...post,
+        liked: likedPostIds.has(post.id),
+        likes_count: likesCountMap.get(post.id) || 0,
+        comments_count: commentsCountMap.get(post.id) || 0,
+        // 确保user对象存在，便于前端直接使用
+        user: {
+          user_name: post.normal_user?.user_name || ' ',
+          user_image: post.normal_user?.user_image || '/UserImage/001.png'
+        }
+      }))
+
       return {
         success: true,
-        data: posts,
+        data: enrichedPosts,
         error: null
       }
     } catch (err) {
+      console.error('获取帖子列表出错:', err)
       return this._handleError(err, '获取消息列表时发生错误')
     }
   },
 
   /**
-   * 根据ID获取消息详情
+   * 根据ID获取消息详情，包含点赞状态、点赞数量和评论数量
    * @param {string} postId - 消息ID
+   * @param {string|null} userId - 当前用户ID，用于获取点赞状态
    * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 操作结果
    */
-  async getPostById(postId) {
+  async getPostById(postId, userId = null) {
     try {
-      const { data, error } = await supabase
+      // 1. 获取帖子基本信息
+      const { data: post, error: postError } = await supabase
         .from('community_post')
         .select(`
-          *, 
+          *,
           normal_user (user_name, user_image)
         `)
         .eq('id', postId)
         .single()
 
-      if (error) {
-        return this._handleError(error, '获取消息详情失败')
+      if (postError) {
+        return this._handleError(postError, '获取消息详情失败')
       }
 
+      if (!post) {
+        return {
+          success: true,
+          data: null,
+          error: null
+        }
+      }
+
+      // 2. 并行获取点赞状态、点赞数量和评论数量
+      const [likedResponse, likesCountResponse, commentsCountResponse] = await Promise.all([
+        // 获取当前用户的点赞状态
+        userId ? supabase
+          .from('community_like')
+          .select('id')
+          .eq('post_id', postId)
+          .eq('user_id', userId)
+          .single() : Promise.resolve({ error: { code: 'PGRST116' } }),
+        
+        // 获取点赞数量
+        supabase
+          .from('community_like')
+          .select('id', { count: 'exact' })
+          .eq('post_id', postId),
+        
+        // 获取评论数量
+        supabase
+          .from('community_comment')
+          .select('id', { count: 'exact' })
+          .eq('post_id', postId)
+      ])
+
+      // 3. 处理点赞状态
+      const liked = likedResponse.data !== null
+      
+      // 4. 处理点赞数量
+      const likes_count = likesCountResponse.count || 0
+      
+      // 5. 处理评论数量
+      const comments_count = commentsCountResponse.count || 0
+
+      // 6. 返回完整的帖子数据
       return {
         success: true,
-        data,
+        data: {
+          ...post,
+          liked,
+          likes_count,
+          comments_count,
+          // 确保user对象存在，便于前端直接使用
+          user: {
+            user_name: post.normal_user?.user_name || ' ',
+            user_image: post.normal_user?.user_image || '/UserImage/001.png'
+          }
+        },
         error: null
       }
     } catch (err) {
@@ -491,7 +592,7 @@ export const communityAPI = {
    * @param {string} commentData.post_id - 消息ID
    * @param {string} commentData.user_id - 用户ID
    * @param {string} commentData.content - 评论内容
-   * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 操作结果
+   * @returns {Promise<{success: boolean, data: {comment: Object, comments_count: number}, error: string|null}>} 操作结果，包含创建的评论和更新后的评论数量
    */
   async createComment(commentData) {
     try {
@@ -504,7 +605,7 @@ export const communityAPI = {
         }
       }
 
-      const { data, error } = await supabase
+      const { data: comment, error } = await supabase
         .from('community_comment')
         .insert([{
           post_id: commentData.post_id,
@@ -519,9 +620,22 @@ export const communityAPI = {
         return this._handleError(error, '发布评论失败')
       }
 
+      // 获取更新后的评论数量
+      const { count: comments_count, error: countError } = await supabase
+        .from('community_comment')
+        .select('id', { count: 'exact' })
+        .eq('post_id', commentData.post_id)
+
+      if (countError) {
+        console.error('获取评论数量失败:', countError)
+      }
+
       return {
         success: true,
-        data,
+        data: {
+          comment,
+          comments_count: countError ? null : comments_count || 0
+        },
         error: null
       }
     } catch (err) {
@@ -601,21 +715,49 @@ export const communityAPI = {
   /**
    * 删除评论
    * @param {string} commentId - 评论ID
-   * @returns {Promise<{success: boolean, error: string|null}>} 操作结果
+   * @returns {Promise<{success: boolean, data: {comments_count: number|null, post_id: string|null}, error: string|null}>} 操作结果，包含删除后的评论数量和帖子ID
    */
   async deleteComment(commentId) {
     try {
-      const { error } = await supabase
+      // 1. 先获取评论所属的帖子ID，以便后续获取更新后的评论数量
+      const { data: comment, error: getError } = await supabase
+        .from('community_comment')
+        .select('post_id')
+        .eq('id', commentId)
+        .single()
+
+      if (getError) {
+        return this._handleError(getError, '获取评论信息失败')
+      }
+
+      const postId = comment.post_id
+
+      // 2. 删除评论
+      const { error: deleteError } = await supabase
         .from('community_comment')
         .delete()
         .eq('id', commentId)
 
-      if (error) {
-        return this._handleError(error, '删除评论失败')
+      if (deleteError) {
+        return this._handleError(deleteError, '删除评论失败')
+      }
+
+      // 3. 获取更新后的评论数量
+      const { count: comments_count, error: countError } = await supabase
+        .from('community_comment')
+        .select('id', { count: 'exact' })
+        .eq('post_id', postId)
+
+      if (countError) {
+        console.error('获取评论数量失败:', countError)
       }
 
       return {
         success: true,
+        data: {
+          comments_count: countError ? null : comments_count || 0,
+          post_id: postId
+        },
         error: null
       }
     } catch (err) {
@@ -629,7 +771,7 @@ export const communityAPI = {
    * 切换帖子点赞状态
    * @param {string} userId - 用户ID（外键关联normal_user.user_name）
    * @param {string} postId - 帖子ID
-   * @returns {Promise<{success: boolean, data: {liked: boolean, likes: number}, error: string|null}>} 操作结果
+   * @returns {Promise<{success: boolean, data: {liked: boolean, likes_count: number, comments_count: number}, error: string|null}>} 操作结果
    */
   async toggleLike(userId, postId) {
     try {
@@ -674,19 +816,30 @@ export const communityAPI = {
         newLiked = true;
       }
 
-      // 4. 获取更新后的点赞数量
-      const { data: likesCount, error: countError } = await supabase
-        .from('community_like')
-        .select('id', { count: 'exact', head: true })
-        .eq('post_id', postId);
+      // 4. 并行获取更新后的点赞数量和评论数量
+      const [likesCountResponse, commentsCountResponse] = await Promise.all([
+        // 获取更新后的点赞数量
+        supabase
+          .from('community_like')
+          .select('id', { count: 'exact' })
+          .eq('post_id', postId),
+        
+        // 获取评论数量，保持数据完整性
+        supabase
+          .from('community_comment')
+          .select('id', { count: 'exact' })
+          .eq('post_id', postId)
+      ]);
 
-      if (countError) {
-        return this._handleError(countError, '获取点赞数量失败')
+      if (likesCountResponse.error) {
+        return this._handleError(likesCountResponse.error, '获取点赞数量失败')
       }
 
-      // 不再更新community_post表中的likes字段，直接从community_like表统计
+      if (commentsCountResponse.error) {
+        return this._handleError(commentsCountResponse.error, '获取评论数量失败')
+      }
 
-      // 6. 更新本地存储的点赞状态
+      // 5. 更新本地存储的点赞状态
       const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${userId}`) || '[]');
       let updatedLikedPosts;
       
@@ -703,7 +856,8 @@ export const communityAPI = {
         success: true,
         data: {
           liked: newLiked,
-          likes: likesCount
+          likes_count: likesCountResponse.count || 0,
+          comments_count: commentsCountResponse.count || 0
         },
         error: null
       }
@@ -786,5 +940,136 @@ export const communityAPI = {
     } catch (err) {
       return this._handleError(err, '获取点赞列表时发生错误')
     }
+  },
+
+  /**
+   * 高效获取多个帖子的评论数量
+   * @param {Array<string>} postIds - 帖子ID数组
+   * @returns {Promise<{success: boolean, data: Map<string, number>, error: string|null}>} 操作结果，返回帖子ID到评论数量的映射
+   */
+  async getCommentsCountByPostIds(postIds) {
+    try {
+      if (!Array.isArray(postIds) || postIds.length === 0) {
+        return {
+          success: true,
+          data: new Map(),
+          error: null
+        }
+      }
+
+      // 获取所有评论记录
+      const { data, error } = await supabase
+        .from('community_comment')
+        .select('post_id')
+        .in('post_id', postIds)
+
+      if (error) {
+        return this._handleError(error, '获取评论数量失败')
+      }
+
+      // 构建帖子ID到评论数量的映射
+      const commentsCountMap = new Map()
+      
+      // 初始化所有帖子的评论数量为0
+      postIds.forEach(postId => commentsCountMap.set(postId, 0))
+      
+      // 统计每个帖子的评论数量
+      data.forEach(comment => {
+        commentsCountMap.set(comment.post_id, (commentsCountMap.get(comment.post_id) || 0) + 1)
+      })
+
+      return {
+        success: true,
+        data: commentsCountMap,
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '获取评论数量时发生错误')
+    }
+  },
+
+  /**
+   * 高效获取多个帖子的点赞数量
+   * @param {Array<string>} postIds - 帖子ID数组
+   * @returns {Promise<{success: boolean, data: Map<string, number>, error: string|null}>} 操作结果，返回帖子ID到点赞数量的映射
+   */
+  async getLikesCountByPostIds(postIds) {
+    try {
+      if (!Array.isArray(postIds) || postIds.length === 0) {
+        return {
+          success: true,
+          data: new Map(),
+          error: null
+        }
+      }
+
+      // 获取所有点赞记录
+      const { data, error } = await supabase
+        .from('community_like')
+        .select('post_id')
+        .in('post_id', postIds)
+
+      if (error) {
+        return this._handleError(error, '获取点赞数量失败')
+      }
+
+      // 构建帖子ID到点赞数量的映射
+      const likesCountMap = new Map()
+      
+      // 初始化所有帖子的点赞数量为0
+      postIds.forEach(postId => likesCountMap.set(postId, 0))
+      
+      // 统计每个帖子的点赞数量
+      data.forEach(like => {
+        likesCountMap.set(like.post_id, (likesCountMap.get(like.post_id) || 0) + 1)
+      })
+
+      return {
+        success: true,
+        data: likesCountMap,
+        error: null
+      }
+    } catch (err) {
+      return this._handleError(err, '获取点赞数量时发生错误')
+    }
+  },
+
+  /**
+   * 格式化帖子内容，将URL转换为可点击的链接
+   * @param {string} content - 原始帖子内容
+   * @returns {string} 格式化后的内容，包含可点击的链接
+   */
+  formatContent(content) {
+    if (!content) return ''
+    
+    // URL正则表达式，匹配http/https链接
+    const urlRegex = /(https?:\/\/[^\s]+)/g
+    
+    // 将URL转换为a标签
+    return content.replace(urlRegex, (url) => {
+      // 确保URL的完整性
+      let fullUrl = url
+      // 移除可能的标点符号
+      fullUrl = fullUrl.replace(/[.,!?;:)]$/, '')
+      return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="post-link">${fullUrl}</a>`
+    })
+  },
+
+  /**
+   * 格式化时间，将ISO时间字符串转换为相对时间（如：刚刚、5分钟前、1小时前等）
+   * @param {string} timeString - ISO格式的时间字符串
+   * @returns {string} 格式化后的相对时间
+   */
+  formatTime(timeString) {
+    const date = new Date(timeString)
+    const now = new Date()
+    const diff = now - date
+    
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+    if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前'
+    
+    return date.toLocaleDateString()
   }
 }

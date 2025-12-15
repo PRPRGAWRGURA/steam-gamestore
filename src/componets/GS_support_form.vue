@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { supportAPI } from '@/utils/supportAPI';
+import { setCache, getCache, removeCache } from '@/utils/cacheUtils';
 export default {
   name: 'GS_support_form',
   props: {
@@ -45,23 +46,23 @@ export default {
     const checkDeveloperApplicationLimit = () => {
       if (!props.isDeveloperApplication) return;
       
-      // 从本地存储获取最后提交时间
-      const storedTime = localStorage.getItem('developer_application_last_submit');
+      // 从缓存获取最后提交时间
+      const storedTime = getCache('developer_application_last_submit');
       if (storedTime) {
         const now = Date.now();
-        const diff = now - parseInt(storedTime);
+        const diff = now - storedTime;
         const setTime = 1 * 60 * 1000;
         
         if (diff < setTime) {
-          // 24小时内已提交过
+          // 1分钟内已提交过
           canSubmitDeveloperApplication.value = false;
-          lastSubmitTime.value = parseInt(storedTime);
+          lastSubmitTime.value = storedTime;
           // 计算剩余时间（毫秒）
           countdown.value = setTime - diff;
         } else {
-          // 超过24小时，可以提交
+          // 超过1分钟，可以提交
           canSubmitDeveloperApplication.value = true;
-          localStorage.removeItem('developer_application_last_submit');
+          removeCache('developer_application_last_submit');
         }
       }
     };
@@ -78,7 +79,7 @@ export default {
           canSubmitDeveloperApplication.value = true;
           lastSubmitTime.value = null;
           countdown.value = 0;
-          localStorage.removeItem('developer_application_last_submit');
+          removeCache('developer_application_last_submit');
           clearInterval(timer);
         }
       }, 1000);
@@ -199,10 +200,11 @@ export default {
       // 提交成功
       submitSuccess.value = true;
       
-      // 如果是发行商申请，保存提交时间到本地存储
+      // 如果是发行商申请，保存提交时间到缓存
       if (props.isDeveloperApplication) {
         const now = Date.now();
-        localStorage.setItem('developer_application_last_submit', now.toString());
+        // 设置1分钟的缓存有效期
+        setCache('developer_application_last_submit', now, 1 * 60 * 1000);
         checkDeveloperApplicationLimit(); // 更新提交限制状态
       }
 

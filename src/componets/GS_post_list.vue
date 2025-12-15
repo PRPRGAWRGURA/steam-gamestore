@@ -1,7 +1,8 @@
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { communityAPI } from '../utils/communityAPI'
+import { setCache, getCache } from '../utils/cacheUtils'
 
 export default {
   name: 'PostList',
@@ -23,7 +24,9 @@ export default {
     const loadingComments = ref([])
     const visibleComments = ref(new Set())
     const offset = ref(0)
-    const limit = 10 // 减少初始加载的帖子数量，提高加载速度
+    // 优化加载策略：初始加载30条，后续每次加载20条
+    const initialLimit = 30 // 初始加载30条，减少用户初期的加载次数
+    const loadMoreLimit = 20 // 后续每次加载20条，平衡加载速度和数据量
     const hasMore = ref(true)
     const commentInputs = ref({})
     // 图片放大显示功能相关状态
@@ -38,50 +41,17 @@ export default {
     
     // 从本地缓存加载帖子
     const loadPostsFromCache = () => {
-      const cachedPosts = localStorage.getItem(CACHE_KEY)
-      const cacheTime = localStorage.getItem(`${CACHE_KEY}_time`)
-      
-      if (cachedPosts && cacheTime) {
-        const cacheAge = Date.now() - parseInt(cacheTime)
-        // 检查缓存是否在有效期内
-        if (cacheAge < CACHE_EXPIRE_TIME) {
-          const loadedPosts = JSON.parse(cachedPosts)
-          
-          // 更新当前用户帖子的用户信息
-          if (store.currentUser) {
-            loadedPosts.forEach(post => {
-              if (post.user_id === store.currentUser.user_name) {
-                post.user = {
-                  user_name: store.currentUser.user_name,
-                  user_image: store.currentUser.user_image || defaultAvatar
-                }
-              }
-            })
-          }
-          
-          posts.value = loadedPosts
-        }
+      const cachedPosts = getCache(CACHE_KEY)
+      if (cachedPosts) {
+        posts.value = cachedPosts
+        // 设置offset为缓存帖子的数量，确保下次加载更多时从正确位置开始
+        offset.value = cachedPosts.length
       }
     }
     
     // 保存帖子到本地缓存
     const savePostsToCache = () => {
-      localStorage.setItem(CACHE_KEY, JSON.stringify(posts.value))
-      localStorage.setItem(`${CACHE_KEY}_time`, Date.now().toString())
-    }
-    
-    // 格式化时间
-    const formatTime = (timeString) => {
-      const date = new Date(timeString)
-      const now = new Date()
-      const diff = now - date
-      
-      if (diff < 60000) return '刚刚'
-      if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
-      if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
-      if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前'
-      
-      return date.toLocaleDateString()
+      setCache(CACHE_KEY, posts.value, CACHE_EXPIRE_TIME)
     }
     
     // 判断是否为当前用户
@@ -111,61 +81,10 @@ export default {
     }
     
     const getCommentsCount = (postId) => {
-      // 优先使用post对象中的comment_count属性
+      // 使用API返回的comments_count属性
       const post = posts.value.find(p => p.id === postId)
-      if (post && post.comment_count !== undefined) {
-        return post.comment_count
-      }
-      // 如果没有comment_count属性，则使用本地评论数组长度
-      return getComments(postId).length
+      return post ? post.comments_count || 0 : 0
     }
-    
-    // 点赞相关状态
-    const likesCount = ref({}); // 存储每个帖子的点赞数量
-    const isLoadingLikes = ref(new Set()); // 存储正在加载点赞的帖子ID
-    
-    // 加载帖子的点赞数量
-    const loadLikesCount = async (postId) => {
-      if (isLoadingLikes.value.has(postId)) return;
-      
-      try {
-        isLoadingLikes.value.add(postId);
-        const response = await communityAPI.getLikesByPostId(postId);
-        
-        if (response.success) {
-          likesCount.value[postId] = response.data.length;
-        } else {
-          console.error('加载点赞数量失败:', response.error);
-          likesCount.value[postId] = 0;
-        }
-      } catch (error) {
-        console.error('加载点赞数量出错:', error);
-        likesCount.value[postId] = 0;
-      } finally {
-        isLoadingLikes.value.delete(postId);
-      }
-    };
-    
-    // 批量加载点赞数量
-    const loadLikesForPosts = async (postIds) => {
-      // 过滤掉已经加载或正在加载的帖子ID
-      const postsToLoad = postIds.filter(id => !likesCount.value[id] && !isLoadingLikes.value.has(id));
-      
-      if (postsToLoad.length > 0) {
-        // 并行加载所有帖子的点赞数量
-        await Promise.all(postsToLoad.map(id => loadLikesCount(id)));
-      }
-    };
-    
-    // 获取点赞数量
-    const getLikesCount = (postId) => {
-      // 如果还没有加载点赞数量，触发加载
-      if (likesCount.value[postId] === undefined) {
-        loadLikesCount(postId);
-        return 0;
-      }
-      return likesCount.value[postId];
-    };
     
     // 自动调整textarea高度
     const autoResizeTextarea = (event) => {
@@ -183,8 +102,11 @@ export default {
         // 获取当前用户ID（使用user_name，因为外键关联的是normal_user表的user_name字段）
         const currentUserId = store.currentUser?.user_name || null
         
+        // 使用优化的加载策略：初始加载30条，后续加载20条
+        const currentLimit = isLoadMore ? loadMoreLimit : initialLimit
+        
         const response = await communityAPI.getPosts({
-          limit,
+          limit: currentLimit,
           offset: isLoadMore ? offset.value : 0
         }, currentUserId)
         
@@ -197,50 +119,38 @@ export default {
             const newPosts = response.data.filter(post => !existingIds.has(post.id))
             updatedPosts = [...posts.value, ...newPosts]
           } else {
-            // 刷新数据时，保留临时帖子
+            // 刷新数据时，保留所有已加载的帖子，只更新最新内容
+            // 1. 保留临时帖子
             const tempPosts = posts.value.filter(post => post.is_temp)
-            const newPosts = response.data.filter(post => !tempPosts.some(temp => temp.content === post.content))
-            updatedPosts = [...tempPosts, ...newPosts]
+            
+            // 2. 保留现有帖子，去重并合并最新帖子
+            const existingIds = new Set(posts.value.map(post => post.id))
+            const newPosts = response.data.filter(post => !existingIds.has(post.id))
+            
+            // 3. 合并所有帖子，确保临时帖子在最前面
+            updatedPosts = [...tempPosts, ...posts.value, ...newPosts]
+            
+            // 4. 去重，确保每个帖子只出现一次（以最新的为准）
+            const uniquePostsMap = new Map()
+            updatedPosts.forEach(post => {
+              uniquePostsMap.set(post.id, post)
+            })
+            updatedPosts = Array.from(uniquePostsMap.values())
+            
+            // 5. 按创建时间排序，最新的在前面
+            updatedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
           }
           
-          // 处理每个帖子的用户信息，确保在设置posts.value之前完成
-          updatedPosts.forEach(post => {
-            // 检查是否为当前用户的帖子
-            const isCurrentUserPost = store.currentUser && store.currentUser.user_name === post.user_id
-            
-            // 为每个帖子设置user对象，确保立即显示正确的用户名和头像
-            post.user = {
-              user_name: isCurrentUserPost ? store.currentUser.user_name : (post.normal_user?.user_name || ' '),
-              user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (post.normal_user?.user_image || defaultAvatar)
-            }
-            
-            // 点赞状态已由API返回，无需手动设置
-          })
-          
-          // 重新排序帖子，使其在CSS Columns布局下呈现从左到右、从上到下的视觉效果
-          // 同时保持时间顺序从新到旧
-          const columns = 3;
-          const reorderedPosts = [];
-          const totalPosts = updatedPosts.length;
-          
-          // 按行填充帖子，确保视觉上从左到右、从上到下排列
-          for (let i = 0; i < totalPosts; i++) {
-            reorderedPosts.push(updatedPosts[i]);
-          }
-          
-          posts.value = reorderedPosts
+          // API已经返回完整的帖子数据，包括user对象、点赞状态、点赞数量和评论数量
+          posts.value = updatedPosts
           
           // 更新偏移量
           offset.value += response.data.length
           
-          // 判断是否还有更多数据
-          hasMore.value = response.data.length === limit
+          // 使用当前请求的limit值判断是否还有更多数据
+          hasMore.value = response.data.length === currentLimit
           
-          // 批量加载点赞数量
-          const postIds = response.data.map(post => post.id);
-          await loadLikesForPosts(postIds);
-          
-          // 自动为每个帖子加载评论，但不展开评论区。千万不要删这个
+          // 自动为每个帖子加载评论，但不展开评论区
           const newPosts = isLoadMore ? response.data : posts.value
           newPosts.forEach(post => {
             if (!comments.value[post.id]) {
@@ -264,24 +174,13 @@ export default {
         loading.value = false
       }
     }
+    
     // 更新临时帖子为真实帖子（乐观更新成功）
     const updateTempPost = (tempId, realPost) => {
       const index = posts.value.findIndex(post => post.id === tempId)
       if (index !== -1) {
-        // 检查是否为当前用户的帖子
-        const isCurrentUserPost = store.currentUser && store.currentUser.user_name === realPost.user_id
-        
-        // 替换临时帖子为真实帖子
-        posts.value[index] = {
-          ...realPost,
-          user: {
-            // 如果是当前用户的帖子，优先使用store中的用户信息
-            user_name: isCurrentUserPost ? store.currentUser.user_name : (realPost.normal_user?.user_name || ' '),
-            user_image: isCurrentUserPost ? (store.currentUser.user_image || defaultAvatar) : (realPost.normal_user?.user_image || defaultAvatar)
-          },
-          comment_count: realPost.comment_count || 0,
-          like_count: realPost.like_count || 0
-        }
+        // API已经返回完整的帖子数据，直接替换
+        posts.value[index] = realPost
         // 保存到缓存
         savePostsToCache()
       }
@@ -397,14 +296,8 @@ export default {
             comments.value[postId] = []
           }
           
-          // 补充用户信息
-          const newComment = response.data
-          newComment.normal_user = {
-            user_name: currentUser.user_name,
-            user_image: currentUser.user_image || defaultAvatar
-          }
-          
-          comments.value[postId].push(newComment)
+          // API已经返回完整的评论数据，包括用户信息
+          comments.value[postId].push(response.data.comment)
           
           // 重置输入框
           commentInputs.value[postId] = ''
@@ -412,7 +305,7 @@ export default {
           // 更新帖子的评论计数
           const post = posts.value.find(p => p.id === postId)
           if (post) {
-            post.comment_count = (post.comment_count || 0) + 1
+            post.comments_count = response.data.comments_count
           }
         } else {
           alert(response.error || '发表评论失败，请稍后重试')
@@ -439,56 +332,36 @@ export default {
       if (!post) return
       
       try {
-      // 乐观更新：立即更新UI，提升用户体验
-      const wasLiked = post.liked;
-      const currentLikes = likesCount.value[postId] || 0;
-      
-      // 更新本地UI状态
-      post.liked = !wasLiked;
-      // 使用likesCount状态而不是post.likes
-      likesCount.value[postId] = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
-      
-      // 更新本地存储（仍使用id作为标识，确保用户名改变时点赞状态保持一致）
-      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${currentUser.id}`) || '[]');
-      let updatedLikedPosts;
-      if (post.liked) {
-        updatedLikedPosts = [...new Set([...likedPosts, postId])];
-      } else {
-        updatedLikedPosts = likedPosts.filter(id => id !== postId);
-      }
-      localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(updatedLikedPosts));
-      
-      // 保存到本地缓存
-      savePostsToCache();
-      
-      // 异步更新服务器数据（使用user_name作为userId，因为外键关联的是normal_user.user_name）
-      const response = await communityAPI.toggleLike(currentUser.user_name, postId);
-      
-      if (response.success) {
-        // 服务器更新成功，更新点赞数量
-        likesCount.value[postId] = response.data.likes;
-      } else {
-        // 服务器更新失败，回滚UI状态
-        post.liked = wasLiked;
-        likesCount.value[postId] = currentLikes;
+        // 乐观更新：立即更新UI，提升用户体验
+        const wasLiked = post.liked;
+        const currentLikes = post.likes_count;
         
-        // 回滚本地存储
-        localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(likedPosts));
-        savePostsToCache();
-        alert(response.error || '点赞失败，请稍后重试');
+        // 更新本地UI状态
+        post.liked = !wasLiked;
+        post.likes_count = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
+        
+        // 异步更新服务器数据（使用user_name作为userId，因为外键关联的是normal_user.user_name）
+        const response = await communityAPI.toggleLike(currentUser.user_name, postId);
+        
+        if (response.success) {
+          // 服务器更新成功，更新点赞数量和评论数量
+          post.liked = response.data.liked;
+          post.likes_count = response.data.likes_count;
+          post.comments_count = response.data.comments_count;
+        } else {
+          // 服务器更新失败，回滚UI状态
+          post.liked = wasLiked;
+          post.likes_count = currentLikes;
+          alert(response.error || '点赞失败，请稍后重试');
+        }
+      } catch (error) {
+        console.error('点赞出错:', error);
+        // 网络错误，回滚UI状态
+        post.liked = wasLiked;
+        post.likes_count = currentLikes;
+        alert('网络错误，请稍后重试');
       }
-    } catch (error) {
-      console.error('点赞出错:', error);
-      // 网络错误，回滚UI状态
-      post.liked = wasLiked;
-      likesCount.value[postId] = currentLikes;
-      
-      // 回滚本地存储
-      localStorage.setItem(`liked_posts_${currentUser.id}`, JSON.stringify(likedPosts));
-      savePostsToCache();
-      alert('网络错误，请稍后重试');
     }
-  }
     
     // 删除帖子（这里只包含基本结构，实际实现可能需要更多逻辑）
     const deletePost = async (postId) => {
@@ -534,6 +407,14 @@ export default {
             )
           }
           
+          // 更新帖子的评论计数
+          if (response.data.post_id) {
+            const post = posts.value.find(p => p.id === response.data.post_id)
+            if (post) {
+              post.comments_count = response.data.comments_count
+            }
+          }
+          
           alert('删除成功！')
         } else {
           alert(response.error || '删除失败，请稍后重试')
@@ -542,23 +423,6 @@ export default {
         console.error('删除评论出错:', error)
         alert('网络错误，请稍后重试')
       }
-    }
-    
-    // 格式化内容，将URL转换为可点击的链接
-    const formatContent = (content) => {
-      if (!content) return ''
-      
-      // URL正则表达式，匹配http/https链接
-      const urlRegex = /(https?:\/\/[^\s]+)/g
-      
-      // 将URL转换为a标签
-      return content.replace(urlRegex, (url) => {
-        // 确保URL的完整性
-        let fullUrl = url
-        // 移除可能的标点符号
-        fullUrl = fullUrl.replace(/[.,!?;:)]$/, '')
-        return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="post-link">${fullUrl}</a>`
-      })
     }
     
     // 图片放大显示功能相关方法
@@ -577,6 +441,18 @@ export default {
       posts.value.unshift(newPost)
     }
     
+    // 滚动处理函数，实现预加载
+    const handleScroll = () => {
+      const scrollHeight = document.documentElement.scrollHeight
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop
+      const clientHeight = document.documentElement.clientHeight
+      
+      // 当滚动到距离底部200px时，预加载下一页
+      if (scrollHeight - scrollTop - clientHeight < 200 && !loading.value && hasMore.value) {
+        loadMorePosts()
+      }
+    }
+    
     // 组件挂载时加载帖子
     onMounted(() => {
       // 先从本地缓存加载数据
@@ -591,6 +467,14 @@ export default {
       } else {
         loadPosts()
       }
+      
+      // 添加滚动监听，实现预加载
+      window.addEventListener('scroll', handleScroll)
+    })
+    
+    // 组件卸载时移除滚动监听，避免内存泄漏
+    onUnmounted(() => {
+      window.removeEventListener('scroll', handleScroll)
     })
     
     return {
@@ -600,7 +484,8 @@ export default {
       hasMore,
       commentInputs,
       defaultAvatar,
-      formatTime,
+      // 使用API提供的格式化方法
+      formatTime: communityAPI.formatTime,
       isCurrentUser,
       isCommentsVisible,
       toggleComments,
@@ -615,13 +500,8 @@ export default {
       updateTempPost,
       handlePostFailed,
       handleLike,
-      formatContent,
-      // 点赞相关
-      likesCount,
-      isLoadingLikes,
-      loadLikesCount,
-      loadLikesForPosts,
-      getLikesCount,
+      // 使用API提供的格式化方法
+      formatContent: communityAPI.formatContent,
       // 图片放大显示功能相关
       enlargedImage,
       enlargeImage,
@@ -675,14 +555,20 @@ export default {
         <div class="post-content">
           <div class="content-text" v-html="formatContent(post.content)"></div>
           <div class="content-image" v-if="post.image_url">
-            <img 
-              :src="post.image_url" 
-              :alt="'图片'" 
-              class="post-image" 
-              loading="lazy"
-              @click="enlargeImage(post.image_url)"
-              style="cursor: pointer;"
-            />
+            <div class="image-container">
+              <!-- 模糊占位图，使用CSS实现加载效果 -->
+              <div class="image-placeholder" :class="{ 'loaded': post.imageLoaded }">
+                <img 
+                  :src="post.image_url" 
+                  :alt="'图片'" 
+                  class="post-image" 
+                  loading="lazy"
+                  @click="enlargeImage(post.image_url)"
+                  @load="post.imageLoaded = true"
+                  style="cursor: pointer;"
+                />
+              </div>
+            </div>
           </div>
         </div>
         
@@ -691,7 +577,7 @@ export default {
           <button class="interaction-btn like-btn" :class="{liked: post.liked}" @click="handleLike(post.id)">
             <img class="icon-like normal" src="/WebResources/likes.svg" alt="点赞" />
             <img class="icon-like active" src="/WebResources/likes_click.svg" alt="点赞" />
-            <span class="interaction-count">{{ getLikesCount(post.id) }}</span>
+            <span class="interaction-count">{{ post.likes_count }}</span>
           </button>
           <button class="interaction-btn comment-btn" :class="{active: isCommentsVisible(post.id)}" @click="toggleComments(post.id)">
             <img class="icon-comment normal" src="/WebResources/comment.svg" alt="评论" />
@@ -953,11 +839,88 @@ export default {
 .post-image {
   max-width: 100%;
   transition: all 0.3s ease;
+  opacity: 0;
+  transform: scale(1.02);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 .post-image:hover {
   transform: scale(1.01);
   box-shadow: 0 0 10px rgba(41, 104, 163, 0.34);
+}
+
+/* 渐进式图片加载样式 */
+.image-container {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.image-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background-color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 加载中的模糊效果 */
+.image-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* 图片加载完成后隐藏占位符 */
+.image-placeholder.loaded::before {
+  opacity: 0;
+}
+
+/* 图片加载完成后的显示效果 */
+.image-placeholder.loaded .post-image {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* 为图片添加骨架屏效果 */
+.image-placeholder::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 50px;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTAiIGhlaWdodD0iNTAiIHZpZXdCb3g9IjAgMCA1MCA1MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiByeD0iNCIvPgo8Y2lyY2xlIGN4PSIyNSIgY3k9IjI1IiByPSI0Ii8+Cjwvc3ZnPgo=');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 50px;
+  opacity: 0.3;
+  transition: opacity 0.5s ease;
+}
+
+.image-placeholder.loaded::after {
+  opacity: 0;
 }
 
 /* 互动栏样式 */
