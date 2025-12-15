@@ -1,14 +1,14 @@
 <script>
-import GS_body from '@/componets/GS_body.vue';
-import GS_container from '@/componets/GS_container.vue';
+import BaseBody from '@/componets/BaseBody.vue';
+import BaseContainer from '@/componets/BaseContainer.vue';
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 export default {
     name: 'GameDetailView',
     components: {
-        GS_body,
-        GS_container
+        BaseBody,
+        BaseContainer
     },
     setup() {
         const route = useRoute();
@@ -178,8 +178,8 @@ export default {
 }
 </script>
 <template>
-    <GS_body>
-        <GS_container>
+    <BaseBody>
+        <BaseContainer> 
             <!-- 加载状态 -->
             <div v-if="isLoading" class="loading-container">
                 <button class="back-button" @click="goBack">
@@ -335,8 +335,8 @@ export default {
                     </div>
                 </div>
             </div>
-        </GS_container>
-    </GS_body>
+        </BaseContainer>
+    </BaseBody>
 </template>
 <style scoped>
 .game-detail-container {

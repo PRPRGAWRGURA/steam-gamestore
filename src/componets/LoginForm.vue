@@ -153,7 +153,7 @@ export default {
                 const user = await normalUserAPI.register(this.registerData.username, this.registerData.password)
                 if(user.success){
                     // 使用Pinia store保存用户信息
-                    this.userStore.login(this.registerData.username, this.registerData.password, this.rememberMe)
+                    this.userStore.login(this.registerData.username, this.registerData.password, true)
                     this.$router.push('/')
                 }else{
                     this.errorMsg = user.error

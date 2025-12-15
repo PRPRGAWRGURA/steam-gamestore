@@ -9,6 +9,11 @@ export default {
   setup(props, { emit }) {
     const store = useUserStore()
     
+    // 使用computed从Pinia store获取当前用户信息，确保响应式更新
+    const currentUser = computed(() => {
+      return store.currentUser || null;
+    });
+    
     // 状态管理
     const newPostContent = ref('')
     const previewImage = ref('')
@@ -73,25 +78,26 @@ export default {
       }
       
       // 检查用户是否登录
-      if (!store.currentUser) {
+      if (!currentUser.value) {
         alert('请先登录后再发布消息')
         return
       }
       
-      const currentUser = store.currentUser
+      const user = currentUser.value
       
       // 1. 创建临时帖子对象（乐观更新）
       const tempPost = {
         id: `temp_${Date.now()}`, // 临时ID
-        user_id: currentUser.user_name,
+        user_id: user.user_name,
         content: newPostContent.value.trim(),
         image_url: previewImage.value || null,
-        user: {
-          user_name: currentUser.user_name,
-          user_image: currentUser.user_image || '/UserImage/001.png'
+        normal_user: {
+          user_name: user.user_name,
+          user_image: user.user_image 
         },
-        comment_count: 0,
-        like_count: 0,
+        comments_count: 0,
+        likes_count: 0,
+        liked: false,
         created_at: new Date().toISOString(),
         is_temp: true // 标记为临时帖子
       }
@@ -106,7 +112,7 @@ export default {
         
         // 准备消息数据，直接传入图片文件
         const postData = {
-          user_id: currentUser.user_name, // 外键约束连接的是normal_user表的user_name字段
+          user_id: user.user_name, // 外键约束连接的是normal_user表的user_name字段
           content: tempPost.content,
           image: selectedFile.value // 直接传递File对象给API
         }

@@ -1,5 +1,5 @@
 <script>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted,computed } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { communityAPI } from '../utils/api/communityAPI'
 import { loadPostsFromCache, savePostsToCache } from '../utils/tools/cacheUtils'
@@ -16,6 +16,11 @@ export default {
   emits: ['postsLoaded', 'postUpdated', 'postFailed'],
   setup(props, { emit }) {
     const store = useUserStore()
+    
+    // 使用computed从Pinia store获取当前用户信息，确保响应式更新
+    const currentUser = computed(() => {
+      return store.currentUser || null;
+    });
     
     // 状态管理
     const posts = ref(props.initialPosts || [])
@@ -47,7 +52,7 @@ export default {
     
     // 判断是否为当前用户
     const isCurrentUser = (userId) => {
-      return store.currentUser && store.currentUser.user_name === userId
+      return currentUser.value && currentUser.value.user_name === userId
     }
     
     // 评论可见性控制
@@ -91,7 +96,7 @@ export default {
       loading.value = true
       try {
         // 获取当前用户ID（使用user_name，因为外键关联的是normal_user表的user_name字段）
-        const currentUserId = store.currentUser?.user_name || null
+        const currentUserId = currentUser.value?.user_name || null
         
         // 使用优化的加载策略：初始加载30条，后续加载20条
         const currentLimit = isLoadMore ? loadMoreLimit : initialLimit
@@ -171,8 +176,25 @@ export default {
     const updateTempPost = (tempId, realPost) => {
       const index = posts.value.findIndex(post => post.id === tempId)
       if (index !== -1) {
-        // API已经返回完整的帖子数据，直接替换
-        posts.value[index] = realPost
+        // 保存临时帖子的互动数据
+        const tempPost = posts.value[index]
+        
+        // 合并真实帖子和临时帖子的数据，确保互动字段完整
+        const updatedPost = {
+          ...realPost,
+          // 确保点赞和评论相关字段存在且类型正确
+          liked: realPost.liked || tempPost.liked || false,
+          likes_count: realPost.likes_count !== undefined ? realPost.likes_count : (tempPost.likes_count || 0),
+          comments_count: realPost.comments_count !== undefined ? realPost.comments_count : (tempPost.comments_count || 0),
+          // 确保normal_user字段存在，用于显示用户信息
+          normal_user: realPost.normal_user || tempPost.normal_user || {
+            user_name: '',
+            user_image: '/UserImage/001.png'
+          }
+        }
+        
+        // 使用合并后的数据替换
+        posts.value[index] = updatedPost
         // 保存到缓存
         savePostsToCache(posts.value)
       }
@@ -254,7 +276,7 @@ export default {
       }
       
       // 检查用户是否登录
-      if (!store.currentUser) {
+      if (!currentUser.value) {
         alert('请先登录后再发表评论')
         return
       }
@@ -266,7 +288,36 @@ export default {
         return
       }
       
-      const currentUser = store.currentUser
+      const user = currentUser.value
+      
+      // 1. 创建临时评论对象（乐观更新）
+      const tempComment = {
+        id: `temp_${Date.now()}`, // 临时ID
+        post_id: postId,
+        user_id: user.user_name,
+        content: content,
+        created_at: new Date().toISOString(),
+        normal_user: {
+          user_name: user.user_name,
+          user_image: user.user_image 
+        },
+        is_temp: true // 标记为临时评论
+      }
+      
+      // 2. 立即更新评论列表
+      if (!comments.value[postId]) {
+        comments.value[postId] = []
+      }
+      comments.value[postId].push(tempComment)
+      
+      // 3. 立即更新帖子评论计数
+      const post = posts.value.find(p => p.id === postId)
+      if (post) {
+        post.comments_count = (post.comments_count || 0) + 1
+      }
+      
+      // 4. 重置输入框
+      commentInputs.value[postId] = ''
       
       try {
         // 显示加载状态
@@ -275,35 +326,54 @@ export default {
         }
         
         const commentData = {
-          post_id: postId,
-          user_id: currentUser.user_name, // 外键约束连接的是normal_user表的user_name字段
-          content: content
-        }
+        post_id: postId,
+        user_id: user.user_name, // 外键约束连接的是normal_user表的user_name字段
+        content: content
+      }
         
         const response = await communityAPI.createComment(commentData)
         
         if (response.success) {
-          // 更新评论列表
-          if (!comments.value[postId]) {
-            comments.value[postId] = []
+          // 5. API调用成功，替换临时评论为真实评论
+          const tempCommentIndex = comments.value[postId].findIndex(comment => comment.id === tempComment.id)
+          if (tempCommentIndex !== -1) {
+            comments.value[postId][tempCommentIndex] = response.data.comment
           }
           
-          // API已经返回完整的评论数据，包括用户信息
-          comments.value[postId].push(response.data.comment)
-          
-          // 重置输入框
-          commentInputs.value[postId] = ''
-          
-          // 更新帖子的评论计数
-          const post = posts.value.find(p => p.id === postId)
+          // 6. 更新帖子的真实评论计数
           if (post) {
             post.comments_count = response.data.comments_count
+            // 立即更新缓存，确保下次刷新时数据最新
+            savePostsToCache(posts.value)
           }
         } else {
+          // 7. API调用失败，移除临时评论
+          const tempCommentIndex = comments.value[postId].findIndex(comment => comment.id === tempComment.id)
+          if (tempCommentIndex !== -1) {
+            comments.value[postId].splice(tempCommentIndex, 1)
+          }
+          
+          // 回滚评论计数
+          if (post) {
+            post.comments_count = Math.max(0, (post.comments_count || 1) - 1)
+          }
+          
           alert(response.error || '发表评论失败，请稍后重试')
         }
       } catch (error) {
         console.error('发表评论出错:', error)
+        
+        // 8. 网络错误，移除临时评论
+        const tempCommentIndex = comments.value[postId].findIndex(comment => comment.id === tempComment.id)
+        if (tempCommentIndex !== -1) {
+          comments.value[postId].splice(tempCommentIndex, 1)
+        }
+        
+        // 回滚评论计数
+        if (post) {
+          post.comments_count = Math.max(0, (post.comments_count || 1) - 1)
+        }
+        
         alert('网络错误，请稍后重试')
       } finally {
         loadingComments.value = loadingComments.value.filter(id => id !== postId)
@@ -313,27 +383,27 @@ export default {
     // 处理点赞
     const handleLike = async (postId) => {
       // 检查用户是否登录
-      if (!store.currentUser) {
+      if (!currentUser.value) {
         alert('请先登录后再点赞')
         return
       }
       
-      const currentUser = store.currentUser
+      const user = currentUser.value
       const post = posts.value.find(p => p.id === postId)
       
       if (!post) return
       
       try {
         // 乐观更新：立即更新UI，提升用户体验
-        const wasLiked = post.liked;
-        const currentLikes = post.likes_count;
+        const wasLiked = post.liked || false;
+        const currentLikes = Number(post.likes_count) || 0;
         
         // 更新本地UI状态
         post.liked = !wasLiked;
         post.likes_count = wasLiked ? Math.max(0, currentLikes - 1) : currentLikes + 1;
         
         // 异步更新服务器数据（使用user_name作为userId，因为外键关联的是normal_user.user_name）
-        const response = await communityAPI.toggleLike(currentUser.user_name, postId);
+        const response = await communityAPI.toggleLike(user.user_name, postId);
         
         if (response.success) {
           // 服务器更新成功，更新点赞数量和评论数量
@@ -375,8 +445,6 @@ export default {
           visibleComments.value.delete(postId)
           // 更新缓存
           savePostsToCache(posts.value)
-          
-          alert('删除成功！')
         } else {
           alert(response.error || '删除失败，请稍后重试')
         }
@@ -413,7 +481,6 @@ export default {
             }
           }
           
-          alert('删除成功！')
         } else {
           alert(response.error || '删除失败，请稍后重试')
         }
@@ -687,6 +754,7 @@ export default {
   scrollbar-color: #499deb30 transparent;
   scrollbar-width: thin;
 }
+
 .loading-indicator,
 .empty-state {
   text-align: center;
@@ -702,6 +770,7 @@ export default {
 }
 
 .post-item {
+  position: relative;
   background-color: #07121f;
   color: rgb(225, 229, 234);
   padding: 20px;
@@ -973,23 +1042,44 @@ export default {
 
 /* 评论区域样式 */
 .comments-section {
-  max-height: 0;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: #07121f;
+  padding: 20px;
+  border-bottom: 2px solid #3ba0de;
+  border-top: none;
+  z-index: 10;
+  overflow-y: auto;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  /* 移除max-height: 0，使用transform和opacity控制显示隐藏 */
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(0px);
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.3s ease-out;
+  box-sizing: border-box;
 }
 
 .comments-section.expanded {
-  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
+  
+  max-height: 600px;
 }
 
 .comment-input-wrapper {
-  border-top: 2px solid #385894a7;
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 0;
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
+  border-top: none;
 }
 
 .comment-input {

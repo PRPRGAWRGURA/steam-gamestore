@@ -467,13 +467,13 @@ export const communityAPI = {
 
       // 2. 并行获取点赞状态、点赞数量和评论数量
       const [likedResponse, likesCountResponse, commentsCountResponse] = await Promise.all([
-        // 获取当前用户的点赞状态
+        // 获取当前用户的点赞状态，不使用single()避免406错误
         userId ? supabase
           .from('community_like')
           .select('id')
           .eq('post_id', postId)
           .eq('user_id', userId)
-          .single() : Promise.resolve({ error: { code: 'PGRST116' } }),
+          .limit(1) : Promise.resolve({ data: [] }),
         
         // 获取点赞数量
         supabase
@@ -489,7 +489,7 @@ export const communityAPI = {
       ])
 
       // 3. 处理点赞状态
-      const liked = likedResponse.data !== null
+      const liked = likedResponse.data && likedResponse.data.length > 0
       
       // 4. 处理点赞数量
       const likes_count = likesCountResponse.count || 0
@@ -565,7 +565,13 @@ export const communityAPI = {
         .delete()
         .eq('post_id', postId)
 
-      // 再删除消息
+      // 再删除相关点赞记录
+      await supabase
+        .from('community_like')
+        .delete()
+        .eq('post_id', postId)
+
+      // 最后删除消息
       const { error } = await supabase
         .from('community_post')
         .delete()
@@ -613,7 +619,10 @@ export const communityAPI = {
           content: commentData.content,
           created_at: new Date().toISOString()
         }])
-        .select()
+        .select(`
+          *,
+          normal_user (user_name, user_image)
+        `)
         .single()
 
       if (error) {
@@ -781,25 +790,29 @@ export const communityAPI = {
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', userId)
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116是未找到记录的错误码
+      if (checkError) {
         return this._handleError(checkError, '检查点赞状态失败')
       }
+      
+      // 检查是否有记录，避免使用single()导致的406错误
+      const isLiked = existingLike && existingLike.length > 0;
 
       let newLiked = false;
 
-      if (existingLike) {
+      if (isLiked) {
         // 2. 已点赞，取消点赞
         const { error: deleteError } = await supabase
           .from('community_like')
           .delete()
-          .eq('id', existingLike.id);
+          .eq('post_id', postId)
+          .eq('user_id', userId);
 
         if (deleteError) {
           return this._handleError(deleteError, '取消点赞失败')
         }
+        newLiked = false;
       } else {
         // 3. 未点赞，添加点赞
         const { error: insertError } = await supabase
@@ -880,14 +893,13 @@ export const communityAPI = {
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', userId)
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116是未找到记录的错误码
+      if (checkError) {
         return this._handleError(checkError, '检查点赞状态失败')
       }
 
-      const isLiked = !!existingLike;
+      const isLiked = existingLike && existingLike.length > 0;
 
       // 2. 获取点赞数量
       const { data: likesCount, error: countError } = await supabase
