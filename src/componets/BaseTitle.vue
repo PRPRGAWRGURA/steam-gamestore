@@ -1,12 +1,12 @@
 <script>
-import GS_title_inner from './GS_title_inner.vue';
-import GS_title_search from './GS_title_search.vue';
-import GS_title_expand from './GS_title_expand.vue';
+import TitleInner from './TitleInner.vue';
+import TitleSearch from './TitleSearch.vue';
+import TitleExpand from './TitleExpand.vue';
 export default {
     components: {
-        GS_title_inner,
-        GS_title_search,
-        GS_title_expand,
+        TitleInner,
+        TitleSearch,
+        TitleExpand,
     },
     data() {
         return {
@@ -39,7 +39,7 @@ export default {
         <div class="GS_title">
             <div class="GS_title_box">
                 <div class="box-left">
-                    <GS_title_inner v-for="item in titles" 
+                    <TitleInner v-for="item in titles" 
                     :key="item.id" 
                     :index="item.id" 
                     :title="item.name"
@@ -47,12 +47,12 @@ export default {
                     @title-click="handleTitleClick"/>
                 </div>
                 <div class="box-right">
-                    <GS_title_search/>
+                    <TitleSearch/>
                 </div>
             </div>
             <transition name="expand">
                 <div class="box-bottom" v-show="isExpanded">
-                    <GS_title_expand :active-index="activeIndex"/>
+                    <TitleExpand :active-index="activeIndex"/>
                 </div>
             </transition>
         </div>

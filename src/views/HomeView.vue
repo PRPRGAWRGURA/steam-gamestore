@@ -1,29 +1,29 @@
 <script>
-import GS_body from '../componets/GS_body.vue';
-import GS_title from '../componets/GS_title.vue';
-import GS_container from '../componets/GS_container.vue';
-import GS_Carousel from '../componets/GS_Carousel.vue'; // 引入新的轮播图组件
-import GS_showgames from '../componets/GS_showgames.vue';
+import BaseBody from '../componets/BaseBody.vue';
+import BaseTitle from '../componets/BaseTitle.vue';
+import BaseContainer from '../componets/BaseContainer.vue';
+import HomeCarousel from '../componets/HomeCarousel.vue'; // 引入新的轮播图组件
+import HomeGameShowcase from '../componets/HomeGameShowcase.vue';
 export default {
   name: 'HomeView',
   components: {
-    GS_body,
-    GS_title,
-    GS_container,
-    GS_Carousel,
-    GS_showgames
+    BaseBody,
+    BaseTitle,
+    BaseContainer,
+    HomeCarousel,
+    HomeGameShowcase
   }
 }
 </script>
 
 <template>
-  <GS_body>
-    <GS_title/>
-    <GS_container>
-      <GS_Carousel />
-      <GS_showgames />
-    </GS_container>
-  </GS_body>
+  <BaseBody>
+    <BaseTitle/>
+    <BaseContainer>
+      <HomeCarousel />
+      <HomeGameShowcase />
+    </BaseContainer>
+  </BaseBody>
 </template>
 
 <style scoped>

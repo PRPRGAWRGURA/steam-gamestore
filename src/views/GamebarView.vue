@@ -1,15 +1,15 @@
 <script>
-import GS_body from '../componets/GS_body.vue';
-import GS_container from '../componets/GS_container.vue';
-import GS_game_library from '../componets/GS_game_library.vue';
+import BaseBody from '../componets/BaseBody.vue';
+import BaseContainer from '../componets/BaseContainer.vue';
+import GameLibrary from '../componets/GameLibrary.vue';
 import { useUserStore } from '@/stores/userStore';
 import { computed } from 'vue';
 export default {
   name: 'GamebarView',
   components: {
-    GS_body,
-    GS_container,
-    GS_game_library
+    BaseBody,
+    BaseContainer,
+    GameLibrary
   },
   setup() {
     const userStore = useUserStore();
@@ -24,17 +24,17 @@ export default {
 }
 </script>
 <template>
-  <GS_body>
+  <BaseBody>
       <div class="gamebar-container">
         <div class="user-info">
           <p v-if="currentUser">欢迎您，{{ currentUser.user_name }}！</p>
           <p v-else>请先登录查看更多内容</p>
         </div>
       </div>
-      <GS_container>
+      <BaseContainer>
         <div class="gamebar-content" v-if="currentUser">
           <h1 class="gamebar-title">游戏库</h1>
-          <GS_game_library />
+          <GameLibrary />
         </div>
         <div class="gamebar-content" v-else>
           <h1 class="gamebar-title">游戏库</h1>
@@ -44,8 +44,8 @@ export default {
             <p>登录后即可访问您的游戏收藏和游戏时间统计</p>
           </div>
         </div>
-      </GS_container>
-  </GS_body>
+      </BaseContainer>
+  </BaseBody>
 </template>
 <style scoped>
 .gamebar-container {

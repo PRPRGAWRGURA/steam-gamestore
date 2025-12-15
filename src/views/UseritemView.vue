@@ -1,21 +1,21 @@
 <script>
-import GS_body from '../componets/GS_body.vue';
-import GS_container from '../componets/GS_container.vue';
-import GS_change_userinfo from '../componets/GS_change_userinfo.vue';
+import BaseBody from '../componets/BaseBody.vue';
+import BaseContainer from '../componets/BaseContainer.vue';
+import UserProfileEdit from '../componets/UserProfileEdit.vue';
 
 export default {
   name: 'UseritemView',
   components: {
-    GS_body,
-    GS_container,
-    GS_change_userinfo
+    BaseBody,
+    BaseContainer,
+    UserProfileEdit
   }
 };
 </script>
 
 <template>
-  <GS_body>
-    <GS_container>
+  <BaseBody>
+    <BaseContainer>
       <div class="UserItemBox">
         <div class="UserItemHeader">
           <div class="UserItemHeaderTitle">
@@ -23,11 +23,11 @@ export default {
           </div>
           
           <!-- 修改用户信息区域 - 整合了修改头像、用户名和密码功能 -->
-          <GS_change_userinfo />
+          <UserProfileEdit />
         </div>
       </div>
-    </GS_container>
-  </GS_body>
+    </BaseContainer>
+  </BaseBody>
 </template>
 
 <style scoped>

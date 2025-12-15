@@ -1,17 +1,17 @@
 <script>
-import GS_body from '@/componets/GS_body.vue'
-import GS_container from '@/componets/GS_container.vue'
-import GS_post_creator from '@/componets/GS_post_creator.vue'
-import GS_post_list from '@/componets/GS_post_list.vue'
+import BaseBody from '@/componets/BaseBody.vue'
+import BaseContainer from '@/componets/BaseContainer.vue'
+import PostCreator from '@/componets/PostCreator.vue'
+import PostList from '@/componets/PostList.vue'
 import { ref } from 'vue'
 
 export default {
   name: 'CommunityView',
   components: {
-    GS_body,
-    GS_container,
-    GS_post_creator,
-    GS_post_list
+    BaseBody,
+    BaseContainer,
+    PostCreator,
+    PostList
   },
   setup() {
     const postListRef = ref(null)
@@ -49,25 +49,25 @@ export default {
 </script>
 
 <template>
-  <GS_body>
+  <BaseBody>
     <div class="community-title">
       <div class="community-title-line"></div>
       <div class="community-title-text">社区内容</div>
     </div>
-    <GS_container>
+    <BaseContainer>
       <div class="community-container">
         <!-- 使用PostCreator组件 -->
-        <GS_post_creator 
+        <PostCreator 
           @post-created="handlePostCreated" 
           @post-updated="handlePostUpdated"
           @post-failed="handlePostFailed"
         />
         
         <!-- 使用PostList组件 -->
-        <GS_post_list ref="postListRef" />
+        <PostList ref="postListRef" />
       </div>
-    </GS_container>
-  </GS_body>
+    </BaseContainer>
+  </BaseBody>
 </template>
 
 <style scoped>

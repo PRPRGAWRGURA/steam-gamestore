@@ -1,18 +1,18 @@
 <script>
-import GS_body from '@/componets/GS_body.vue';
-import GS_title from '@/componets/GS_title.vue';
-import GS_container from '@/componets/GS_container.vue';
+import BaseBody from '@/componets/BaseBody.vue';
+import BaseTitle from '@/componets/BaseTitle.vue';
+import BaseContainer from '@/componets/BaseContainer.vue';
 import { useUserStore } from '@/stores/userStore';
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { normalUserAPI } from '@/utils/api/normalUserAPI';
 
 export default {
   name: 'AboutView',
   components: {
-    GS_body,
-    GS_title,
-    GS_container,
+    BaseBody,
+    BaseTitle,
+    BaseContainer,
   },
   setup() {
     const userStore = useUserStore();
@@ -100,9 +100,9 @@ export default {
 }
 </script>
 <template>
-  <GS_body>
-    <GS_title/>
-    <GS_container>
+  <BaseBody>
+    <BaseTitle/>
+    <BaseContainer>
       <div class="hero-section">
         <div class="hero-content">
           <h1 class="hero-title">
@@ -189,8 +189,8 @@ export default {
           <button class="cta-button" @click="goToDeveloperPage">成为发行者</button>
         </div>
       </section>
-    </GS_container>
-  </GS_body>
+    </BaseContainer>
+  </BaseBody>
 </template>
 <style scoped>
 /* 全局样式重置 */

@@ -2,7 +2,7 @@
 import { ref, reactive } from 'vue';
 
 export default {
-  name: 'GS_showgames',
+  name: 'HomeGameShowcase',
   setup() {
     // 游戏列表 - 这里会从数据库获取，目前使用模拟数据
     const games = ref([]);

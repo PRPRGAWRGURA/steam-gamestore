@@ -1,21 +1,21 @@
 <script>
-import GS_body from '../componets/GS_body.vue';
-import GS_title from '../componets/GS_title.vue';
-import GS_login from '../componets/GS_login.vue';
+import BaseBody from '../componets/BaseBody.vue';
+import BaseTitle from '../componets/BaseTitle.vue';
+import LoginForm from '../componets/LoginForm.vue';
 export default {
   name: 'LoginView',
   components: {
-    GS_body,
-    GS_title,
-    GS_login,
+    BaseBody,
+    BaseTitle,
+    LoginForm,
   }
 }
 </script>
 <template>
-  <GS_body>
-      <GS_title/>
-      <GS_login/>
-  </GS_body>
+  <BaseBody>
+      <BaseTitle/>
+      <LoginForm/>
+  </BaseBody>
 </template>
 
 <style scoped>

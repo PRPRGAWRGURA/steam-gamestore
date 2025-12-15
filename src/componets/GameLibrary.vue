@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue';
 
 export default {
-  name: 'GS_game_library',
+  name: 'GameLibrary',
   setup() {
     // 当前悬停的游戏
     const hoveredGame = ref(null);

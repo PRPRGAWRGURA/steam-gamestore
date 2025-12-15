@@ -4,7 +4,7 @@ import { useUserStore } from '@/stores/userStore';
 import { supportAPI } from '@/utils/api/supportAPI';
 import { setCache, getCache, removeCache } from '@/utils/tools/cacheUtils';
 export default {
-  name: 'GS_support_form',
+  name: 'SupportForm',
   props: {
     isDeveloperApplication: {
       type: Boolean,

@@ -1,9 +1,9 @@
 <script>
-import GS_header_user from './GS_header_user.vue';
+import HeaderUser from './HeaderUser.vue';
 import { useUserStore } from '../stores/userStore';
 export default {
     components: {
-        GS_header_user
+        HeaderUser
     },
     setup() {
         const userStore = useUserStore();
@@ -73,7 +73,7 @@ export default {
                     >{{ item.text }}</router-link>
                 </div>
             </div>
-            <GS_header_user />
+            <HeaderUser />
         </div>
     </div>
 </template>
