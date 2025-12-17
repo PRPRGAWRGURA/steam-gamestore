@@ -744,7 +744,7 @@ export default {
 .posts-list {
   width: 100%;
   height: 100%;
-  overflow: scroll;
+  overflow: auto;
   overflow-x: hidden;
   border-left: 2px solid transparent;
   border-right: 2px solid transparent;

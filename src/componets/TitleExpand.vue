@@ -114,35 +114,100 @@ export default {
             </template>
             <template v-else-if="activeIndex === 3">
                 <h2>畅玩方式</h2>
-                <div class="playstyle-buttons">
-                    <button class="playstyle-btn" v-for="(playstyle, index) in playstyles" :key="`playstyle-${index}`" @click="handleAction('selectPlaystyle', playstyle)">
-                        {{ playstyle }}
-                    </button>
-                </div>
-                <div class="playstyle-subcontent">
-                    <h3>热门多人游戏</h3>
-                    <div class="sub-list">
-                        <div class="sub-item" v-for="(game, i) in games.filter(g => g.tags.includes('多人')).slice(0, 6)" :key="`play-${i}`">
-                            <h4>{{ game.title }}</h4>
-                            <div class="tags">
-                                <span v-for="tag in game.tags" :key="tag">{{ tag }}</span>
+                <div class="special-flex playstyle-flex">
+                    <div class="special-flex-left playstyle-flex-left">
+                        <div class="special-card playstyle-card">
+                            <div class="card-content">
+                                <img src="/WebResources/deck.svg" alt="" class="normal">
+                                <img src="/WebResources/deck_hover.svg" alt="" class="hover">
+                                <p>非常适合DECK</p>
                             </div>
-                            <span>{{ game.price }}</span>
+                        </div>
+                        <div class="special-card playstyle-card">
+                            <div class="card-content">
+                                <img src="/WebResources/remote.svg" alt="" class="normal">
+                                <img src="/WebResources/remote_hover.svg" alt="" class="hover">
+                                <p>远程畅玩</p>
+                            </div>
+                        </div>
+                        <div class="special-card playstyle-card">
+                            <div class="card-content">
+                                <img src="/WebResources/vr.svg" alt="" class="normal">
+                                <img src="/WebResources/vr_hover.svg" alt="" class="hover">
+                                <p>VR作品</p>
+                            </div>
+                        </div>
+                        <div class="special-card playstyle-card">
+                            <div class="card-content">
+                                <img src="/WebResources/controller.svg" alt="" class="normal">
+                                <img src="/WebResources/controller_hover.svg" alt="" class="hover">
+                                <p>支持控制器</p>
+                            </div>
+                        </div>
+                        <div class="special-card playstyle-card">
+                            <div class="card-content">
+                                <img src="/WebResources/online.svg" alt="" class="normal">
+                                <img src="/WebResources/online_hover.svg" alt="" class="hover">
+                                <p>合作</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="special-flex-right playstyle-flex-right">
+                        <div class="special-content-left">
+                            <p>局域网</p>
+                            <p>本地多人及社交聚会</p>
+                            <p>大型多人在线</p>
+                            <p>多人</p>
+                            <p>在线竞技</p>
+                            <p>单人</p>
                         </div>
                     </div>
                 </div>
             </template>
             <template v-else-if="activeIndex === 4">
-                <h2>特别优惠</h2>
-                <div class="special-grid">
-                    <div class="special-card" v-for="(game, i) in games.filter(g => g.discount)" :key="`special-${i}`">
-                        <div class="card-img" :style="{ backgroundImage: `url(${game.image})` }"></div>
-                        <div class="card-info">
-                            <h3>{{ game.title }}</h3>
-                            <div class="tags">
-                                <span v-for="tag in game.tags" :key="tag">{{ tag }}</span>
+                <h2>特别栏目</h2>
+                <div class="special-flex">
+                    <div class="special-flex-left">
+                        <div class="special-card">
+                            <div class="card-content">
+                                <img src="/WebResources/cd.svg" alt="" class="normal">
+                                <img src="/WebResources/cd_hover.svg" alt="" class="hover">
+                                <p>试玩</p>
                             </div>
-                            <span class="price">{{ game.price }} <span class="discount">-{{ game.discount }}</span></span>
+                        </div>
+                        <div class="special-card">
+                            <div class="card-content">
+                                <img src="/WebResources/download.svg" alt="" class="normal">
+                                <img src="/WebResources/download_hover.svg" alt="" class="hover">
+                                <p>DLC</p>
+                            </div>
+                        </div>
+                        <div class="special-card">
+                            <div class="card-content">
+                                <img src="/WebResources/sale.svg" alt="" class="normal">
+                                <img src="/WebResources/sale_hover.svg" alt="" class="hover">
+                                <p>特卖活动</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="special-flex-right">
+                        <div class="special-content-left">
+                            <div class="top">
+                                <p>软件</p>
+                                <p>原声音轨</p>
+                                <p>抢先体验</p>
+                            </div>
+                            <div class="bottom">
+                                <p>网吧游戏</p>
+                                <p>macOS</p>
+                                <p>steamOS + Linux</p>
+                            </div>
+                        </div>
+                        <div class="special-content-right">
+                            <p>Steam 新品节</p>
+                            <p>Steam 大奖</p>
+                            <p>Steam 回顾</p>
+                            <p>Steam 实验室</p>
                         </div>
                     </div>
                 </div>
@@ -154,21 +219,23 @@ export default {
     .GS_title_expand {
         display: flex;
         flex-direction: column; 
-        max-width: 1200px; 
+        max-width: 1200px;
+        height: 240px; 
         margin: 0 auto;
         margin-bottom: 20px;
-        padding: 20px;
         box-sizing: border-box;
         color: #c6d4e1; 
-        background-color: #1b2838; 
     }
     h2 {
-        font-size: 24px;
-        color: #ffffff;
+        font-size: 14px;
+        color: #8d9092;
+        margin-top: 0;
         margin-bottom: 15px;
     }
     .browse-content, .recommend-content, .category-content, .playstyle-content, .special-content {
         width: 100%;
+        height: 100%;
+        overflow: hidden;
     }
     .browse-grid {
         display: grid;
@@ -301,19 +368,120 @@ export default {
         margin-bottom: 5px;
         border-radius: 4px;
     }
-    /* 特别网格：模仿折扣网格 */
-    .special-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 10px;
+    .special-flex {
+        display: flex;
+        width: 100%;
+        height: 1px;
+    }
+    .special-flex-left {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 750px;
+        gap: 5px;
     }
     .special-card {
-        background: #2a475e;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        width: calc(50% - 5px);
+        height: 90px;
+        background: linear-gradient(to bottom, rgb(29, 172, 249) 0%, rgb(20, 154, 225) 50%, rgb(13, 123, 182) 100%);
+        color: black;
+        font-size: 16px;
+        font-weight: bold;
         border-radius: 4px;
         overflow: hidden;
     }
+    .card-content {
+        position: relative;
+        width: 150px;
+        height: 50px;
+    }
+        
+    .special-flex-left .special-card:last-child {
+        width: calc(100% - 5px);
+    }
+    .card-content img {
+        position: absolute;
+        width: 35%;
+        object-fit: cover;
+        top: 5%;
+        left: 15%;
+        opacity: 1;
+    }
+    .special-card p {
+        position: absolute;
+        width: 200px;
+        left: 55%;
+    }
+    .special-card .hover {
+        opacity: 0;
+    }
+    .special-card:hover .hover {
+        opacity: 1;
+    }
+    .special-card:hover .normal {
+        opacity: 0;
+    }
+    .special-card p, 
+    .special-card img {
+        transition: all 0.2s ease;
+    }
+    .special-card:hover p,
+    .special-card:hover img {
+        transform: translateY(3px);
+        color: white;
+    }
+    .special-flex-right {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 470px;
+        padding-left: 15px;
+        gap: 5px;
+    }
+    .special-flex-right p {
+        color: rgb(206, 215, 218);
+        font-size: 12px;
+        margin: 8px;
+        margin-left: 0;
+    }
+    .special-flex-right p:hover {
+        color: rgb(234, 241, 243);;
+    }
+    .special-flex-right .special-content-left {
+        width: 200px;
+    }
+    .special-flex-right .special-content-left .top {
+        border: 1.5px solid transparent;
+        border-image: linear-gradient(to right, #6c6b6bbd, #59595900) 1;
+        border-top: none;
+        border-left: none;
+        border-right: none;
+    }
+    
+    .playstyle-flex-left {
+        width: 1800px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: flex-start;
+    }
+    .playstyle-card {
+        width: calc(33.333% - 3.333px);
+    }
+    
+    .playstyle-card:nth-child(n+4) {
+        width: calc(50% - 5px);
+    }
+    
+    .playstyle-flex-left .playstyle-card:last-child {
+        width: 50%;
+    }
     /* 可以添加更多Steam-like样式，如hover效果 */
-    .browse-card:hover, .recommend-item:hover, .category-btn:hover, .playstyle-btn:hover, .special-card:hover {
+    .browse-card:hover, .recommend-item:hover, .category-btn:hover, .playstyle-btn:hover {
         background: #67c1f5;
         color: #1b2838;
     }

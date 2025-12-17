@@ -74,7 +74,7 @@ export default {
         width: 100%;
         top: 0;
         position: sticky;
-        background-color: #18273890;
+        background: linear-gradient(to bottom,  #182738, #18273890);
         backdrop-filter: blur(10px);
         box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
         display: flex;

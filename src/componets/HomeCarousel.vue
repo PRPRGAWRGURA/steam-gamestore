@@ -7,6 +7,9 @@ export default {
       // 新增：跟踪当前悬停的缩略图索引
       hoveredShotIndex: 0,
       // 组件内部数据，不需要从外部获取
+      isAutoPlaying: true,
+      // 轮播间隔时间（毫秒）
+      timeout: 5000,
       gamelite: [
         { id: 1, GameName:'SPLIT FICTION', GamePrice: 298, GamePriceSave: 50},
         { id: 2, GameName:'三角洲行动', GamePrice: 0, GamePriceSave: 0},
@@ -38,7 +41,18 @@ export default {
     goToSlide(id) {
       this.GameId = id;
     },
-    
+    // 新增：暂停自动播放
+    pauseAutoPlay() {
+      this.isAutoPlaying = false;
+    },
+    // 新增：恢复自动播放
+    resumeAutoPlay() {
+      if (!this.isAutoPlaying) {
+        this.isAutoPlaying = true;
+        // 重新调用loopFunction重启递归链条
+        this.loopFunction();
+      }
+    },    
     // 新增：鼠标悬停到缩略图时的处理函数
     handleThumbHover(shotIndex) {
       this.hoveredShotIndex = shotIndex + 1; // 修正：缩略图索引从1开始
@@ -63,7 +77,19 @@ export default {
         // 根据悬停的缩略图显示对应图片
         return imageData[`item${this.hoveredShotIndex}`] || imageData.header;
       }
+    },
+    loopFunction() {
+      if(this.isAutoPlaying) {
+        this.nextSlide();
+        setTimeout(this.loopFunction, this.timeout);
+      }
     }
+  },
+  mounted() {
+    this.loopFunction();
+  },
+  beforeUnmount() {
+    
   }
 }
 </script>
@@ -78,11 +104,11 @@ export default {
       
       <!-- 左箭头按钮 -->
       <div class="left_btn">
-        <button @click="prevSlide"><img src="/WebResources/left_arrow.svg" alt=""></button>
+        <button @click="prevSlide" @mouseenter="pauseAutoPlay" @mouseleave="resumeAutoPlay"><img src="/WebResources/left_arrow.svg" alt=""></button>
       </div>
       
       <!-- 轮播图内容容器 -->
-      <router-link class="game_item_container" to="/gamedetail">
+      <router-link class="game_item_container" to="/gamedetail" @mouseenter="pauseAutoPlay" @mouseleave="resumeAutoPlay">
         <a href="#" class="game_item" v-for="item in gamelite" :key="item.id" :class="{'active': item.id === GameId}">
           <!-- 游戏截图区域 - 修改为动态显示图片 -->
           <div class="screenshot">
@@ -123,7 +149,7 @@ export default {
       
       <!-- 右箭头按钮 -->
       <div class="right_btn">
-        <button @click="nextSlide"><img src="/WebResources/left_arrow.svg" alt=""></button>
+        <button @click="nextSlide" @mouseenter="pauseAutoPlay" @mouseleave="resumeAutoPlay"><img src="/WebResources/left_arrow.svg" alt=""></button>
       </div>
       
       <!-- 轮播图缩略指示器 -->
