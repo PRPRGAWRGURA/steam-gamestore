@@ -225,7 +225,11 @@ export default {
           // 自动为每个帖子加载评论，但不展开评论区
           const newPosts = isLoadMore ? response.data : posts.value
           newPosts.forEach(post => {
-            if (!comments.value[post.id]) {
+            if (isLoadMore) {
+              if (!comments.value[post.id]) {
+              loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
+              }
+            } else {
               loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
             }
           })
