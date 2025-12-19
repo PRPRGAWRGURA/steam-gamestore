@@ -38,11 +38,19 @@ export default {
       }
     }
     
+    // 处理刷新按钮点击
+    const handleRefresh = () => {
+      if (postListRef.value) {
+        postListRef.value.refreshPosts()
+      }
+    }
+    
     return {
       postListRef,
       handlePostCreated,
       handlePostUpdated,
-      handlePostFailed
+      handlePostFailed,
+      handleRefresh
     }
   }
 }
@@ -52,7 +60,13 @@ export default {
   <BaseBody>
     <div class="community-title">
       <div class="community-title-line"></div>
-      <div class="community-title-text">社区内容</div>
+      <div class="community-title-container">
+        <div class="community-title-text">社区内容</div>
+        <button class="refresh-btn" @click="handleRefresh">
+          <img src="/WebResources/refresh.svg" alt="刷新" class="refresh-icon" :class="{ 'rotating': postListRef?.loading }" />
+          <span>刷新</span>
+        </button>
+      </div>
     </div>
     <BaseContainer>
       <div class="community-container">
@@ -88,20 +102,68 @@ export default {
   height: 3px;
   background-color: #0d1723;
 }
-.community-title-text  {
+.community-title-container {
   width: 1220px;
   height: 80px;
-  line-height: 80px;
   margin: 0 auto;
   border-radius: 5px;
   background-color: #0d1723;
   font-size: 25px;
   font-weight: bold;
-  padding-left: 20px;
+  padding: 0 20px;
   box-sizing: border-box;
   border: 2px solid transparent;
   border-top: none;
   border-image: linear-gradient(to bottom,  #0d1723 15%,  #499deb 100%) 1;
   color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.community-title-text {
+  flex: 1;
+  height: 80px;
+  line-height: 80px;
+}
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 15px;
+  background-color: #499deb;
+  color: #e1d4d4;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.refresh-btn:hover {
+  background-color: #5ba5ea;
+  transform: scale(1.05);
+}
+.refresh-btn:active {
+  transform: scale(0.98);
+}
+.refresh-icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  transition: transform 0.3s ease;
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 旋转状态类 */
+.rotating {
+  animation: rotate 1s linear infinite;
 }
 </style>

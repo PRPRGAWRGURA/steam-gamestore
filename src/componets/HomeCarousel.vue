@@ -89,7 +89,7 @@ export default {
     this.loopFunction();
   },
   beforeUnmount() {
-    
+    this.pauseAutoPlay();
   }
 }
 </script>

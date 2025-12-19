@@ -400,8 +400,8 @@ export default {
               >
             </div>
           </div>
-          <!-- 如果状态为已处理且有管理员回复，显示回复内容 -->
-          <div v-if="ticket.status === '已处理' && ticket.callback" class="ticket-callback">
+          <!-- 如果状态为已通过或已拒绝且有管理员回复，显示回复内容 -->
+          <div v-if="(ticket.status === '已通过' || ticket.status === '已拒绝' || ticket.status === '已处理') && ticket.callback" class="ticket-callback">
             <div class="callback-header">
               <strong>管理员回复：</strong>
             </div>

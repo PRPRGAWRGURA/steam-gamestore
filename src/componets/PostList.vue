@@ -55,6 +55,17 @@ export default {
       return currentUser.value && currentUser.value.user_name === userId
     }
     
+    // 按数组索引位置将帖子分为两列
+    // 第一列：从第一条数据开始隔行读取（索引0, 2, 4...）
+    const firstColumnPosts = computed(() => {
+      return posts.value.filter((_, index) => index % 2 === 0)
+    })
+    
+    // 第二列：从第二条数据开始隔行读取（索引1, 3, 5...）
+    const secondColumnPosts = computed(() => {
+      return posts.value.filter((_, index) => index % 2 === 1)
+    })
+    
     // 评论可见性控制
     const isCommentsVisible = (postId) => {
       return visibleComments.value.has(postId)
@@ -108,44 +119,108 @@ export default {
         
         if (response.success) {
           let updatedPosts = []
+          let actualNewPostCount = 0
           
           if (isLoadMore) {
             // 加载更多时，合并数据并去重
             const existingIds = new Set(posts.value.map(post => post.id))
             const newPosts = response.data.filter(post => !existingIds.has(post.id))
+            actualNewPostCount = newPosts.length
             updatedPosts = [...posts.value, ...newPosts]
-          } else {
-            // 刷新数据时，保留所有已加载的帖子，只更新最新内容
-            // 1. 保留临时帖子
-            const tempPosts = posts.value.filter(post => post.is_temp)
             
-            // 2. 保留现有帖子，去重并合并最新帖子
-            const existingIds = new Set(posts.value.map(post => post.id))
-            const newPosts = response.data.filter(post => !existingIds.has(post.id))
-            
-            // 3. 合并所有帖子，确保临时帖子在最前面
-            updatedPosts = [...tempPosts, ...posts.value, ...newPosts]
-            
-            // 4. 去重，确保每个帖子只出现一次（以最新的为准）
+            // 去重，确保每个帖子只出现一次（以最新的为准）
             const uniquePostsMap = new Map()
             updatedPosts.forEach(post => {
               uniquePostsMap.set(post.id, post)
             })
             updatedPosts = Array.from(uniquePostsMap.values())
+          } else {
+            // 刷新数据时，保留临时帖子和服务器返回的帖子，删除已不存在的帖子
+            // 1. 保留临时帖子
+            const tempPosts = posts.value.filter(post => post.is_temp)
             
-            // 5. 按创建时间排序，最新的在前面
-            updatedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            // 2. 获取服务器返回的帖子ID集合
+            const serverPostIds = new Set(response.data.map(post => post.id))
+            
+            // 3. 从现有帖子中只保留临时帖子和存在于服务器返回结果中的帖子
+            // 同时保留帖子的图片加载状态
+            const existingValidPosts = posts.value.filter(post => {
+              return post.is_temp || serverPostIds.has(post.id)
+            })
+            
+            // 4. 合并服务器返回的帖子，去重并确保临时帖子在最前面
+            // 首先将服务器返回的帖子转换为Map，便于去重
+            const serverPostsMap = new Map()
+            response.data.forEach(post => {
+              serverPostsMap.set(post.id, post)
+            })
+            
+            // 5. 合并所有帖子：临时帖子 + (现有有效帖子与服务器帖子合并)
+            updatedPosts = [...tempPosts]
+            
+            // 合并现有有效帖子和服务器帖子，保留图片加载状态
+            const mergedPostsMap = new Map()
+            
+            // 先添加现有有效帖子，保留它们的图片加载状态
+            existingValidPosts.forEach(post => {
+              mergedPostsMap.set(post.id, post)
+            })
+            
+            // 再添加服务器帖子，更新帖子内容但保留图片加载状态
+            serverPostsMap.forEach((serverPost, postId) => {
+              const existingPost = mergedPostsMap.get(postId)
+              if (existingPost) {
+                // 保留现有帖子的图片加载状态，更新其他内容
+                mergedPostsMap.set(postId, {
+                  ...serverPost,
+                  imageLoaded: existingPost.imageLoaded // 保留图片加载状态
+                })
+              } else {
+                // 新增帖子，直接添加
+                mergedPostsMap.set(postId, serverPost)
+              }
+            })
+            
+            // 将合并后的帖子添加到updatedPosts
+            updatedPosts.push(...mergedPostsMap.values())
+            
+            // 6. 计算实际新帖子数量（服务器返回的帖子中不在现有帖子中的数量）
+            const currentPostIds = new Set(posts.value.map(post => post.id))
+            actualNewPostCount = response.data.filter(post => !currentPostIds.has(post.id)).length
+            
+            // 7. 去重，确保每个帖子只出现一次（以最新的为准）
+            const uniquePostsMap = new Map()
+            updatedPosts.forEach(post => {
+              uniquePostsMap.set(post.id, post)
+            })
+            updatedPosts = Array.from(uniquePostsMap.values())
           }
+          
+          // 8. 统一按时间排序，最新的在前面
+          // 使用id排序，数字大的帖子最新，性能更好
+          updatedPosts.sort((a, b) => {
+            // 先按id排序，id大的帖子最新
+            if (b.id && a.id) {
+              // 如果id是数字，直接比较数字大小
+              const idA = Number(a.id)
+              const idB = Number(b.id)
+              if (!isNaN(idA) && !isNaN(idB)) {
+                return idB - idA
+              }
+            }
+            // 否则按created_at排序
+            return new Date(b.created_at) - new Date(a.created_at)
+          })
           
           // API已经返回完整的帖子数据，包括user对象、点赞状态、点赞数量和评论数量
           posts.value = updatedPosts
           
-          // 更新偏移量
-          offset.value += response.data.length
+          // 更新偏移量：只增加实际加载的新帖子数量
+          offset.value += actualNewPostCount
           
-          // 使用当前请求的limit值判断是否还有更多数据
-          // 如果返回的数据长度小于请求的limit，说明没有更多数据了
-          hasMore.value = response.data.length >= currentLimit
+          // 使用实际返回的新帖子数量判断是否还有更多数据
+          // 如果返回的新帖子数量小于请求的limit，说明没有更多数据了
+          hasMore.value = actualNewPostCount >= currentLimit
           
           // 自动为每个帖子加载评论，但不展开评论区
           const newPosts = isLoadMore ? response.data : posts.value
@@ -506,9 +581,17 @@ export default {
       posts.value.unshift(newPost)
     }
     
+    // 刷新帖子方法
+    const refreshPosts = () => {
+      // 重置offset，重新加载所有帖子
+      offset.value = 0
+      loadPosts(false)
+    }
+    
     // 滚动处理函数，实现预加载
-    const handleScroll = (event) => {
-      const target = event.target || document.querySelector('.posts-list')
+    const handleScroll = () => {
+      // 直接获取滚动元素，确保正确的滚动目标
+      const target = document.querySelector('.posts-list')
       if (!target) return
       
       const scrollHeight = target.scrollHeight
@@ -553,6 +636,8 @@ export default {
     
     return {
       posts,
+      firstColumnPosts,
+      secondColumnPosts,
       loading,
       loadingComments,
       hasMore,
@@ -566,6 +651,7 @@ export default {
       getComments,
       getCommentsCount,
       loadMorePosts,
+      refreshPosts,
       submitComment,
       deletePost,
       deleteComment,
@@ -596,11 +682,143 @@ export default {
     </div>
     
     <div v-else class="posts-container">
-      <div 
-        v-for="post in posts" 
-        :key="post.id" 
-        class="post-item bilibili-style"
-      >
+      <div class="posts-columns">
+        <!-- 第一列：从第一条数据开始隔行读取 -->
+        <div class="posts-column first-column">
+          <div 
+            v-for="post in firstColumnPosts" 
+            :key="post.id" 
+            class="post-item"
+          >
+        <!-- 消息头部 -->
+        <div class="post-header">
+          <div class="user-avatar-wrapper">
+            <img 
+              :src="post.normal_user?.user_image || defaultAvatar" 
+              :alt="post.normal_user?.user_name || ' '"
+              class="user-avatar"
+            />
+          </div>
+          <div class="user-info">
+            <div class="user-name">{{ post.normal_user?.user_name || ' ' }}</div>
+            <div class="post-meta">
+              <span class="post-time">{{ formatTime(post.created_at) }}</span>
+            </div>
+          </div>
+          <!-- 操作按钮 -->
+          <div class="post-actions" v-if="isCurrentUser(post.user_id)">
+            <button @click="deletePost(post.id)" class="action-btn delete-btn">
+              <img src="/WebResources/close.svg" alt="删除" class="delete-icon normal-icon" />
+              <img src="/WebResources/close_red.svg" alt="删除" class="delete-icon hover-icon" />
+            </button>
+          </div>
+        </div>
+        
+        <!-- 消息内容 -->
+        <div class="post-content">
+          <div class="content-text" v-html="formatContent(post.content)"></div>
+          <div class="content-image" v-if="post.image_url">
+            <div class="image-container">
+              <!-- 模糊占位图，使用CSS实现加载效果 -->
+              <div class="image-placeholder" :class="{ 'loaded': post.imageLoaded }">
+                <img 
+                  :src="post.image_url" 
+                  :alt="'图片'" 
+                  class="post-image" 
+                  loading="lazy"
+                  @click="enlargeImage(post.image_url)"
+                  @load="post.imageLoaded = true"
+                  style="cursor: pointer;"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 互动栏 -->
+        <div class="post-interaction-bar">
+          <button class="interaction-btn like-btn" :class="{liked: post.liked}" @click="handleLike(post.id)">
+            <img class="icon-like normal" src="/WebResources/likes.svg" alt="点赞" />
+            <img class="icon-like active" src="/WebResources/likes_click.svg" alt="点赞" />
+            <span class="interaction-count">{{ post.likes_count }}</span>
+          </button>
+          <button class="interaction-btn comment-btn" :class="{active: isCommentsVisible(post.id)}" @click="toggleComments(post.id)">
+            <img class="icon-comment normal" src="/WebResources/comment.svg" alt="评论" />
+            <img class="icon-comment active" src="/WebResources/comment_click.svg" alt="评论" />
+            <span class="interaction-count">{{ getCommentsCount(post.id) }}</span>
+          </button>
+          <button class="interaction-btn share-btn">
+            <img class="icon-share" src="/WebResources/share.svg" alt="分享" />
+            <span class="interaction-text">分享</span>
+          </button>
+        </div>
+        
+        <!-- 评论区域 -->
+        <div class="comments-section" :class="{ expanded: isCommentsVisible(post.id) }">
+          <!-- 评论输入框 -->
+          <div class="comment-input-wrapper">
+            <textarea 
+              v-model="commentInputs[post.id]"
+              placeholder="写下你的评论..."
+              rows="1"
+              class="comment-input"
+              @keydown.ctrl.enter="submitComment(post.id)"
+              @input="autoResizeTextarea($event)"
+              style="resize: none; overflow-y: hidden;"
+            ></textarea>
+            <button 
+              @click="submitComment(post.id)"
+              class="comment-submit-btn"
+              :disabled="!commentInputs[post.id]?.trim() || loadingComments.includes(post.id)"
+            >
+              发送
+            </button>
+          </div>
+          <!-- 评论列表 -->
+          <div class="comments-list">
+            <div v-if="loadingComments.includes(post.id)" class="loading-comments">
+              加载评论中...
+            </div>
+            <div v-else-if="getComments(post.id).length === 0" class="no-comments">
+              暂无评论，来发表第一条评论吧！
+            </div>
+            <div v-else>
+              <div 
+                v-for="comment in getComments(post.id)" 
+                :key="comment.id" 
+                class="comment-item"
+              >
+                <img 
+                  :src="comment.normal_user?.user_image || defaultAvatar" 
+                  :alt="comment.normal_user?.user_name || '用户'"
+                  class="commenter-avatar"
+                />
+                <div class="comment-content-wrapper">
+                  <div class="comment-header">
+                    <span class="commenter-name">{{ comment.normal_user?.user_name || ' ' }}</span>
+                    <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
+                    <div class="comment-actions" v-if="isCurrentUser(comment.user_id)">
+                      <button @click="deleteComment(comment.id)" class="action-btn delete-btn">
+                      <img src="/WebResources/close.svg" alt="删除" class="delete-icon normal-icon" />
+                      <img src="/WebResources/close_red.svg" alt="删除" class="delete-icon hover-icon" />
+                      </button>
+                    </div>
+                  </div>
+                  <div class="comment-text">{{ comment.content }}</div>
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <!-- 第二列：从第二条数据开始隔行读取 -->
+        <div class="posts-column second-column">
+          <div 
+            v-for="post in secondColumnPosts" 
+            :key="post.id" 
+            class="post-item"
+          >
         <!-- 消息头部 -->
         <div class="post-header">
           <div class="user-avatar-wrapper">
@@ -722,10 +940,9 @@ export default {
           </div>
         </div>
       </div>
-      
-      
+        </div>
+      </div>
     </div>
-
       
       <!-- 图片放大显示模态框 -->
       <div v-if="enlargedImage" class="image-modal" @click="closeImage">
@@ -764,19 +981,28 @@ export default {
 
 .posts-container {
   display: block;
-  column-count: 3;
-  column-gap: 15px;
-  column-fill: balance;
+  width: 100%;
+}
+
+.posts-columns {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.posts-column {
+  flex: 1;
+  width: 50%;
 }
 
 .post-item {
   position: relative;
+  display: flex;
   background-color: #07121f;
   color: rgb(225, 229, 234);
   padding: 20px;
   transition: box-shadow 0.3s ease;
   margin-bottom: 15px;
-  break-inside: avoid;
   display: inline-block;
   width: 100%;
   box-sizing: border-box;
@@ -877,14 +1103,14 @@ export default {
 .post-content { 
    width: 100%; 
    height: auto; 
-   max-height: 700px; 
-   overflow: auto; 
-   scrollbar-width: thin; 
-   overflow-x: hidden; 
    margin-bottom: 15px; 
  }
 
 .content-text {
+  max-height: 350px;
+  overflow: auto; 
+  scrollbar-width: thin; 
+  overflow-x: hidden; 
   margin-bottom: 10px;
   line-height: 1.6;
   white-space: pre-wrap;
@@ -979,6 +1205,7 @@ export default {
 
 /* 互动栏样式 */
 .post-interaction-bar {
+  align-self: flex-end;
   display: flex;
   gap: 10px;
   padding-top: 15px;

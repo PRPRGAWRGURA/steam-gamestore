@@ -1,8 +1,7 @@
 <script setup>
 import normalUserAPI from '@/utils/api/normalUserAPI';
 import { useUserStore } from '@/stores/userStore';
-import { computed, ref, reactive, onUnmounted } from 'vue';
-import { ImageCropper } from '@/utils/tools/canvasAPI';
+import { computed, ref, reactive } from 'vue';
 // 导入验证工具函数
 import {
   validatePassword,
@@ -11,6 +10,9 @@ import {
   validateIntroduction,
   validateImageFile
 } from '@/utils/tools/validation';
+
+// 导入头像裁剪组件
+import AvatarCropper from './AvatarCropper.vue';
 
 const userStore = useUserStore();
 
@@ -65,8 +67,6 @@ const croppedAvatar = ref(null);
 const openCropper =() => {
   if (avatarFile.value) {
     croppedAvatar.value = avatarPreview.value;
-    // 重置裁剪参数
-    resetCropParams();
   } else {
     return;
   }
@@ -78,148 +78,12 @@ const avatarFile = ref(null);
 const avatarPreview = ref('');
 const isUploading = ref(false);
 
-// 裁剪相关状态
-const croppedImage = ref(null);
-const previewImage = ref(null);
-const imageContainer = ref(null);
-const isDragging = ref(false);
-const isResizing = ref(false);
-const dragStart = ref({ x: 0, y: 0 });
-const resizeStart = ref({ x: 0, y: 0 });
-const cropParams = ref({ x: 0, y: 0, width: 200, height: 200 });
-const resizeHandle = ref('');
-
-// 创建裁剪器实例
-const cropper = new ImageCropper();
-
-// 初始化裁剪参数
-const resetCropParams = () => {
-  cropper.reset();
-  cropParams.value = cropper.getCropParams();
-  isDragging.value = false;
-  isResizing.value = false;
-  resizeHandle.value = '';
-};
-
-// 监听图片加载完成事件
-const onImageLoad = () => {
-  if (croppedImage.value && imageContainer.value) {
-    // 使用裁剪器初始化
-    cropper.init(croppedImage.value, imageContainer.value);
-    // 更新裁剪参数
-    cropParams.value = cropper.getCropParams();
-    // 更新预览
-    updateCropPreview();
-  }
-};
-
-// 开始拖拽
-const startDrag = (e) => {
-  isDragging.value = true;
-  dragStart.value = {
-    x: e.clientX - cropParams.value.x,
-    y: e.clientY - cropParams.value.y
-  };
-  
-  // 添加全局事件监听
-  document.addEventListener('mousemove', onDrag);
-  document.addEventListener('mouseup', stopDrag);
-};
-
-// 拖拽中
-const onDrag = (e) => {
-  if (!isDragging.value) return;
-  
-  // 计算拖拽距离
-  const deltaX = e.clientX - (dragStart.value.x + cropParams.value.x);
-  const deltaY = e.clientY - (dragStart.value.y + cropParams.value.y);
-  
-  // 使用裁剪器计算新位置
-  const newParams = cropper.calculateDragPosition(deltaX, deltaY);
-  cropParams.value = newParams;
-  
-  // 更新预览
-  updateCropPreview();
-};
-
-// 停止拖拽
-const stopDrag = () => {
-  isDragging.value = false;
-  document.removeEventListener('mousemove', onDrag);
-  document.removeEventListener('mouseup', stopDrag);
-};
-
-// 开始调整大小
-const startResize = (e) => {
-  isResizing.value = true;
-  resizeStart.value = {
-    x: e.clientX,
-    y: e.clientY
-  };
-  resizeHandle.value = e.target.dataset.handle;
-  
-  // 添加全局事件监听
-  document.addEventListener('mousemove', onResize);
-  document.addEventListener('mouseup', stopResize);
-};
-
-// 调整大小中
-const onResize = (e) => {
-  if (!isResizing.value) return;
-  
-  // 计算调整距离
-  const deltaX = e.clientX - resizeStart.value.x;
-  const deltaY = e.clientY - resizeStart.value.y;
-  
-  // 使用裁剪器计算新尺寸
-  const newParams = cropper.calculateResizeParams(deltaX, deltaY, resizeHandle.value);
-  cropParams.value = newParams;
-  
-  // 更新预览
-  updateCropPreview();
-  
-  // 更新起始位置
-  resizeStart.value = {
-    x: e.clientX,
-    y: e.clientY
-  };
-};
-
-// 停止调整大小
-const stopResize = () => {
-  isResizing.value = false;
-  resizeHandle.value = '';
-  document.removeEventListener('mousemove', onResize);
-  document.removeEventListener('mouseup', stopResize);
-};
-
-// 更新裁剪预览
-const updateCropPreview = () => {
-  if (!croppedImage.value || !previewImage.value) return;
-  
-  // 使用裁剪器执行裁剪
-  const croppedDataURL = cropper.cropImage(croppedImage.value);
-  if (croppedDataURL) {
-    previewImage.value.src = croppedDataURL;
-  }
-};
-
-// 确认裁剪
-const confirmCrop = () => {
-  if (!croppedImage.value) return;
-  
-  // 使用裁剪器执行最终裁剪
-  const croppedDataURL = cropper.cropImage(croppedImage.value);
-  if (!croppedDataURL) return;
-  
+// 处理裁剪确认事件
+const handleCropConfirm = (cropResult) => {
   // 将裁剪后的图片设置为新的头像预览
-  avatarPreview.value = croppedDataURL;
-  
-  // 使用裁剪器将DataURL转换为File对象
-  const timestamp = Date.now();
-  const filename = `avatar_${timestamp}.jpg`;
-  avatarFile.value = cropper.dataURLtoFile(croppedDataURL, filename);
-  
+  avatarPreview.value = cropResult.dataURL;
+  // 使用裁剪结果中的File对象
+  avatarFile.value = cropResult.file;
   // 关闭裁剪界面
   closeCropper();
 };
@@ -451,14 +315,7 @@ const uploadAvatar = async () => {
   }
 };
 
-// 组件卸载时清理事件监听
-onUnmounted(() => {
-  // 清理拖拽和调整大小的事件监听
-  document.removeEventListener('mousemove', onDrag);
-  document.removeEventListener('mouseup', stopDrag);
-  document.removeEventListener('mousemove', onResize);
-  document.removeEventListener('mouseup', stopResize);
-});
+
 
 /**
  * 取消上传头像
@@ -674,71 +531,13 @@ const updateIntroduction = async () => {
     </div>
   </div>
   <!-- 头像裁剪区域 -->
-  <div v-if="croppedAvatar" class="CropperAvatarSection">
-    <div class="CropperAvatarContainer">
-      <div class="ContainerLeft" ref="imageContainer">
-        <img 
-          :src="croppedAvatar" 
-          class="CroppedAvatarImage" 
-          ref="croppedImage"
-          @load="onImageLoad"
-        />
-        <div 
-          class="CropFrame" 
-          :style="{
-            left: cropParams.x + 'px',
-            top: cropParams.y + 'px',
-            width: cropParams.width + 'px',
-            height: cropParams.height + 'px'
-          }"
-          @mousedown="startDrag"
-        >
-          <div 
-            class="crop-handle top-left" 
-            data-handle="top-left"
-            @mousedown.stop="startResize"
-          ></div>
-          <div 
-            class="crop-handle top-right" 
-            data-handle="top-right"
-            @mousedown.stop="startResize"
-          ></div>
-          <div 
-            class="crop-handle bottom-left" 
-            data-handle="bottom-left"
-            @mousedown.stop="startResize"
-          ></div>
-          <div 
-            class="crop-handle bottom-right" 
-            data-handle="bottom-right"
-            @mousedown.stop="startResize"
-          ></div>
-        </div>
-      </div>
-      <div class="ContainerRight">
-        <button @click="closeCropper" class="action-btn">
-          <img src="/WebResources/close.svg" class="icon action" alt="">
-          <img src="/WebResources/close_red.svg" class="icon close" alt="">
-        </button>
-        <div class="CropperPreview">
-          <img 
-            class="CroppedPreviewImage" 
-            ref="previewImage"
-          />
-          <div class="CropInfo1">
-            裁剪区域：{{ cropParams.width }}px x {{ cropParams.height }}px
-          </div>
-          <div class="CropInfo2">
-            裁剪位置：{{ cropParams.x }}px, {{ cropParams.y }}px
-          </div>
-        </div>
-        <button class="cropping" @click="confirmCrop">
-          确认裁剪
-        </button>
-      </div>
-      
-    </div>
-  </div>
+  <AvatarCropper
+    v-if="croppedAvatar"
+    :image-url="croppedAvatar"
+    @confirm="handleCropConfirm"
+    @cancel="closeCropper"
+  />
+
   <!-- 修改用户名区域 -->
   <div class="ChangeNameSection">
     <h3 class="SectionTitle">修改用户名</h3>
@@ -1428,171 +1227,7 @@ const updateIntroduction = async () => {
   font-size: 16px;
   font-weight: 500;
 }
-.CropperAvatarSection {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.599);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-.CropperAvatarContainer {
-  margin-top: 100px;
-  padding: 0;
-  position: relative;
-  display: flex;
-  width: 1220px;
-  height: 900px;
-  overflow: hidden;
-}
-.ContainerLeft {
-  flex: 2;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  position: relative;
-  background-color: rgba(0, 0, 0, 0.8);
-}
-.CroppedAvatarImage {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  /* 禁止图片被选中和拖动 */
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  pointer-events: none;
-}
-.ContainerRight {
-  background-color: #1b2838;
-  flex: 1;
-  height: 100%;
-  position: relative;
-}
 
-/* 裁剪框样式 */
-.CropFrame {
-  position: absolute;
-  border: 2px solid #1a9efe;
-  background-color: rgba(255, 255, 255, 0.1);
-  cursor: move;
-  box-sizing: border-box;
-}
-
-/* 裁剪手柄样式 */
-.crop-handle {
-  position: absolute;
-  width: 12px;
-  height: 12px;
-  background-color: #1a9efe;
-  border: 2px solid white;
-  border-radius: 50%;
-  cursor: nwse-resize;
-  box-sizing: border-box;
-  z-index: 10;
-}
-
-/* 四个角的手柄位置 */
-.crop-handle.top-left {
-  top: -6px;
-  left: -6px;
-}
-
-.crop-handle.top-right {
-  top: -6px;
-  right: -6px;
-}
-
-.crop-handle.bottom-left {
-  bottom: -6px;
-  left: -6px;
-}
-
-.crop-handle.bottom-right {
-  bottom: -6px;
-  right: -6px;
-}
-
-/* 预览区域样式 */
-.CropperPreview {
-  width: 380px;
-  height: 380px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-sizing: border-box;
-  border-radius: 8px;
-  position: relative;
-  top: 45%;
-  margin: 0 auto;
-  transform: translateY(-50%);
-  text-align: center;
-  line-height: 700px;
-  font-size: 24px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-/* 预览图片样式 */
-.CroppedPreviewImage {
-  width: 100%;
-  height: 100%;
-}
-.CropInfo1 {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-}
-.CropInfo2 {
-  position: absolute;
-  bottom: -10px;
-  left: 10px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.8);
-}
-.action-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: white;
-  transition: color 0.3s ease;
-}
-.icon {
-  width: 30px;
-  height: 30px;
-}
-.icon.action {
-  display: block;
-}
-.icon.close {
-  display: none;
-}
-.action-btn:hover .icon.action {
-  display: none;
-}
-.action-btn:hover .icon.close {
-  display: block;
-}
-.cropping {
-  position: absolute;
-  bottom: 20px;
-  width: 300px;
-  left: calc(50% - 150px);
-}
 .AvatarImage {
   width: 100%;
   height: 100%;

@@ -114,37 +114,37 @@ export default {
             </template>
             <template v-else-if="activeIndex === 3">
                 <h2>畅玩方式</h2>
-                <div class="special-flex playstyle-flex">
-                    <div class="special-flex-left playstyle-flex-left">
-                        <div class="special-card playstyle-card">
+                <div class="special-flex">
+                    <div class="special-flex-left">
+                        <div class="special-card">
                             <div class="card-content">
                                 <img src="/WebResources/deck.svg" alt="" class="normal">
                                 <img src="/WebResources/deck_hover.svg" alt="" class="hover">
                                 <p>非常适合DECK</p>
                             </div>
                         </div>
-                        <div class="special-card playstyle-card">
+                        <div class="special-card">
                             <div class="card-content">
                                 <img src="/WebResources/remote.svg" alt="" class="normal">
                                 <img src="/WebResources/remote_hover.svg" alt="" class="hover">
                                 <p>远程畅玩</p>
                             </div>
                         </div>
-                        <div class="special-card playstyle-card">
+                        <div class="special-card">
                             <div class="card-content">
                                 <img src="/WebResources/vr.svg" alt="" class="normal">
                                 <img src="/WebResources/vr_hover.svg" alt="" class="hover">
                                 <p>VR作品</p>
                             </div>
                         </div>
-                        <div class="special-card playstyle-card">
+                        <div class="special-card">
                             <div class="card-content">
                                 <img src="/WebResources/controller.svg" alt="" class="normal">
                                 <img src="/WebResources/controller_hover.svg" alt="" class="hover">
                                 <p>支持控制器</p>
                             </div>
                         </div>
-                        <div class="special-card playstyle-card">
+                        <div class="special-card">
                             <div class="card-content">
                                 <img src="/WebResources/online.svg" alt="" class="normal">
                                 <img src="/WebResources/online_hover.svg" alt="" class="hover">
@@ -152,7 +152,7 @@ export default {
                             </div>
                         </div>
                     </div>
-                    <div class="special-flex-right playstyle-flex-right">
+                    <div class="special-flex-right">
                         <div class="special-content-left">
                             <p>局域网</p>
                             <p>本地多人及社交聚会</p>
