@@ -100,8 +100,8 @@ export default {
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
     }
     
-    // 加载帖子
-    const loadPosts = async (isLoadMore = false) => {
+    // 加载帖子 - 用于刷新数据
+    const loadPosts = async () => {
       if (loading.value) return
       
       loading.value = true
@@ -109,94 +109,63 @@ export default {
         // 获取当前用户ID（使用user_name，因为外键关联的是normal_user表的user_name字段）
         const currentUserId = currentUser.value?.user_name || null
         
-        // 使用优化的加载策略：初始加载30条，后续加载20条
-        const currentLimit = isLoadMore ? loadMoreLimit : initialLimit
-        
         const response = await communityAPI.getPosts({
-          limit: currentLimit,
-          offset: isLoadMore ? offset.value : 0
+          limit: initialLimit,
+          offset: 0
         }, currentUserId)
         
         if (response.success) {
           let updatedPosts = []
-          let actualNewPostCount = 0
           
-          if (isLoadMore) {
-            // 加载更多时，合并数据并去重
-            const existingIds = new Set(posts.value.map(post => post.id))
-            const newPosts = response.data.filter(post => !existingIds.has(post.id))
-            actualNewPostCount = newPosts.length
-            updatedPosts = [...posts.value, ...newPosts]
-            
-            // 去重，确保每个帖子只出现一次（以最新的为准）
-            const uniquePostsMap = new Map()
-            updatedPosts.forEach(post => {
-              uniquePostsMap.set(post.id, post)
-            })
-            updatedPosts = Array.from(uniquePostsMap.values())
-          } else {
-            // 刷新数据时，保留临时帖子和服务器返回的帖子，删除已不存在的帖子
-            // 1. 保留临时帖子
-            const tempPosts = posts.value.filter(post => post.is_temp)
-            
-            // 2. 获取服务器返回的帖子ID集合
-            const serverPostIds = new Set(response.data.map(post => post.id))
-            
-            // 3. 从现有帖子中只保留临时帖子和存在于服务器返回结果中的帖子
-            // 同时保留帖子的图片加载状态
-            const existingValidPosts = posts.value.filter(post => {
-              return post.is_temp || serverPostIds.has(post.id)
-            })
-            
-            // 4. 合并服务器返回的帖子，去重并确保临时帖子在最前面
-            // 首先将服务器返回的帖子转换为Map，便于去重
-            const serverPostsMap = new Map()
-            response.data.forEach(post => {
-              serverPostsMap.set(post.id, post)
-            })
-            
-            // 5. 合并所有帖子：临时帖子 + (现有有效帖子与服务器帖子合并)
-            updatedPosts = [...tempPosts]
-            
-            // 合并现有有效帖子和服务器帖子，保留图片加载状态
-            const mergedPostsMap = new Map()
-            
-            // 先添加现有有效帖子，保留它们的图片加载状态
-            existingValidPosts.forEach(post => {
-              mergedPostsMap.set(post.id, post)
-            })
-            
-            // 再添加服务器帖子，更新帖子内容但保留图片加载状态
-            serverPostsMap.forEach((serverPost, postId) => {
-              const existingPost = mergedPostsMap.get(postId)
-              if (existingPost) {
-                // 保留现有帖子的图片加载状态，更新其他内容
-                mergedPostsMap.set(postId, {
-                  ...serverPost,
-                  imageLoaded: existingPost.imageLoaded // 保留图片加载状态
-                })
-              } else {
-                // 新增帖子，直接添加
-                mergedPostsMap.set(postId, serverPost)
-              }
-            })
-            
-            // 将合并后的帖子添加到updatedPosts
-            updatedPosts.push(...mergedPostsMap.values())
-            
-            // 6. 计算实际新帖子数量（服务器返回的帖子中不在现有帖子中的数量）
-            const currentPostIds = new Set(posts.value.map(post => post.id))
-            actualNewPostCount = response.data.filter(post => !currentPostIds.has(post.id)).length
-            
-            // 7. 去重，确保每个帖子只出现一次（以最新的为准）
-            const uniquePostsMap = new Map()
-            updatedPosts.forEach(post => {
-              uniquePostsMap.set(post.id, post)
-            })
-            updatedPosts = Array.from(uniquePostsMap.values())
-          }
+          // 1. 保留临时帖子
+          const tempPosts = posts.value.filter(post => post.is_temp)
           
-          // 8. 统一按时间排序，最新的在前面
+          // 2. 获取服务器返回的帖子ID集合
+          const serverPostIds = new Set(response.data.map(post => post.id))
+          
+          // 3. 从现有帖子中只保留临时帖子和存在于服务器返回结果中的帖子
+          // 同时保留帖子的图片加载状态
+          const existingValidPosts = posts.value.filter(post => {
+            return post.is_temp || serverPostIds.has(post.id)
+          })
+          
+          // 4. 合并服务器返回的帖子，去重并确保临时帖子在最前面
+          // 首先将服务器返回的帖子转换为Map，便于去重
+          const serverPostsMap = new Map()
+          response.data.forEach(post => {
+            serverPostsMap.set(post.id, post)
+          })
+          
+          // 5. 合并所有帖子：临时帖子 + (现有有效帖子与服务器帖子合并)
+          updatedPosts = [...tempPosts]
+          
+          // 合并现有有效帖子和服务器帖子，保留图片加载状态
+          const mergedPostsMap = new Map()
+          
+          // 先添加现有有效帖子，保留它们的图片加载状态
+          existingValidPosts.forEach(post => {
+            mergedPostsMap.set(post.id, post)
+          })
+          
+          // 再添加服务器帖子，更新帖子内容但保留图片加载状态
+          serverPostsMap.forEach((serverPost, postId) => {
+            const existingPost = mergedPostsMap.get(postId)
+            if (existingPost) {
+              // 保留现有帖子的图片加载状态，更新其他内容
+              mergedPostsMap.set(postId, {
+                ...serverPost,
+                imageLoaded: existingPost.imageLoaded // 保留图片加载状态
+              })
+            } else {
+              // 新增帖子，直接添加
+              mergedPostsMap.set(postId, serverPost)
+            }
+          })
+          
+          // 将合并后的帖子添加到updatedPosts
+          updatedPosts.push(...mergedPostsMap.values())
+          
+          // 6. 统一按时间排序，最新的在前面
           // 使用id排序，数字大的帖子最新，性能更好
           updatedPosts.sort((a, b) => {
             // 先按id排序，id大的帖子最新
@@ -215,23 +184,15 @@ export default {
           // API已经返回完整的帖子数据，包括user对象、点赞状态、点赞数量和评论数量
           posts.value = updatedPosts
           
-          // 更新偏移量：只增加实际加载的新帖子数量
-          offset.value += actualNewPostCount
+          // 更新偏移量
+          offset.value = response.data.length
           
-          // 使用实际返回的新帖子数量判断是否还有更多数据
-          // 如果返回的新帖子数量小于请求的limit，说明没有更多数据了
-          hasMore.value = actualNewPostCount >= currentLimit
+          // 使用返回的帖子数量判断是否还有更多数据
+          hasMore.value = response.data.length >= initialLimit
           
           // 自动为每个帖子加载评论，但不展开评论区
-          const newPosts = isLoadMore ? response.data : posts.value
-          newPosts.forEach(post => {
-            if (isLoadMore) {
-              if (!comments.value[post.id]) {
-              loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
-              }
-            } else {
-              loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
-            }
+          posts.value.forEach(post => {
+            loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
           })
           
           // 保存到本地缓存
@@ -246,6 +207,59 @@ export default {
       } catch (error) {
         console.error('加载消息出错:', error)
         // 不显示错误提示，避免影响用户体验
+      } finally {
+        loading.value = false
+      }
+    }
+    
+    // 加载更多帖子 - 专门用于滚动加载
+    const loadMorePosts = async () => {
+      if (loading.value || !hasMore.value) return
+      
+      loading.value = true
+      try {
+        // 获取当前用户ID（使用user_name，因为外键关联的是normal_user表的user_name字段）
+        const currentUserId = currentUser.value?.user_name || null
+        
+        const response = await communityAPI.getPosts({
+          limit: loadMoreLimit,
+          offset: offset.value
+        }, currentUserId)
+        
+        if (response.success) {
+          const newPosts = response.data
+          
+          if (newPosts.length > 0) {
+            // 1. 直接将新帖子添加到现有列表
+            posts.value.push(...newPosts)
+            
+            // 2. 自动为新帖子加载评论
+            newPosts.forEach(post => {
+              if (!comments.value[post.id]) {
+                loadComments(post.id).catch(err => console.error('自动加载评论失败:', err))
+              }
+            })
+            
+            // 3. 更新偏移量
+            offset.value += newPosts.length
+            
+            // 4. 判断是否还有更多数据
+            hasMore.value = newPosts.length >= loadMoreLimit
+            
+            // 5. 保存到本地缓存
+            savePostsToCache(posts.value)
+            
+            // 6. 向父组件发送事件
+            emit('postsLoaded', posts.value)
+          } else {
+            // 没有更多数据
+            hasMore.value = false
+          }
+        } else {
+          console.error('加载更多消息失败:', response.error)
+        }
+      } catch (error) {
+        console.error('加载更多消息出错:', error)
       } finally {
         loading.value = false
       }
@@ -320,9 +334,7 @@ export default {
       }
     }
     
-    const loadMorePosts = () => {
-      loadPosts(true)
-    }
+
     
     // 加载评论
     const loadComments = async (postId) => {
@@ -589,7 +601,7 @@ export default {
     const refreshPosts = () => {
       // 重置offset，重新加载所有帖子
       offset.value = 0
-      loadPosts(false)
+      loadPosts()
     }
     
     // 滚动处理函数，实现预加载
@@ -947,6 +959,11 @@ export default {
         </div>
       </div>
     </div>
+      
+      <!-- 加载更多进度条 -->
+      <div v-if="loading && posts.length > 0" class="load-more-progress">
+        <div class="progress-bar"></div>
+      </div>
       
       <!-- 图片放大显示模态框 -->
       <div v-if="enlargedImage" class="image-modal" @click="closeImage">
@@ -1482,5 +1499,43 @@ export default {
 .close-icon {
   width: 16px;
   height: 16px;
+}
+
+/* 加载更多进度条样式 */
+.load-more-progress {
+  width: 100%;
+  padding: 20px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.progress-bar {
+  width: 80%;
+  height: 4px;
+  background-color: #0c1f35;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #499deb, transparent);
+  animation: progress-animation 1.5s infinite;
+}
+
+@keyframes progress-animation {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
 }
 </style>
