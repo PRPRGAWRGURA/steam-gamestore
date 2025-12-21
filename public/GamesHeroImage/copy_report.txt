@@ -1,0 +1,739 @@
+Steam游戏图片复制报告
+============================================================
+源目录: C:\Program Files (x86)\Steam\appcache\librarycache
+目标目录: E:\web集中营\GameStore\GS_User\public\GamesHeroImage
+搜索文件夹数: 516
+复制文件数: 183
+
+AppID: 1016920
+原文件名: library_hero.jpg
+新文件名: 1016920_library_hero.jpg
+----------------------------------------
+AppID: 1044620
+原文件名: library_hero.jpg
+新文件名: 1044620_library_hero.jpg
+----------------------------------------
+AppID: 1046400
+原文件名: library_hero.jpg
+新文件名: 1046400_library_hero.jpg
+----------------------------------------
+AppID: 105600
+原文件名: library_hero.jpg
+新文件名: 105600_library_hero.jpg
+----------------------------------------
+AppID: 1057090
+原文件名: library_hero.jpg
+新文件名: 1057090_library_hero.jpg
+----------------------------------------
+AppID: 1070910
+原文件名: library_hero.jpg
+新文件名: 1070910_library_hero.jpg
+----------------------------------------
+AppID: 107600
+原文件名: library_hero.jpg
+新文件名: 107600_library_hero.jpg
+----------------------------------------
+AppID: 1151640
+原文件名: library_hero.jpg
+新文件名: 1151640_library_hero.jpg
+----------------------------------------
+AppID: 1174180
+原文件名: library_hero.jpg
+新文件名: 1174180_library_hero.jpg
+----------------------------------------
+AppID: 1200580
+原文件名: library_hero.jpg
+新文件名: 1200580_library_hero.jpg
+----------------------------------------
+AppID: 1222140
+原文件名: library_hero.jpg
+新文件名: 1222140_library_hero.jpg
+----------------------------------------
+AppID: 1222680
+原文件名: library_hero.jpg
+新文件名: 1222680_library_hero.jpg
+----------------------------------------
+AppID: 1227890
+原文件名: library_hero.jpg
+新文件名: 1227890_library_hero.jpg
+----------------------------------------
+AppID: 1230140
+原文件名: library_hero.jpg
+新文件名: 1230140_library_hero.jpg
+----------------------------------------
+AppID: 1237970
+原文件名: library_hero.jpg
+新文件名: 1237970_library_hero.jpg
+----------------------------------------
+AppID: 1238840
+原文件名: library_hero.jpg
+新文件名: 1238840_library_hero.jpg
+----------------------------------------
+AppID: 1245620
+原文件名: library_hero.jpg
+新文件名: 1245620_library_hero.jpg
+----------------------------------------
+AppID: 1250760
+原文件名: library_hero.jpg
+新文件名: 1250760_library_hero.jpg
+----------------------------------------
+AppID: 1277930
+原文件名: library_hero.jpg
+新文件名: 1277930_library_hero.jpg
+----------------------------------------
+AppID: 1281930
+原文件名: library_hero.jpg
+新文件名: 1281930_library_hero.jpg
+----------------------------------------
+AppID: 1282100
+原文件名: library_hero.jpg
+新文件名: 1282100_library_hero.jpg
+----------------------------------------
+AppID: 1285670
+原文件名: library_hero.jpg
+新文件名: 1285670_library_hero.jpg
+----------------------------------------
+AppID: 1289310
+原文件名: library_hero.jpg
+新文件名: 1289310_library_hero.jpg
+----------------------------------------
+AppID: 1306630
+原文件名: library_hero.jpg
+新文件名: 1306630_library_hero.jpg
+----------------------------------------
+AppID: 1326470
+原文件名: library_hero.jpg
+新文件名: 1326470_library_hero.jpg
+----------------------------------------
+AppID: 1350650
+原文件名: library_hero.jpg
+新文件名: 1350650_library_hero.jpg
+----------------------------------------
+AppID: 1369630
+原文件名: library_hero.jpg
+新文件名: 1369630_library_hero.jpg
+----------------------------------------
+AppID: 1398210
+原文件名: library_hero.jpg
+新文件名: 1398210_library_hero.jpg
+----------------------------------------
+AppID: 1434480
+原文件名: library_hero.jpg
+新文件名: 1434480_library_hero.jpg
+----------------------------------------
+AppID: 1446780
+原文件名: library_hero.jpg
+新文件名: 1446780_library_hero.jpg
+----------------------------------------
+AppID: 1449560
+原文件名: library_hero.jpg
+新文件名: 1449560_library_hero.jpg
+----------------------------------------
+AppID: 1451940
+原文件名: library_hero.jpg
+新文件名: 1451940_library_hero.jpg
+----------------------------------------
+AppID: 1549690
+原文件名: library_hero.jpg
+新文件名: 1549690_library_hero.jpg
+----------------------------------------
+AppID: 1562700
+原文件名: library_hero.jpg
+新文件名: 1562700_library_hero.jpg
+----------------------------------------
+AppID: 1584090
+原文件名: library_hero.jpg
+新文件名: 1584090_library_hero.jpg
+----------------------------------------
+AppID: 1592670
+原文件名: library_hero.jpg
+新文件名: 1592670_library_hero.jpg
+----------------------------------------
+AppID: 1608640
+原文件名: library_hero.jpg
+新文件名: 1608640_library_hero.jpg
+----------------------------------------
+AppID: 1623730
+原文件名: library_hero.jpg
+新文件名: 1623730_library_hero.jpg
+----------------------------------------
+AppID: 1659420
+原文件名: library_hero.jpg
+新文件名: 1659420_library_hero.jpg
+----------------------------------------
+AppID: 1672970
+原文件名: library_hero.jpg
+新文件名: 1672970_library_hero.jpg
+----------------------------------------
+AppID: 1752760
+原文件名: library_hero.jpg
+新文件名: 1752760_library_hero.jpg
+----------------------------------------
+AppID: 1755910
+原文件名: library_hero.jpg
+新文件名: 1755910_library_hero.jpg
+----------------------------------------
+AppID: 1756470
+原文件名: library_hero.jpg
+新文件名: 1756470_library_hero.jpg
+----------------------------------------
+AppID: 1817070
+原文件名: library_hero.jpg
+新文件名: 1817070_library_hero.jpg
+----------------------------------------
+AppID: 1817230
+原文件名: library_hero.jpg
+新文件名: 1817230_library_hero.jpg
+----------------------------------------
+AppID: 1829980
+原文件名: library_hero.jpg
+新文件名: 1829980_library_hero.jpg
+----------------------------------------
+AppID: 1832640
+原文件名: library_hero.jpg
+新文件名: 1832640_library_hero.jpg
+----------------------------------------
+AppID: 1840
+原文件名: library_hero.jpg
+新文件名: 1840_library_hero.jpg
+----------------------------------------
+AppID: 1874900
+原文件名: library_hero.jpg
+新文件名: 1874900_library_hero.jpg
+----------------------------------------
+AppID: 1888930
+原文件名: library_hero.jpg
+新文件名: 1888930_library_hero.jpg
+----------------------------------------
+AppID: 1905180
+原文件名: library_hero.jpg
+新文件名: 1905180_library_hero.jpg
+----------------------------------------
+AppID: 1928870
+原文件名: library_hero.jpg
+新文件名: 1928870_library_hero.jpg
+----------------------------------------
+AppID: 1955830
+原文件名: library_hero.jpg
+新文件名: 1955830_library_hero.jpg
+----------------------------------------
+AppID: 1999530
+原文件名: library_hero.jpg
+新文件名: 1999530_library_hero.jpg
+----------------------------------------
+AppID: 200260
+原文件名: library_hero.jpg
+新文件名: 200260_library_hero.jpg
+----------------------------------------
+AppID: 2050650
+原文件名: library_hero.jpg
+新文件名: 2050650_library_hero.jpg
+----------------------------------------
+AppID: 207610
+原文件名: library_hero.jpg
+新文件名: 207610_library_hero.jpg
+----------------------------------------
+AppID: 208650
+原文件名: library_hero.jpg
+新文件名: 208650_library_hero.jpg
+----------------------------------------
+AppID: 213610
+原文件名: library_hero.jpg
+新文件名: 213610_library_hero.jpg
+----------------------------------------
+AppID: 2138710
+原文件名: library_hero.jpg
+新文件名: 2138710_library_hero.jpg
+----------------------------------------
+AppID: 217120
+原文件名: library_hero.jpg
+新文件名: 217120_library_hero.jpg
+----------------------------------------
+AppID: 219
+原文件名: library_hero.jpg
+新文件名: 219_library_hero.jpg
+----------------------------------------
+AppID: 219150
+原文件名: library_hero.jpg
+新文件名: 219150_library_hero.jpg
+----------------------------------------
+AppID: 2193490
+原文件名: library_hero.jpg
+新文件名: 2193490_library_hero.jpg
+----------------------------------------
+AppID: 2215430
+原文件名: library_hero.jpg
+新文件名: 2215430_library_hero.jpg
+----------------------------------------
+AppID: 222480
+原文件名: library_hero.jpg
+新文件名: 222480_library_hero.jpg
+----------------------------------------
+AppID: 222860
+原文件名: library_hero.jpg
+新文件名: 222860_library_hero.jpg
+----------------------------------------
+AppID: 228980
+原文件名: library_hero.jpg
+新文件名: 228980_library_hero.jpg
+----------------------------------------
+AppID: 229950
+原文件名: library_hero.jpg
+新文件名: 229950_library_hero.jpg
+----------------------------------------
+AppID: 231390
+原文件名: library_hero.jpg
+新文件名: 231390_library_hero.jpg
+----------------------------------------
+AppID: 2358720
+原文件名: library_hero.jpg
+新文件名: 2358720_library_hero.jpg
+----------------------------------------
+AppID: 236430
+原文件名: library_hero.jpg
+新文件名: 236430_library_hero.jpg
+----------------------------------------
+AppID: 242760
+原文件名: library_hero.jpg
+新文件名: 242760_library_hero.jpg
+----------------------------------------
+AppID: 2430160
+原文件名: library_hero.jpg
+新文件名: 2430160_library_hero.jpg
+----------------------------------------
+AppID: 2458530
+原文件名: library_hero.jpg
+新文件名: 2458530_library_hero.jpg
+----------------------------------------
+AppID: 249050
+原文件名: library_hero.jpg
+新文件名: 249050_library_hero.jpg
+----------------------------------------
+AppID: 250820
+原文件名: library_hero.jpg
+新文件名: 250820_library_hero.jpg
+----------------------------------------
+AppID: 251570
+原文件名: library_hero.jpg
+新文件名: 251570_library_hero.jpg
+----------------------------------------
+AppID: 252610
+原文件名: library_hero.jpg
+新文件名: 252610_library_hero.jpg
+----------------------------------------
+AppID: 2533960
+原文件名: library_hero.jpg
+新文件名: 2533960_library_hero.jpg
+----------------------------------------
+AppID: 2581470
+原文件名: library_hero.jpg
+新文件名: 2581470_library_hero.jpg
+----------------------------------------
+AppID: 2593370
+原文件名: library_hero.jpg
+新文件名: 2593370_library_hero.jpg
+----------------------------------------
+AppID: 261570
+原文件名: library_hero.jpg
+新文件名: 261570_library_hero.jpg
+----------------------------------------
+AppID: 262060
+原文件名: library_hero.jpg
+新文件名: 262060_library_hero.jpg
+----------------------------------------
+AppID: 265550
+原文件名: library_hero.jpg
+新文件名: 265550_library_hero.jpg
+----------------------------------------
+AppID: 265930
+原文件名: library_hero.jpg
+新文件名: 265930_library_hero.jpg
+----------------------------------------
+AppID: 268910
+原文件名: library_hero.jpg
+新文件名: 268910_library_hero.jpg
+----------------------------------------
+AppID: 2698940
+原文件名: library_hero.jpg
+新文件名: 2698940_library_hero.jpg
+----------------------------------------
+AppID: 271590
+原文件名: library_hero.jpg
+新文件名: 271590_library_hero.jpg
+----------------------------------------
+AppID: 2725260
+原文件名: library_hero.jpg
+新文件名: 2725260_library_hero.jpg
+----------------------------------------
+AppID: 2739700
+原文件名: library_hero.jpg
+新文件名: 2739700_library_hero.jpg
+----------------------------------------
+AppID: 274170
+原文件名: library_hero.jpg
+新文件名: 274170_library_hero.jpg
+----------------------------------------
+AppID: 286690
+原文件名: library_hero.jpg
+新文件名: 286690_library_hero.jpg
+----------------------------------------
+AppID: 287290
+原文件名: library_hero.jpg
+新文件名: 287290_library_hero.jpg
+----------------------------------------
+AppID: 287390
+原文件名: library_hero.jpg
+新文件名: 287390_library_hero.jpg
+----------------------------------------
+AppID: 289070
+原文件名: library_hero.jpg
+新文件名: 289070_library_hero.jpg
+----------------------------------------
+AppID: 2915460
+原文件名: library_hero.jpg
+新文件名: 2915460_library_hero.jpg
+----------------------------------------
+AppID: 291550
+原文件名: library_hero.jpg
+新文件名: 291550_library_hero.jpg
+----------------------------------------
+AppID: 294420
+原文件名: library_hero.jpg
+新文件名: 294420_library_hero.jpg
+----------------------------------------
+AppID: 304240
+原文件名: library_hero.jpg
+新文件名: 304240_library_hero.jpg
+----------------------------------------
+AppID: 3097560
+原文件名: library_hero.jpg
+新文件名: 3097560_library_hero.jpg
+----------------------------------------
+AppID: 3132990
+原文件名: library_hero.jpg
+新文件名: 3132990_library_hero.jpg
+----------------------------------------
+AppID: 319630
+原文件名: library_hero.jpg
+新文件名: 319630_library_hero.jpg
+----------------------------------------
+AppID: 320
+原文件名: library_hero.jpg
+新文件名: 320_library_hero.jpg
+----------------------------------------
+AppID: 324160
+原文件名: library_hero.jpg
+新文件名: 324160_library_hero.jpg
+----------------------------------------
+AppID: 335300
+原文件名: library_hero.jpg
+新文件名: 335300_library_hero.jpg
+----------------------------------------
+AppID: 340
+原文件名: library_hero.jpg
+新文件名: 340_library_hero.jpg
+----------------------------------------
+AppID: 346110
+原文件名: library_hero.jpg
+新文件名: 346110_library_hero.jpg
+----------------------------------------
+AppID: 3475630
+原文件名: library_hero.jpg
+新文件名: 3475630_library_hero.jpg
+----------------------------------------
+AppID: 349040
+原文件名: library_hero.jpg
+新文件名: 349040_library_hero.jpg
+----------------------------------------
+AppID: 35140
+原文件名: library_hero.jpg
+新文件名: 35140_library_hero.jpg
+----------------------------------------
+AppID: 356190
+原文件名: library_hero.jpg
+新文件名: 356190_library_hero.jpg
+----------------------------------------
+AppID: 3590
+原文件名: library_hero.jpg
+新文件名: 3590_library_hero.jpg
+----------------------------------------
+AppID: 360
+原文件名: library_hero.jpg
+新文件名: 360_library_hero.jpg
+----------------------------------------
+AppID: 367080
+原文件名: library_hero.jpg
+新文件名: 367080_library_hero.jpg
+----------------------------------------
+AppID: 367520
+原文件名: library_hero.jpg
+新文件名: 367520_library_hero.jpg
+----------------------------------------
+AppID: 368340
+原文件名: library_hero.jpg
+新文件名: 368340_library_hero.jpg
+----------------------------------------
+AppID: 374320
+原文件名: library_hero.jpg
+新文件名: 374320_library_hero.jpg
+----------------------------------------
+AppID: 379720
+原文件名: library_hero.jpg
+新文件名: 379720_library_hero.jpg
+----------------------------------------
+AppID: 380
+原文件名: library_hero.jpg
+新文件名: 380_library_hero.jpg
+----------------------------------------
+AppID: 387290
+原文件名: library_hero.jpg
+新文件名: 387290_library_hero.jpg
+----------------------------------------
+AppID: 391540
+原文件名: library_hero.jpg
+新文件名: 391540_library_hero.jpg
+----------------------------------------
+AppID: 397540
+原文件名: library_hero.jpg
+新文件名: 397540_library_hero.jpg
+----------------------------------------
+AppID: 400910
+原文件名: library_hero.jpg
+新文件名: 400910_library_hero.jpg
+----------------------------------------
+AppID: 407530
+原文件名: library_hero.jpg
+新文件名: 407530_library_hero.jpg
+----------------------------------------
+AppID: 40990
+原文件名: library_hero.jpg
+新文件名: 40990_library_hero.jpg
+----------------------------------------
+AppID: 412020
+原文件名: library_hero.jpg
+新文件名: 412020_library_hero.jpg
+----------------------------------------
+AppID: 412830
+原文件名: library_hero.jpg
+新文件名: 412830_library_hero.jpg
+----------------------------------------
+AppID: 413150
+原文件名: library_hero.jpg
+新文件名: 413150_library_hero.jpg
+----------------------------------------
+AppID: 418370
+原文件名: library_hero.jpg
+新文件名: 418370_library_hero.jpg
+----------------------------------------
+AppID: 420
+原文件名: library_hero.jpg
+新文件名: 420_library_hero.jpg
+----------------------------------------
+AppID: 428550
+原文件名: library_hero.jpg
+新文件名: 428550_library_hero.jpg
+----------------------------------------
+AppID: 440
+原文件名: library_hero.jpg
+新文件名: 440_library_hero.jpg
+----------------------------------------
+AppID: 442070
+原文件名: library_hero.jpg
+新文件名: 442070_library_hero.jpg
+----------------------------------------
+AppID: 460790
+原文件名: library_hero.jpg
+新文件名: 460790_library_hero.jpg
+----------------------------------------
+AppID: 460950
+原文件名: library_hero.jpg
+新文件名: 460950_library_hero.jpg
+----------------------------------------
+AppID: 474960
+原文件名: library_hero.jpg
+新文件名: 474960_library_hero.jpg
+----------------------------------------
+AppID: 47780
+原文件名: library_hero.jpg
+新文件名: 47780_library_hero.jpg
+----------------------------------------
+AppID: 485510
+原文件名: library_hero.jpg
+新文件名: 485510_library_hero.jpg
+----------------------------------------
+AppID: 49520
+原文件名: library_hero.jpg
+新文件名: 49520_library_hero.jpg
+----------------------------------------
+AppID: 504230
+原文件名: library_hero.jpg
+新文件名: 504230_library_hero.jpg
+----------------------------------------
+AppID: 508440
+原文件名: library_hero.jpg
+新文件名: 508440_library_hero.jpg
+----------------------------------------
+AppID: 524220
+原文件名: library_hero.jpg
+新文件名: 524220_library_hero.jpg
+----------------------------------------
+AppID: 550
+原文件名: library_hero.jpg
+新文件名: 550_library_hero.jpg
+----------------------------------------
+AppID: 553640
+原文件名: library_hero.jpg
+新文件名: 553640_library_hero.jpg
+----------------------------------------
+AppID: 570940
+原文件名: library_hero.jpg
+新文件名: 570940_library_hero.jpg
+----------------------------------------
+AppID: 582010
+原文件名: library_hero.jpg
+新文件名: 582010_library_hero.jpg
+----------------------------------------
+AppID: 598700
+原文件名: library_hero.jpg
+新文件名: 598700_library_hero.jpg
+----------------------------------------
+AppID: 601150
+原文件名: library_hero.jpg
+新文件名: 601150_library_hero.jpg
+----------------------------------------
+AppID: 612880
+原文件名: library_hero.jpg
+新文件名: 612880_library_hero.jpg
+----------------------------------------
+AppID: 613220
+原文件名: library_hero.jpg
+新文件名: 613220_library_hero.jpg
+----------------------------------------
+AppID: 638230
+原文件名: library_hero.jpg
+新文件名: 638230_library_hero.jpg
+----------------------------------------
+AppID: 644560
+原文件名: library_hero.jpg
+新文件名: 644560_library_hero.jpg
+----------------------------------------
+AppID: 646910
+原文件名: library_hero.jpg
+新文件名: 646910_library_hero.jpg
+----------------------------------------
+AppID: 648100
+原文件名: library_hero.jpg
+新文件名: 648100_library_hero.jpg
+----------------------------------------
+AppID: 648800
+原文件名: library_hero.jpg
+新文件名: 648800_library_hero.jpg
+----------------------------------------
+AppID: 675010
+原文件名: library_hero.jpg
+新文件名: 675010_library_hero.jpg
+----------------------------------------
+AppID: 692850
+原文件名: library_hero.jpg
+新文件名: 692850_library_hero.jpg
+----------------------------------------
+AppID: 699920
+原文件名: library_hero.jpg
+新文件名: 699920_library_hero.jpg
+----------------------------------------
+AppID: 70
+原文件名: library_hero.jpg
+新文件名: 70_library_hero.jpg
+----------------------------------------
+AppID: 728880
+原文件名: library_hero.jpg
+新文件名: 728880_library_hero.jpg
+----------------------------------------
+AppID: 774171
+原文件名: library_hero.jpg
+新文件名: 774171_library_hero.jpg
+----------------------------------------
+AppID: 774181
+原文件名: library_hero.jpg
+新文件名: 774181_library_hero.jpg
+----------------------------------------
+AppID: 774361
+原文件名: library_hero.jpg
+新文件名: 774361_library_hero.jpg
+----------------------------------------
+AppID: 813230
+原文件名: library_hero.jpg
+新文件名: 813230_library_hero.jpg
+----------------------------------------
+AppID: 814380
+原文件名: library_hero.jpg
+新文件名: 814380_library_hero.jpg
+----------------------------------------
+AppID: 815370
+原文件名: library_hero.jpg
+新文件名: 815370_library_hero.jpg
+----------------------------------------
+AppID: 825630
+原文件名: library_hero.jpg
+新文件名: 825630_library_hero.jpg
+----------------------------------------
+AppID: 831660
+原文件名: library_hero.jpg
+新文件名: 831660_library_hero.jpg
+----------------------------------------
+AppID: 837470
+原文件名: library_hero.jpg
+新文件名: 837470_library_hero.jpg
+----------------------------------------
+AppID: 860510
+原文件名: library_hero.jpg
+新文件名: 860510_library_hero.jpg
+----------------------------------------
+AppID: 880950
+原文件名: library_hero.jpg
+新文件名: 880950_library_hero.jpg
+----------------------------------------
+AppID: 883710
+原文件名: library_hero.jpg
+新文件名: 883710_library_hero.jpg
+----------------------------------------
+AppID: 897220
+原文件名: library_hero.jpg
+新文件名: 897220_library_hero.jpg
+----------------------------------------
+AppID: 924970
+原文件名: library_hero.jpg
+新文件名: 924970_library_hero.jpg
+----------------------------------------
+AppID: 930910
+原文件名: library_hero.jpg
+新文件名: 930910_library_hero.jpg
+----------------------------------------
+AppID: 940710
+原文件名: library_hero.jpg
+新文件名: 940710_library_hero.jpg
+----------------------------------------
+AppID: 952060
+原文件名: library_hero.jpg
+新文件名: 952060_library_hero.jpg
+----------------------------------------
+AppID: 952070
+原文件名: library_hero.jpg
+新文件名: 952070_library_hero.jpg
+----------------------------------------
+AppID: 958260
+原文件名: library_hero.jpg
+新文件名: 958260_library_hero.jpg
+----------------------------------------
+AppID: 962130
+原文件名: library_hero.jpg
+新文件名: 962130_library_hero.jpg
+----------------------------------------
+AppID: 970560
+原文件名: library_hero.jpg
+新文件名: 970560_library_hero.jpg
+----------------------------------------
+AppID: 977950
+原文件名: library_hero.jpg
+新文件名: 977950_library_hero.jpg
+----------------------------------------

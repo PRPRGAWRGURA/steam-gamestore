@@ -3,7 +3,7 @@ export default {
     data() {
         return {
             searchText: '',
-            cartCount: 0,
+            cartCount: 1,
         }
     },
     methods: {
