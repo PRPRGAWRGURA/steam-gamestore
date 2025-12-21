@@ -40,8 +40,9 @@ export default {
     
     // 处理刷新按钮点击
     const handleRefresh = () => {
-      if (postListRef.value) {
+      if (postListRef.value && !postListRef.value.loading) {
         postListRef.value.refreshPosts()
+        console.log('刷新帖子列表')
       }
     }
     
@@ -62,7 +63,7 @@ export default {
       <div class="community-title-line"></div>
       <div class="community-title-container">
         <div class="community-title-text">社区内容</div>
-        <button class="refresh-btn" @click="handleRefresh">
+        <button class="refresh-btn" @click="handleRefresh" :disabled="postListRef?.loading">
           <img src="/WebResources/refresh.svg" alt="刷新" class="refresh-icon" :class="{ 'rotating': postListRef?.loading }" />
           <span>刷新</span>
         </button>
