@@ -1,6 +1,7 @@
 <script>
 import BaseBody from '@/componets/BaseBody.vue';
 import BaseContainer from '@/componets/BaseContainer.vue';
+import BaseTitle from '@/componets/BaseTitle.vue';
 import { ref, reactive, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
@@ -8,7 +9,8 @@ export default {
     name: 'GameDetailView',
     components: {
         BaseBody,
-        BaseContainer
+        BaseContainer,
+        BaseTitle
     },
     setup() {
         const route = useRoute();
@@ -179,6 +181,7 @@ export default {
 </script>
 <template>
     <BaseBody>
+        <BaseTitle/>
         <BaseContainer> 
             <!-- 加载状态 -->
             <div v-if="isLoading" class="loading-container">
@@ -339,6 +342,9 @@ export default {
     </BaseBody>
 </template>
 <style scoped>
+.GS_container {
+  padding-top: 48px;
+}
 .game-detail-container {
     padding: 20px 0;
     max-width: 1200px;

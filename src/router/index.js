@@ -12,6 +12,7 @@ const Login = () => import('../views/LoginView.vue')
 const Gamebar = () => import('../views/GamebarView.vue')
 const Useritem = () => import('../views/UseritemView.vue')
 const GameDetail = () => import('../views/GameDetailView.vue')
+const ShoppingCart = () => import('../views/ShoppingCartView.vue')
 const routes = [
   // 默认布局路由 - 包含header和footer
   {
@@ -57,6 +58,11 @@ const routes = [
         path: '/gamedetail/:id?',
         name: 'GameDetail',        
         component: GameDetail      
+      },
+      {
+        path: '/shoppingcart',
+        name: 'ShoppingCart',
+        component: ShoppingCart
       },
     ]
   },

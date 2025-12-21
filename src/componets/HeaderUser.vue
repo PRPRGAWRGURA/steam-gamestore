@@ -52,9 +52,10 @@ export default {
                 alt="用户头像" 
                 class="user-avatar"
             >
-            <span class="user-name" >{{ currentUser.user_name }}</span>
+            <router-link class="user-name" to="/useritem">{{ currentUser.user_name }}</router-link>
             <div class="dropdown" v-if="isHover">
                 <router-link  class="dropdown-item" to="/useritem">查看个人资料</router-link>
+                <router-link  class="dropdown-item" to="/shoppingcart">购物车</router-link>
                 <div class="dropdown-item" @click="logout">退出登录</div>
             </div>
         </div>
@@ -96,8 +97,9 @@ export default {
     top: 1.5px;
     display: flex;
     align-self: flex-start;
+    justify-content: center;
     position: relative;
-    background-color: #78787868;   
+    background-color: #3b3e41;   
 }
 .user-avatar {
     width: 30px;
@@ -110,12 +112,13 @@ export default {
 .user-name {
     width: 100%;
     border-left: #1a9efe 3px solid;
+    text-decoration: none;
     box-sizing: border-box;
     padding-left: 8px;
     padding-top: 5px;
     color: #1a9efe;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 16px;
     max-width: 100px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -136,8 +139,8 @@ export default {
     border-top: #555555 1px solid;
     box-sizing: border-box;
     width: 90px;
-    height: 55px;
-    background-color: #78787868;
+    height: 80px;
+    background-color: #3b3e41;
     font-size: 12px;
     transition: all 0.3s ease-in-out;
     cursor: pointer;

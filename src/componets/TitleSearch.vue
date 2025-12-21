@@ -3,6 +3,7 @@ export default {
     data() {
         return {
             searchText: '',
+            cartCount: 0,
         }
     },
     methods: {
@@ -18,6 +19,11 @@ export default {
         <input type="text" placeholder="搜索商店" v-model.lazy="searchText">
         <button type="submit" @click="handleSearch"><img src="/WebResources/serch.svg" alt=""></button>
     </span>
+    <router-link v-show="cartCount > 0" to="/shoppingcart" class="GS_shoppingcart">
+        <img src="/WebResources/shoppingcart.svg" alt="">
+        <span>购物车</span>
+        <span>{{ cartCount }}</span>
+    </router-link>
 </template>
 
 <style scoped>
@@ -25,9 +31,7 @@ export default {
         width: 460px;
         height: 75%;
         padding: 0 10px;
-        
         position: relative;
-        
     }
     .GS_title_search input{
         position: absolute;
@@ -62,6 +66,9 @@ export default {
     }
     .GS_title_search button{
         position: absolute;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         right: 10px;   
         width: 35px;
         height: 100%;
@@ -72,21 +79,43 @@ export default {
         font-size: 16px;
         padding: 0 10px;
     }
-    .GS_title_search button:hover{
+    .GS_title_search:hover button{
         background-color: #2ba7ff;
     }
         .GS_title_search button img{
-            position: absolute;
             filter: brightness(10);
-            width: 60%;
-            height: 60%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            width: 22px;
+            height: auto;
             transition: all 0.3s ease-in-out;
         }
-        .GS_title_search button img:hover{
-            width: 70%;
-            height: 70%;
+        .GS_title_search:hover button img{
+            transform: scale(1.05);
         }
+    .GS_shoppingcart {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 10px;
+        text-decoration: none;
+        height: 75%;
+        background-color: #1a9fff;
+    }
+    .GS_shoppingcart span{
+        font-size: 16px;
+        line-height: 20px;
+        color: white;
+    }
+    .GS_shoppingcart:hover {
+        background-color: #2ba7ff;
+    }
+    .GS_shoppingcart:hover img {
+        transform: scale(1.05);
+    }
+    .GS_shoppingcart img{
+        margin-right: 5px;
+        width: 20px;
+        height: auto;
+        object-fit: contain;
+        transition: all 0.3s ease-in-out;
+    }
 </style>
