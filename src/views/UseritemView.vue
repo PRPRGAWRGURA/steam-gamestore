@@ -17,6 +17,7 @@ export default {
   <BaseBody>
     <BaseContainer>
       <div class="UserItemBox">
+        
         <div class="UserItemHeader">
           <div class="UserItemHeaderTitle">
             个人资料
@@ -37,21 +38,19 @@ export default {
 
 .UserItemBox {
   width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 20px;
   padding: 20px 0;
 }
 
 .UserItemHeader {
-  width: 1100px;
-  background-color: #1b2838;
+  width: 100%;
+  background-color: #211b3847;
   border-radius: 8px;
   padding: 20px;
   color: white;
 }
 
 .UserItemHeaderTitle {
+  width: 100%;
   font-size: 24px;
   font-weight: 700;
   margin-bottom: 30px;

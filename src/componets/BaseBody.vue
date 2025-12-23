@@ -8,6 +8,7 @@
         position: relative;
         z-index: 1;
         width: 100%;
+        min-width: 1400px;
         min-height: 2000px;
         /* 使用多重径向渐变创建点光源效果 */
         background: 

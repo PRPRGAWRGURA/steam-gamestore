@@ -60,7 +60,6 @@ export default {
 <template>
   <BaseBody>
     <div class="community-title">
-      <div class="community-title-line"></div>
       <div class="community-title-container">
         <div class="community-title-text">社区内容</div>
         <button class="refresh-btn" @click="handleRefresh" :disabled="postListRef?.loading">
@@ -86,29 +85,37 @@ export default {
 </template>
 
 <style scoped>
+.GS_container {
+  height: 100vh;
+}
 .community-container {
   position: relative;
-  height: 2000px;
+  min-height: 2000px;
   width: 100%;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   margin: 0 auto;
 }
-
 .community-title {
-  background: linear-gradient(to bottom, #0d1723 0%, transparent 100%);
-}
-.community-title-line {
-  height: 3px;
-  background-color: #0d1723;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 100%;
+  z-index: 50;
+  pointer-events: none;
 }
 .community-title-container {
+  top: 0;
+  position: sticky;
+  pointer-events: auto;
   width: 1220px;
   height: 80px;
   margin: 0 auto;
   border-radius: 5px;
-  background-color: #0d1723;
+  background:linear-gradient(to bottom,  #0d1723 15%,  #0d1723e2 100%) ;
+  backdrop-filter: blur(3px);
   font-size: 25px;
   font-weight: bold;
   padding: 0 20px;

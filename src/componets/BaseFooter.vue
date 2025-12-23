@@ -15,6 +15,7 @@
 <style scoped>
 .GS_bottom{
     width: 100%;
+    min-width: 1400px;
     height: 200px;
     background-color: #000000;
     color: #999;

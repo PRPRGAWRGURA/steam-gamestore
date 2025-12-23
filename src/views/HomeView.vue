@@ -29,5 +29,6 @@ export default {
 <style scoped>
 .GS_container {
   padding-top: 48px;
+  min-height: 100vh;
 }
 </style>

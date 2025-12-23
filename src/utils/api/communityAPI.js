@@ -2,6 +2,35 @@
 import supabase from '../core/supabase.js'
 
 /**
+ * 社区相关表结构说明
+ * 
+ * 表名：community_post
+ * 字段说明：
+ * - id: INT, PRIMARY KEY - 帖子唯一标识符
+ * - user_id: INT, FOREIGN KEY - 用户ID
+ * - content: TEXT - 帖子内容
+ * - image_url: VARCHAR - 帖子图片URL
+ * - created_at: TIMESTAMP - 帖子创建时间
+ * - updated_at: TIMESTAMP - 帖子更新时间
+ * 
+ * 表名：community_comment
+ * 字段说明：
+ * - id: INT, PRIMARY KEY - 评论唯一标识符
+ * - post_id: INT, FOREIGN KEY - 帖子ID
+ * - user_id: INT, FOREIGN KEY - 用户ID
+ * - content: TEXT - 评论内容
+ * - created_at: TIMESTAMP - 评论创建时间
+ * - updated_at: TIMESTAMP - 评论更新时间
+ * 
+ * 表名：community_like
+ * 字段说明：
+ * - id: INT, PRIMARY KEY - 点赞唯一标识符
+ * - post_id: INT, FOREIGN KEY - 帖子ID
+ * - user_id: INT, FOREIGN KEY - 用户ID
+ * - created_at: TIMESTAMP - 点赞创建时间
+ */
+
+/**
  * 压缩图片至适合展示框的大小
  * @param {File} file - 原始图片文件
  * @param {Object} options - 压缩选项

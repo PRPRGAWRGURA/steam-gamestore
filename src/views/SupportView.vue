@@ -1,6 +1,7 @@
 <script>
 import BaseBody from '../componets/BaseBody.vue';
 import BaseContainer from '../componets/BaseContainer.vue';
+import BaseTitle from '@/componets/BaseTitle.vue';
 import SupportForm from '../componets/SupportForm.vue';
 import { useRoute } from 'vue-router';
 
@@ -9,7 +10,8 @@ export default {
   components: {
     BaseBody,
     BaseContainer,
-    SupportForm
+    SupportForm,
+    BaseTitle
   },
   setup() {
     const route = useRoute();
@@ -25,20 +27,30 @@ export default {
 </script>
 <template>
   <BaseBody>
+      <BaseTitle/>
       <BaseContainer>
         <div class="support">
           <h1 class="support-title">{{ isDeveloperApplication ? '发行商申请' : '客服页面' }}</h1>
           <p class="support-subtitle">{{ isDeveloperApplication ? '申请成为游戏发行商，将你的游戏带给全球玩家！' : '获取CHAINHUB客户支持！' }}</p>
           <SupportForm :is-developer-application="isDeveloperApplication" />
+          <div class="fix"></div>
         </div>
       </BaseContainer>
   </BaseBody>
 </template>
 <style scoped>
+.GS_container {
+  padding-top: 45px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a192f 0%, #172a45 50%, #0d1b2a 100%);
+}
 .support {
   padding: 20px 0;
 }
-
+.fix {
+  width: 100%;
+  height: 900px;
+}
 .support-title {
   font-size: 2.5rem;
   font-weight: 800;

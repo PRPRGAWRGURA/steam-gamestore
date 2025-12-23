@@ -2,6 +2,20 @@
 import supabase from '../core/supabase.js'
 
 /**
+ * 用户相关表结构说明
+ * 
+ * 表名：normal_user
+ * 字段说明：
+ * - id: INT, PRIMARY KEY - 用户唯一标识符
+ * - user_name: VARCHAR - 用户名
+ * - password: VARCHAR - 用户密码
+ * - user_image: VARCHAR - 用户头像URL
+ * - introduction: TEXT - 用户简介
+ * - created_at: TIMESTAMP - 用户创建时间
+ * - updated_at: TIMESTAMP - 用户信息更新时间
+ */
+
+/**
  * 压缩图片至适合头像的大小，并裁剪为1:1正方形
  * @param {File} file - 原始图片文件
  * @param {Object} options - 压缩选项
@@ -333,6 +347,39 @@ export const normalUserAPI = {
   },
 
   /**
+   * 检查用户名是否是现有用户的ID
+   * @param {string} userName - 要检查的用户名
+   * @returns {Promise<{isUserId: boolean, error: string|null}>} 检查结果
+   */
+  async _checkIfUserNameIsUserId(userName) {
+    try {
+      // 尝试将用户名转换为数字
+      const numericId = parseInt(userName);
+      if (isNaN(numericId)) {
+        // 不是有效数字，直接返回false
+        return { isUserId: false, error: null };
+      }
+
+      // 是有效数字，检查是否存在对应的用户
+      const { data, error } = await supabase
+        .from('normal_user')
+        .select('id')
+        .eq('id', numericId)
+        .limit(1);
+
+      if (error) {
+        console.error('检查用户名是否为用户ID失败:', error)
+        return { isUserId: false, error: error.message };
+      }
+
+      return { isUserId: data && data.length > 0, error: null };
+    } catch (err) {
+      console.error('检查用户名是否为用户ID时发生错误:', err)
+      return { isUserId: false, error: '检查用户名是否为用户ID时发生错误' };
+    }
+  },
+
+  /**
    * 根据用户名查询用户信息
    * @param {string} userName - 用户名
    * @param {Array<string>} [selectFields=['id', 'password', 'user_image']] - 要查询的字段
@@ -359,15 +406,52 @@ export const normalUserAPI = {
   },
 
   /**
+   * 根据ID查询用户信息
+   * @param {number} userId - 用户ID
+   * @param {Array<string>} [selectFields=['id', 'password', 'user_image']] - 要查询的字段
+   * @returns {Promise<Object|null>} 查询结果
+   */
+  async getUserById(userId, selectFields = ['id', 'password', 'user_image']) {
+    try {
+      const { data, error } = await supabase
+        .from('normal_user')
+        .select(selectFields.join(','))
+        .eq('id', userId)
+        .single()
+      
+      if (error) {
+        console.error('查询用户失败:', error)
+        return null
+      }
+      
+      return data
+    } catch (err) {
+      console.error('查询用户时发生错误:', err)
+      return null
+    }
+  },
+
+  /**
    * 用户登录验证
-   * @param {string} userName - 用户名
+   * @param {string|number} loginIdentifier - 用户名或ID
    * @param {string} password - 密码
    * @returns {Promise<{success: boolean, data: Object|null, error: string|null}>} 登录结果
    */
-  async login(userName, password) {
+  async login(loginIdentifier, password) {
     try {
-      // 根据用户名查询用户信息，获取所有字段
-      const userData = await this.getUserByName(userName, ['*'])
+      let userData;
+      
+      // 尝试将登录标识转换为数字，如果成功则作为ID查询，否则作为用户名查询
+      const numericId = parseInt(loginIdentifier);
+      if (!isNaN(numericId)) {
+        // 是有效数字，作为ID查询
+        userData = await this.getUserById(numericId, ['*']);
+      }
+      
+      // 如果ID查询失败，或者登录标识不是有效数字，则作为用户名查询
+      if (!userData) {
+        userData = await this.getUserByName(loginIdentifier, ['*']);
+      }
       
       if (!userData) {
         return {
@@ -417,6 +501,20 @@ export const normalUserAPI = {
       }
     }
   
+    // 检查用户名是否是现有用户的ID
+    const { isUserId, error: idCheckError } = await this._checkIfUserNameIsUserId(userName)
+    if (idCheckError) {
+      return this._handleError(idCheckError, '注册过程中发生错误')
+    }
+
+    if (isUserId) {
+      return {
+        success: false,
+        data: null,
+        error: '用户名不能设置为其他用户的ID，请选择其他用户名'
+      }
+    }
+
     // 检查用户名是否已存在
     const { exists, error: checkError } = await this._checkUserNameExists(userName)
     
@@ -547,6 +645,20 @@ export const normalUserAPI = {
         }
       }
 
+      // 检查新用户名是否是现有用户的ID
+      const { isUserId, error: idCheckError } = await this._checkIfUserNameIsUserId(newUserName)
+      if (idCheckError) {
+        return this._handleError(idCheckError, '修改用户名过程中发生错误')
+      }
+
+      if (isUserId) {
+        return {
+          success: false,
+          data: null,
+          error: '用户名不能设置为其他用户的ID，请选择其他用户名'
+        }
+      }
+
       // 检查新用户名是否已被使用
       const { exists, error: checkError } = await this._checkUserNameExists(newUserName)
       if (checkError) {
@@ -628,8 +740,23 @@ export const normalUserAPI = {
         }
       }
 
-      // 如果要更新用户名，检查新用户名是否已被使用
+      // 如果要更新用户名，检查新用户名是否已被使用或是否为其他用户的ID
       if (validUpdateData.user_name && validUpdateData.user_name !== userName) {
+        // 检查新用户名是否是现有用户的ID
+        const { isUserId, error: idCheckError } = await this._checkIfUserNameIsUserId(validUpdateData.user_name)
+        if (idCheckError) {
+          return this._handleError(idCheckError, '更新过程中发生错误')
+        }
+
+        if (isUserId) {
+          return {
+            success: false,
+            data: null,
+            error: '用户名不能设置为其他用户的ID，请选择其他用户名'
+          }
+        }
+
+        // 检查新用户名是否已被使用
         const { exists, error: checkError } = await this._checkUserNameExists(validUpdateData.user_name, userName)
         
         if (checkError) {

@@ -12,7 +12,7 @@ export default {
             activeTab: 'login', // 当前激活的选项卡：'login' 或 'register'
             // 登录表单数据
             loginData: {
-                username: '',
+                loginIdentifier: '',
                 password: '',
             },
             // 添加记住我状态
@@ -101,7 +101,7 @@ export default {
                 return;
             }
             
-            if (!this.loginData.username || !this.loginData.password) {
+            if (!this.loginData.loginIdentifier || !this.loginData.password) {
                 alert('请输入账号和密码');
                 return;
             }
@@ -110,10 +110,10 @@ export default {
                 // 开始加载
                 this.loading = true;
                 
-                const user = await normalUserAPI.login(this.loginData.username, this.loginData.password)
+                const user = await normalUserAPI.login(this.loginData.loginIdentifier, this.loginData.password)
                 if(user.success){
                     // 使用Pinia store保存用户信息
-                    this.userStore.login(this.loginData.username, this.loginData.password, this.rememberMe)
+                    this.userStore.login(this.loginData.loginIdentifier, this.loginData.password, this.rememberMe)
                     // 记住我功能由store内部处理
                     this.$router.push('/')
                 }else{
@@ -181,11 +181,11 @@ export default {
     // 在组件挂载时检查是否有记住的用户信息
     mounted() {
         // 修复：直接获取字符串值，不需要JSON.parse
-        const rememberedUsername = localStorage.getItem('rememberedUsername');
+        const rememberedLoginIdentifier = localStorage.getItem('rememberedUsername');
         const rememberedPassword = localStorage.getItem('rememberedPassword');
         
-        if (rememberedUsername) {
-            this.loginData.username = rememberedUsername;
+        if (rememberedLoginIdentifier) {
+            this.loginData.loginIdentifier = rememberedLoginIdentifier;
         }
         if (rememberedPassword) {
             this.loginData.password = rememberedPassword;
@@ -217,13 +217,13 @@ export default {
                 <!-- 登录表单 -->
                 <div class="GS_login_form" v-show="activeTab === 'login'">
                     <div class="GS_login_form_item">
-                        <label for="login-username">账号</label>
+                        <label for="login-identifier">账号/ID</label>
                         <input 
                             type="text" 
-                            id="login-username" 
-                            v-model="loginData.username" 
+                            id="login-identifier" 
+                            v-model="loginData.loginIdentifier" 
                             required
-                            placeholder="请输入账户名称"
+                            placeholder="请输入账户名称或ID"
                         >
                     </div>
                     <div class="GS_login_form_item">
@@ -336,14 +336,15 @@ export default {
 <style scoped>
     .GS_login{
         width: 100%;
-        height: 100%;
+        min-height: 2000px;
+        height: 100vh;
         background-color: #181a21;
         display: flex;
         flex-direction: column;
         align-items: center;
     }
     .GS_login_bg{
-        width: 1200px;
+        width: 100%;
         height: 800px;
         box-sizing: border-box;
         position: relative;

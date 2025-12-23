@@ -10,6 +10,8 @@ export default {
       isAutoPlaying: true,
       // 轮播间隔时间（毫秒）
       timeout: 5000,
+      // 用于标识当前循环的ID
+      autoPlayId: 0,
       gamelite: [
         { id: 1, GameName:'SPLIT FICTION', GamePrice: 298, GamePriceSave: 50},
         { id: 2, GameName:'三角洲行动', GamePrice: 0, GamePriceSave: 0},
@@ -49,8 +51,11 @@ export default {
     resumeAutoPlay() {
       if (!this.isAutoPlaying) {
         this.isAutoPlaying = true;
+        this.autoPlayId++;
         // 重新调用loopFunction重启递归链条
-        this.loopFunction();
+        setTimeout(() => {
+          this.loopFunction(this.autoPlayId);
+        }, this.timeout);
       }
     },    
     // 新增：鼠标悬停到缩略图时的处理函数
@@ -78,15 +83,18 @@ export default {
         return imageData[`item${this.hoveredShotIndex}`] || imageData.header;
       }
     },
-    loopFunction() {
-      if(this.isAutoPlaying) {
-        this.nextSlide();
-        setTimeout(this.loopFunction, this.timeout);
+    loopFunction(currentId) {
+      if(!this.isAutoPlaying || currentId !== this.autoPlayId) {
+        return
       }
+      this.nextSlide();
+      setTimeout(() => {
+        this.loopFunction(currentId);
+      }, this.timeout);
     }
   },
   mounted() {
-    this.loopFunction();
+    this.loopFunction(this.autoPlayId);
   },
   beforeUnmount() {
     this.pauseAutoPlay();

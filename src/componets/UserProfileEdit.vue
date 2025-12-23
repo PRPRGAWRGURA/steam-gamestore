@@ -26,6 +26,11 @@ const currentUsername = computed(() => {
   return userStore.currentUser?.user_name || '';
 });
 
+// 当前用户ID
+const currentUserId = computed(() => {
+  return userStore.currentUser?.id || '';
+});
+
 // 当前用户简介
 const currentIntroduction = computed(() => {
   return userStore.currentUser?.introduction || '';
@@ -89,15 +94,15 @@ const handleCropConfirm = (cropResult) => {
 };
 
 // 修改用户名相关状态
-const changeNameForm = reactive({
-  newUserName: ''
-});
+const isEditingName = ref(false); // 控制是否处于编辑模式
+const tempUserName = ref(''); // 临时存储新用户名
 const isChangingName = ref(false);
 const nameValidationErrors = reactive({
   newUserName: ''
 });
 
 // 修改简介相关状态
+const isEditingIntroduction = ref(false); // 控制是否处于编辑简介模式
 const introductionForm = reactive({
   newIntroduction: currentIntroduction.value
 });
@@ -106,7 +111,7 @@ const introductionValidationErrors = reactive({
   newIntroduction: ''
 });
 const remainingChars = computed(() => {
-  return 200 - introductionForm.newIntroduction.length;
+  return introductionForm.newIntroduction.length;
 });
 
 // 初始化头像预览
@@ -338,12 +343,36 @@ const cancelUploadAvatar = () => {
 // ---------------- 修改用户名相关函数 ----------------
 
 /**
- * 验证修改用户名表单
- * @returns {boolean} 表单是否有效
+ * 开始编辑用户名
  */
-const validateChangeNameForm = () => {
+const startEditName = () => {
+  // 初始化临时用户名为当前用户名
+  tempUserName.value = currentUsername.value;
+  // 清除之前的错误信息
+  nameValidationErrors.newUserName = '';
+  // 进入编辑模式
+  isEditingName.value = true;
+};
+
+/**
+ * 取消编辑用户名
+ */
+const cancelEditName = () => {
+  // 退出编辑模式
+  isEditingName.value = false;
+  // 清除临时用户名
+  tempUserName.value = '';
+  // 清除错误信息
+  nameValidationErrors.newUserName = '';
+};
+
+/**
+ * 验证用户名
+ * @returns {boolean} 用户名是否有效
+ */
+const validateUsernameInput = () => {
   let isValid = true;
-  nameValidationErrors.newUserName = validateUsername(changeNameForm.newUserName);
+  nameValidationErrors.newUserName = validateUsername(tempUserName.value);
   
   if (nameValidationErrors.newUserName) {
     isValid = false;
@@ -353,14 +382,16 @@ const validateChangeNameForm = () => {
 };
 
 /**
- * 修改用户名
+ * 保存新用户名
  */
-const changeUserName = async () => {
-  if (!validateChangeNameForm()) {
+const saveUserName = async () => {
+  // 验证用户名
+  if (!validateUsernameInput()) {
     return;
   }
 
-  if (changeNameForm.newUserName === currentUsername.value) {
+  // 检查新用户名是否与当前用户名相同
+  if (tempUserName.value === currentUsername.value) {
     errorMessage.value = '新用户名与当前用户名相同';
     return;
   }
@@ -372,7 +403,7 @@ const changeUserName = async () => {
 
     const result = await normalUserAPI.changeUserName(
       currentUsername.value,
-      changeNameForm.newUserName
+      tempUserName.value
     );
 
     if (result.success) {
@@ -380,9 +411,11 @@ const changeUserName = async () => {
       userStore.currentUser = { ...userStore.currentUser, ...result.data };
       // 将更新后的用户信息保存到localStorage
       localStorage.setItem('user', JSON.stringify(userStore.currentUser));
-      // 重置表单
-      changeNameForm.newUserName = '';
       successMessage.value = '用户名修改成功';
+      // 退出编辑模式
+      isEditingName.value = false;
+      // 清除临时用户名
+      tempUserName.value = '';
     } else {
       errorMessage.value = result.error || '用户名修改失败';
     }
@@ -392,6 +425,30 @@ const changeUserName = async () => {
   } finally {
     isChangingName.value = false;
   }
+};
+
+/**
+ * 开始编辑简介
+ */
+const startEditIntroduction = () => {
+  // 初始化编辑内容为当前简介
+  introductionForm.newIntroduction = currentIntroduction.value;
+  // 清除之前的错误信息
+  introductionValidationErrors.newIntroduction = '';
+  // 进入编辑模式
+  isEditingIntroduction.value = true;
+};
+
+/**
+ * 取消编辑简介
+ */
+const cancelEditIntroduction = () => {
+  // 退出编辑模式
+  isEditingIntroduction.value = false;
+  // 重置编辑内容为当前简介
+  introductionForm.newIntroduction = currentIntroduction.value;
+  // 清除错误信息
+  introductionValidationErrors.newIntroduction = '';
 };
 
 /**
@@ -426,6 +483,8 @@ const updateIntroduction = async () => {
       // 将更新后的用户信息保存到localStorage，解决刷新后简介不更新的问题
       localStorage.setItem('user', JSON.stringify(userStore.currentUser));
       successMessage.value = '简介更新成功';
+      // 退出编辑模式
+      isEditingIntroduction.value = false;
     } else {
       errorMessage.value = result.error || '简介更新失败';
     }
@@ -459,15 +518,41 @@ const updateIntroduction = async () => {
       <div class="UserInfoRight">
         <div class="UserInfoItem">
           <span class="UserInfoLabel">用户名:</span>
-          <span class="UserInfoValue">{{ currentUsername }}</span>
+          <div class="UsernameEditContainer">
+            <!-- 静态显示模式 -->
+            <div v-if="!isEditingName" class="UsernameStatic">
+              <span class="UserInfoValue">{{ currentUsername }}</span>
+              <button type="button" class="ChangeBtn" @click="startEditName">修改</button>
+            </div>
+            <!-- 编辑模式 -->
+            <div v-else class="UsernameEdit">
+              <input
+                v-model="tempUserName"
+                type="text"
+                class="EditInput"
+                :class="{ 'error': nameValidationErrors.newUserName }"
+                placeholder="请输入新用户名"
+                autofocus
+              />
+              <div class="EditArea">
+                <button type="button" class="SaveBtn" @click="saveUserName" :disabled="isChangingName">
+                  {{ isChangingName ? '处理中...' : '保存' }}
+                </button>
+                <button type="button" class="UnsaveBtn" @click="cancelEditName">取消</button>
+              </div>
+              <div v-if="nameValidationErrors.newUserName" class="ErrorText">
+                {{ nameValidationErrors.newUserName }}
+              </div>
+            </div>
+          </div>
         </div>
         <div class="UserInfoItem">
           <span class="UserInfoLabel">账户状态:</span>
-          <span class="UserInfoValue status-active">已激活</span>
+          <span class="UserInfoValue status-active">正常</span>
         </div>
         <div class="UserInfoItem">
-          <span class="UserInfoLabel">最后登录:</span>
-          <span class="UserInfoValue">{{ new Date().toLocaleString() }}</span>
+          <span class="UserInfoLabel">用户ID:</span>
+          <span class="UserInfoValue">{{ currentUserId }}</span>
         </div>
         <div class="UserInfoItem">
           <span class="UserInfoLabel">注册时间:</span>
@@ -476,8 +561,53 @@ const updateIntroduction = async () => {
       </div>
       <div class="UserInfoItem full-width">
           <span class="UserInfoLabel">个人简介:</span>
-          <div class="UserInfoValue introduction">
-            {{ currentIntroduction || '暂无简介' }}
+          <div class="IntroductionEditContainer">
+            <!-- 静态显示模式 -->
+            <div 
+              v-if="!isEditingIntroduction" 
+              class="UserInfoValue introduction" 
+              @click="startEditIntroduction"
+            >
+              {{ currentIntroduction || '暂无简介' }}
+              <div class="EditHint">点击编辑简介</div>
+            </div>
+            <!-- 编辑模式 -->
+            <div v-else class="IntroductionEdit">
+              <textarea
+                v-model="introductionForm.newIntroduction"
+                :class="{ 'error': introductionValidationErrors.newIntroduction }"
+                placeholder="请输入个人简介（最多200字）"
+                rows="4"
+                maxlength="200"
+                autofocus
+                class="IntroductionTextarea"
+              ></textarea>
+              <div class="IntroductionEditFooter">
+                <div class="CharCount" :class="{ 'char-normal': remainingChars <= 100 ,'char-limit': remainingChars > 100 && remainingChars <= 150 ,'char-max': remainingChars > 150 }">
+                  {{ remainingChars }}/200
+                </div>
+                <div class="IntroductionButtons">
+                  <button 
+                    type="button" 
+                    class="SaveBtn" 
+                    @click="updateIntroduction"
+                    :disabled="isUpdatingIntroduction"
+                  >
+                    {{ isUpdatingIntroduction ? '处理中...' : '保存' }}
+                  </button>
+                  <button 
+                    type="button" 
+                    class="UnsaveBtn" 
+                    @click="cancelEditIntroduction"
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+              <div v-if="introductionValidationErrors.newIntroduction" class="ErrorText">
+                {{ introductionValidationErrors.newIntroduction }}
+              </div>
+            </div>
           </div>
         </div>
     </div>
@@ -538,75 +668,9 @@ const updateIntroduction = async () => {
     @cancel="closeCropper"
   />
 
-  <!-- 修改用户名区域 -->
-  <div class="ChangeNameSection">
-    <h3 class="SectionTitle">修改用户名</h3>
-    
-    <form @submit.prevent="changeUserName" class="ChangeNameForm">
-      <!-- 新用户名 -->
-      <div class="FormGroup">
-        <label for="newUserName">新用户名</label>
-        <input
-          id="newUserName"
-          v-model="changeNameForm.newUserName"
-          type="text"
-          :class="{ 'error': nameValidationErrors.newUserName }"
-          placeholder="请输入新用户名"
-        />
-        <div v-if="nameValidationErrors.newUserName" class="ErrorText">
-          {{ nameValidationErrors.newUserName }}
-        </div>
-      </div>
-      
-      <!-- 按钮区域 -->
-      <div class="ButtonGroup">
-        <button
-          type="submit"
-          class="SubmitBtn"
-          :disabled="isChangingName"
-        >
-          {{ isChangingName ? '处理中...' : '确认修改' }}
-        </button>
-      </div>
-    </form>
-  </div>
 
-  <!-- 修改简介区域 -->
-  <div class="ChangeIntroductionSection">
-    <h3 class="SectionTitle">修改简介</h3>
-    
-    <form @submit.prevent="updateIntroduction" class="IntroductionForm">
-      <!-- 新简介 -->
-      <div class="FormGroup">
-        <label for="newIntroduction">个人简介</label>
-        <textarea
-          id="newIntroduction"
-          v-model="introductionForm.newIntroduction"
-          :class="{ 'error': introductionValidationErrors.newIntroduction }"
-          placeholder="请输入个人简介（最多200字）"
-          rows="4"
-          maxlength="200"
-        ></textarea>
-        <div class="CharCount" :class="{ 'char-limit': remainingChars < 50 }">
-          {{ remainingChars }}/200
-        </div>
-        <div v-if="introductionValidationErrors.newIntroduction" class="ErrorText">
-          {{ introductionValidationErrors.newIntroduction }}
-        </div>
-      </div>
-      
-      <!-- 按钮区域 -->
-      <div class="ButtonGroup">
-        <button
-          type="submit"
-          class="SubmitBtn"
-          :disabled="isUpdatingIntroduction"
-        >
-          {{ isUpdatingIntroduction ? '处理中...' : '更新简介' }}
-        </button>
-      </div>
-    </form>
-  </div>
+
+
 
   <!-- 修改密码区域 -->
   <div class="ChangePasswordSection">
@@ -749,7 +813,6 @@ const updateIntroduction = async () => {
 .ChangeAvatarSection,
 .ChangeNameSection,
 .ChangePasswordSection,
-.ChangeIntroductionSection,
 .CropperAvatarContainer {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -765,8 +828,7 @@ const updateIntroduction = async () => {
 .UserInfoSection:hover,
 .ChangeAvatarSection:hover,
 .ChangeNameSection:hover,
-.ChangePasswordSection:hover,
-.ChangeIntroductionSection:hover {
+.ChangePasswordSection:hover {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   border-color: rgba(66, 153, 225, 0.3);
 }
@@ -854,6 +916,186 @@ const updateIntroduction = async () => {
   animation: pulse 2s ease-in-out infinite;
 }
 
+/* 用户名编辑样式 */
+.UsernameEditContainer {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 10px;
+  position: relative;
+}
+
+.UsernameStatic {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.UsernameEdit {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  flex: 1;
+}
+
+.EditInput {
+  padding: 8px 12px;
+  height: 29.46px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  width: 30%;
+  box-sizing: border-box;
+}
+
+.EditInput:focus {
+  outline: none;
+  border-color: #4299e1;
+  box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.EditInput.error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+}
+
+.EditArea {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.SaveBtn,
+.UnsaveBtn,
+.ChangeBtn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.SaveBtn:hover,
+.UnsaveBtn:hover,
+.ChangeBtn:hover {
+  background: rgba(66, 153, 225, 0.2);
+  border-color: rgba(66, 153, 225, 0.4);
+  color: #4299e1;
+  transform: translateY(-1px);
+}
+
+/* 简介编辑样式 */
+.IntroductionEditContainer {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+  position: relative;
+}
+
+.IntroductionEditContainer .UserInfoValue.introduction {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.IntroductionEditContainer .UserInfoValue.introduction:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.EditHint {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 25px;
+  width: 80px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.826);
+  color: rgba(255, 255, 255, 0.898);
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.IntroductionEditContainer .UserInfoValue.introduction:hover .EditHint {
+  opacity: 1;
+}
+
+.IntroductionEdit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.IntroductionTextarea {
+  width: 100%;
+  text-align: left;
+  line-height: 1.6;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  border-left: 3px solid #4299e1;
+  color: white;
+  font-size: 15px;
+  min-height: 80px;
+  resize: none;
+  max-height: 200px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  word-break: break-word;
+  white-space: normal;
+  
+}
+
+.IntroductionTextarea:focus {
+  outline: none;
+  border-color: transparent;
+  border-left: 3px solid #4299e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.IntroductionTextarea.error {
+  border-color: transparent;
+  border-left: 3px solid #e74c3c;
+  box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.2);
+}
+
+.IntroductionEditFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.IntroductionButtons {
+  display: flex;
+  gap: 10px;
+}
+
 /* 个人简介展示样式 */
 .UserInfoItem.full-width {
   flex-direction: column;
@@ -873,8 +1115,8 @@ const updateIntroduction = async () => {
   border-left: 3px solid #4299e1;
   font-size: 15px;
   min-height: 80px;
-  display: flex;
-  align-items: center;
+  word-break: break-word;
+  white-space: normal;
 }
 
 /* 简介表单样式 */
@@ -917,15 +1159,23 @@ const updateIntroduction = async () => {
 /* 字符计数样式 */
 .CharCount {
   font-size: 12px;
+  font-weight: 600;
   color: rgba(255, 255, 255, 0.6);
   margin-top: 4px;
   text-align: right;
   transition: color 0.3s ease;
 }
 
+.CharCount.char-normal {
+  color: rgba(33, 247, 65, 0.6);
+}
+
 .CharCount.char-limit {
   color: #f59e0b;
-  font-weight: 600;
+}
+
+.CharCount.char-max {
+  color: #e74c3c;
 }
 
 .CharCount::before {

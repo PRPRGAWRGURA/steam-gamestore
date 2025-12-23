@@ -81,6 +81,7 @@ export default {
 <style scoped>
 .GS_header_container{
         width: 100%;
+        min-width: 1400px;
         height: 100px;
         background-color: #171a21;
         box-shadow: 0 3px 5px rgba(8, 8, 8, 0.465);

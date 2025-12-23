@@ -1,6 +1,21 @@
 import supabase from "../core/supabase.js";
 
 /**
+ * 支持工单相关表结构说明
+ * 
+ * 表名：support_post
+ * 字段说明：
+ * - id: INT, PRIMARY KEY - 工单唯一标识符
+ * - user_name: INT, FOREIGN KEY - 用户ID
+ * - feedback_msg: TEXT - 反馈内容
+ * - feedback_image: VARCHAR - 反馈图片URL，多个图片用逗号分隔
+ * - type: VARCHAR - 工单类型
+ * - status: VARCHAR - 工单状态（如：待处理、处理中、已解决等）
+ * - created_at: TIMESTAMP - 工单创建时间
+ * - updated_at: TIMESTAMP - 工单更新时间
+ */
+
+/**
  * 压缩图片至适合展示框的大小
  * @param {File} file - 原始图片文件
  * @param {Object} options - 压缩选项

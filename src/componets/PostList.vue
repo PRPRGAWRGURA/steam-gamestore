@@ -1024,10 +1024,12 @@ export default {
 <style scoped>
 /* 消息列表样式 */
 .posts-list {
+  margin-top: 80px;
   width: 100%;
   height: 100%;
   overflow: auto;
   overflow-x: hidden;
+  background: linear-gradient(135deg, #0f2846 0%, #171a45 50%, #221331 100%);
   border-left: 2px solid transparent;
   border-right: 2px solid transparent;
   border-image: linear-gradient(to top, #0d1723, #499deb) 1;
@@ -1063,7 +1065,8 @@ export default {
 .post-item {
   position: relative;
   display: flex;
-  background-color: #07121f;
+  background-color: #07121fba;
+  box-shadow: 0 0 10px rgba(8, 26, 65, 0.945);
   color: rgb(225, 229, 234);
   padding: 20px;
   transition: box-shadow 0.3s ease;

@@ -48,6 +48,9 @@ export default {
   </BaseBody>
 </template>
 <style scoped>
+.GS_container {
+  min-height: 100vh;
+}
 .gamebar-container {
   background-color: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);

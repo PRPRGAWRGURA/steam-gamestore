@@ -216,7 +216,6 @@ export default {
   justify-content: center;
   margin-bottom: 80px;
   overflow: hidden;
-  border-radius: 8px;
 }
 
 .hero-bg {
@@ -373,7 +372,7 @@ export default {
 
 /* 图表区域 */
 .chart-section {
-  margin: 100px 0;
+  margin: 100px 20px;
   animation: fadeIn 1s ease-out 1s both;
 }
 
@@ -549,7 +548,7 @@ export default {
 
 /* CTA区域 */
 .cta-section {
-  margin: 100px 0;
+  margin: 100px 20px;
   text-align: center;
   animation: fadeIn 1s ease-out 1.2s both;
 }

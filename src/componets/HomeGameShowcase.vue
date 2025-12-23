@@ -448,32 +448,4 @@ export default {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* 响应式设计 */
-@media (max-width: 1200px) {
-  .GS_container_games {
-    grid-template-columns: repeat(4, minmax(200px, 1fr)); /* 响应式调整为每行4个 */
-    max-width: 1000px;
-  }
-}
-
-@media (max-width: 1000px) {
-  .GS_container_games {
-    grid-template-columns: repeat(3, minmax(200px, 1fr)); /* 响应式调整为每行3个 */
-    max-width: 750px;
-  }
-}
-
-@media (max-width: 750px) {
-  .GS_container_games {
-    grid-template-columns: repeat(2, minmax(200px, 1fr)); /* 响应式调整为每行2个 */
-    max-width: 500px;
-  }
-}
-
-@media (max-width: 500px) {
-  .GS_container_games {
-    grid-template-columns: 1fr; /* 响应式调整为每行1个 */
-    max-width: 300px;
-  }
-}
 </style>
