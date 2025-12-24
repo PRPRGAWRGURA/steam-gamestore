@@ -1341,7 +1341,7 @@ export default {
   top: 100%;
   left: 0;
   right: 0;
-  background-color: #07121f;
+  background-color: #0a172a;
   padding: 20px;
   border-bottom: 2px solid #3ba0de;
   border-top: none;

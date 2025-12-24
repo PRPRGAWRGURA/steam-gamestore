@@ -258,7 +258,7 @@ const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
     // 验证图片文件
-    const validationError = validateImageFile(file, 5); // 限制5MB
+    const validationError = validateImageFile(file, 15); // 限制15MB
     if (validationError) {
       errorMessage.value = validationError;
       return;
