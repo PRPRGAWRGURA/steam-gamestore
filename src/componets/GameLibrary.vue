@@ -332,7 +332,7 @@ export default {
       <div class="library-title">
         <h2>所有游戏 ({{ libraryStats.displayedGames }}/{{ libraryStats.totalGames }})</h2>
         <button class="library-filter">
-          <span class="filter-icon">🎮</span>
+          <span class="filter-icon"><FontAwesomeIcon icon="gamepad" /></span>
         </button>
       </div>
       
@@ -351,7 +351,7 @@ export default {
         </div>
         
         <button class="view-toggle">
-          <span class="toggle-icon">📋</span>
+          <span class="toggle-icon"><FontAwesomeIcon icon="list" /></span>
         </button>
       </div>
     </div>

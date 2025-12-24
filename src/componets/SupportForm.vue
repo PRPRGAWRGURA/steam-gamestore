@@ -254,7 +254,7 @@ export default {
     
     <!-- 成功提示 -->
     <div v-if="submitSuccess" class="success-message">
-      <div class="success-icon">✅</div>
+      <div class="success-icon"><FontAwesomeIcon icon="check-circle" /></div>
       <h3>提交成功！</h3>
       <p>我们已收到您的请求，将尽快处理。</p>
     </div>
@@ -333,7 +333,7 @@ export default {
           class="submit-button"
           :disabled="isSubmitting || (isDeveloperApplication && !canSubmitDeveloperApplication)"
         >
-          <span v-if="isSubmitting" class="loading">⏳</span>
+          <span v-if="isSubmitting" class="loading"><FontAwesomeIcon icon="spinner" spin /></span>
           {{ isSubmitting ? '提交中...' : 
              (isDeveloperApplication ? 
                (canSubmitDeveloperApplication ? '提交发行商申请' : '申请已提交，请稍后再试') : 
@@ -347,20 +347,19 @@ export default {
       <div class="section-header">
         <h2 class="section-title">我的请求</h2>
         <button class="refresh-button" @click="fetchUserTickets" :disabled="isLoadingTickets">
-          <span v-if="isLoadingTickets" class="loading">⏳</span>
           刷新
         </button>
       </div>
 
       <!-- 加载状态 -->
       <div v-if="isLoadingTickets" class="loading-state">
-        <div class="loading-spinner">⏳</div>
+        <div class="loading-spinner"><FontAwesomeIcon icon="spinner" spin /></div>
         <p>加载中...</p>
       </div>
 
       <!-- 空状态 -->
       <div v-else-if="userTickets.length === 0" class="empty-state">
-        <div class="empty-icon">📝</div>
+        <div class="empty-icon"><FontAwesomeIcon icon="pen-to-square" /></div>
         <h3>暂无请求记录</h3>
         <p>您还没有提交任何请求，点击上方按钮提交您的第一个请求吧！</p>
       </div>
@@ -736,14 +735,23 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 0;
+  padding: 60px 20px;
   color: rgba(255, 255, 255, 0.7);
+  gap: 15px;
 }
 
 .loading-spinner {
-  font-size: 2rem;
-  margin-bottom: 10px;
+  font-size: 3rem;
+  margin-bottom: 0;
   animation: spin 1s linear infinite;
+  color: #4299e1;
+  filter: drop-shadow(0 0 10px rgba(66, 153, 225, 0.3));
+}
+
+.loading-state p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
 }
 
 /* 空状态 */

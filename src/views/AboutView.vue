@@ -32,22 +32,26 @@ export default {
     
     const features = ref([
       { 
-        icon: '🎮', 
+        icon: 'gamepad', 
+        color: '#4299e1', 
         title: '畅玩游戏', 
         description: '访问数千款高品质游戏，从独立佳作到AAA大作，应有尽有。' 
       },
       { 
-        icon: '👥', 
+        icon: 'users', 
+        color: '#38b2ac', 
         title: '社区互动', 
         description: '与全球玩家交流，分享游戏心得，加入游戏社区。' 
       },
       { 
-        icon: '🎨', 
+        icon: 'palette', 
+        color: '#ed8936', 
         title: '创造内容', 
-        description: '使用Steam Workshop创建和分享游戏内容，发挥你的创意。' 
+        description: '使用CHAIN Workshop创建和分享游戏内容，发挥你的创意。' 
       },
       { 
-        icon: '🎪', 
+        icon: 'ticket', 
+        color: '#9f7aea', 
         title: '活动赛事', 
         description: '参与各种游戏活动和电竞赛事，赢取丰厚奖励。' 
       }
@@ -134,13 +138,13 @@ export default {
         <div class="chart-container">
           <!-- 加载状态 -->
           <div v-if="isLoadingGrowthData" class="loading-state">
-            <div class="loading-spinner">⏳</div>
+            <div class="loading-spinner"><FontAwesomeIcon icon="spinner" spin /></div>
             <p>加载用户增长数据中...</p>
           </div>
           
           <!-- 空数据状态 -->
           <div v-else-if="userGrowthData.length === 0" class="empty-state">
-            <div class="empty-icon">📊</div>
+            <div class="empty-icon"><FontAwesomeIcon icon="chart-simple" /></div>
             <p>暂无用户增长数据</p>
           </div>
           
@@ -174,7 +178,7 @@ export default {
             class="feature-card"
             :style="{ animationDelay: `${index * 0.1}s` }"
           >
-            <div class="feature-icon">{{ feature.icon }}</div>
+            <div class="feature-icon" :style="{ color: feature.color }"><FontAwesomeIcon :icon="feature.icon" /></div>
             <h3 class="feature-title">{{ feature.title }}</h3>
             <p class="feature-description">{{ feature.description }}</p>
           </div>
@@ -441,13 +445,22 @@ export default {
   align-items: center;
   justify-content: center;
   height: 300px;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
+  gap: 15px;
 }
 
 .loading-spinner {
-  font-size: 2rem;
-  margin-bottom: 10px;
+  font-size: 3rem;
+  margin-bottom: 0;
   animation: spin 1s linear infinite;
+  color: #4299e1;
+  filter: drop-shadow(0 0 10px rgba(66, 153, 225, 0.3));
+}
+
+.loading-state p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
 }
 
 @keyframes spin {

@@ -248,7 +248,7 @@ export default {
                     <h2>游戏特色</h2>
                     <div class="features-list">
                         <div v-for="(feature, index) in gameitem.features" :key="index" class="feature-item">
-                            <span class="feature-icon">✓</span>
+                            <span class="feature-icon"><FontAwesomeIcon icon="check" /></span>
                             <span class="feature-text">{{ feature }}</span>
                         </div>
                     </div>

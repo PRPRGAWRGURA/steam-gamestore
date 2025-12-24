@@ -200,14 +200,14 @@ export default {
                             <div class="bottom">
                                 <p>网吧游戏</p>
                                 <p>macOS</p>
-                                <p>steamOS + Linux</p>
+                                <p>CHAINOS + Linux</p>
                             </div>
                         </div>
                         <div class="special-content-right">
-                            <p>Steam 新品节</p>
-                            <p>Steam 大奖</p>
-                            <p>Steam 回顾</p>
-                            <p>Steam 实验室</p>
+                            <p>CHAIN 新品节</p>
+                            <p>CHAIN 大奖</p>
+                            <p>CHAIN 回顾</p>
+                            <p>CHAIN 实验室</p>
                         </div>
                     </div>
                 </div>

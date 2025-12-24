@@ -7,12 +7,13 @@ import supabase from '../core/supabase.js'
  * 表名：normal_user
  * 字段说明：
  * - id: INT, PRIMARY KEY - 用户唯一标识符
- * - user_name: VARCHAR - 用户名
- * - password: VARCHAR - 用户密码
- * - user_image: VARCHAR - 用户头像URL
+ * - user_name: TEXT - 用户名
+ * - password: TEXT - 用户密码
+ * - user_image: TEXT - 用户头像URL
  * - introduction: TEXT - 用户简介
  * - created_at: TIMESTAMP - 用户创建时间
- * - updated_at: TIMESTAMP - 用户信息更新时间
+ * - status: TEXT - 用户状态(默认值为'已激活')
+ * - e-mail: TEXT - 用户邮箱
  */
 
 /**

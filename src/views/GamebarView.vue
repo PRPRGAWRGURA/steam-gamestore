@@ -39,7 +39,7 @@ export default {
         <div class="gamebar-content" v-else>
           <h1 class="gamebar-title">游戏库</h1>
           <div class="login-prompt">
-            <div class="prompt-icon">🔒</div>
+            <div class="prompt-icon"><FontAwesomeIcon icon="lock" /></div>
             <h2>请先登录查看您的游戏库</h2>
             <p>登录后即可访问您的游戏收藏和游戏时间统计</p>
           </div>
