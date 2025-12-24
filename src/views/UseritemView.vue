@@ -38,13 +38,12 @@ export default {
 
 .UserItemBox {
   width: 100%;
-  padding: 20px 0;
 }
 
 .UserItemHeader {
   width: 100%;
   background-color: #211b3847;
-  border-radius: 8px;
+  min-height: 100vh;
   padding: 20px;
   color: white;
 }
