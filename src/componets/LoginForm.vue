@@ -37,7 +37,16 @@ export default {
                 regPassword: ''
             },
             // 防重复提交状态
-            loading: false
+            loading: false,
+            // 账号预览相关状态
+            preview: {
+                loading: false, // 预览加载状态
+                userInfo: null, // 用户信息
+                error: null, // 错误信息
+                show: false // 是否显示预览
+            },
+            // 防抖定时器
+            debounceTimer: null
         }
     },
     setup() {
@@ -176,6 +185,71 @@ export default {
         // 切换注册密码可见性
         toggleRegisterPasswordVisibility() {
             this.showRegisterPassword = !this.showRegisterPassword;
+        },
+        
+        // 防抖处理函数
+        debounce(func, delay) {
+            return (...args) => {
+                if (this.debounceTimer) {
+                    clearTimeout(this.debounceTimer);
+                }
+                this.debounceTimer = setTimeout(() => {
+                    func.apply(this, args);
+                }, delay);
+            };
+        },
+        
+        // 获取用户预览信息
+        async fetchUserPreview() {
+            const identifier = this.loginData.loginIdentifier.trim();
+            
+            if (!identifier) {
+                this.preview.show = false;
+                this.preview.userInfo = null;
+                this.preview.error = null;
+                return;
+            }
+            
+            try {
+                this.preview.loading = true;
+                this.preview.error = null;
+                
+                let userData;
+                
+                // 尝试将登录标识转换为数字，如果成功则作为ID查询，否则作为用户名查询
+                const numericId = parseInt(identifier);
+                if (!isNaN(numericId)) {
+                    // 是有效数字，作为ID查询
+                    userData = await normalUserAPI.getUserById(numericId, ['id', 'user_name', 'user_image']);
+                }
+                
+                // 如果ID查询失败，或者登录标识不是有效数字，则作为用户名查询
+                if (!userData) {
+                    userData = await normalUserAPI.getUserByName(identifier, ['id', 'user_name', 'user_image']);
+                }
+                
+                if (userData) {
+                    this.preview.userInfo = userData;
+                    this.preview.show = true;
+                } else {
+                    this.preview.userInfo = null;
+                    this.preview.show = true;
+                    this.preview.error = '未找到该用户';
+                }
+            } catch (error) {
+                console.error('获取用户预览信息失败:', error);
+                this.preview.error = '获取用户信息失败';
+                this.preview.userInfo = null;
+                this.preview.show = true;
+            } finally {
+                this.preview.loading = false;
+            }
+        },
+        
+        // 处理登录标识符输入
+        handleLoginIdentifierInput() {
+            // 使用500ms防抖处理
+            this.debounce(this.fetchUserPreview, 500)();
         }
     },
     // 在组件挂载时检查是否有记住的用户信息
@@ -217,6 +291,30 @@ export default {
                 <!-- 登录表单 -->
                 <div class="GS_login_form" v-show="activeTab === 'login'">
                     <div class="GS_login_form_item">
+                        <!-- 账号预览区域 -->
+                        <div class="user-preview" v-if="preview.show">
+                            <!-- 加载中状态 -->
+                            <div class="preview-loading" v-if="preview.loading">
+                                <span class="loading-spinner"></span>
+                                <span>正在加载...</span>
+                            </div>
+                            <!-- 有数据状态 -->
+                            <div class="preview-content" v-else-if="preview.userInfo">
+                                <img 
+                                    :src="preview.userInfo.user_image" 
+                                    :alt="preview.userInfo.user_name" 
+                                    class="user-avatar"
+                                >
+                                <div class="user-info">
+                                    <span class="user-name">{{ preview.userInfo.user_name }}</span>
+                                    <span class="user-id">ID: {{ preview.userInfo.id }}</span>
+                                </div>
+                            </div>
+                            <!-- 无数据状态 -->
+                            <div class="preview-error" v-else-if="preview.error">
+                                <span>{{ preview.error }}</span>
+                            </div>
+                        </div>
                         <label for="login-identifier">账号/ID</label>
                         <input 
                             type="text" 
@@ -224,6 +322,7 @@ export default {
                             v-model="loginData.loginIdentifier" 
                             required
                             placeholder="请输入账户名称或ID"
+                            @input="handleLoginIdentifierInput"
                         >
                     </div>
                     <div class="GS_login_form_item">
@@ -360,7 +459,8 @@ export default {
         left: 50%;
         transform: translate(-50%, -50%);
         width: 620px;
-        height: 400px;
+        min-height: 400px;
+        height: auto;
     }
     /* 选项卡样式 */
     .GS_login_tabs {
@@ -404,13 +504,15 @@ export default {
     
     .GS_login_form {
         width: 100%;
-        height: 350px;
+        min-height: 350px;
+        height: auto;
         position: relative;
         z-index: 1;
         background-color: #181a21;
         display: flex;
         flex-direction: column;
         align-items: center;
+        padding-bottom: 20px;
     }
     .GS_login_form_item {
         width: 80%;
@@ -551,5 +653,108 @@ export default {
     
     .remember-me-label span {
         user-select: none;
+    }
+    
+    /* 账号预览样式 */
+    .user-preview {
+        width: 100%;
+        margin-bottom: 10px;
+        padding: 15px;
+        border-radius: 5px;
+        background: linear-gradient(135deg, rgba(26, 158, 254, 0.1) 0%, rgba(26, 158, 254, 0.05) 100%);
+        border: 1px solid rgba(26, 158, 254, 0.3);
+        display: flex;
+        align-items: center;
+        transform: translateY(-10px);
+        opacity: 0;
+        animation: slideIn 0.3s ease forwards;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* 滑入动画 */
+    @keyframes slideIn {
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+    
+    /* 加载中状态 */
+    .preview-loading {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 14px;
+        width: 100%;
+    }
+    
+    /* 加载骨架屏 */
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(90deg, rgba(26, 158, 254, 0.2) 25%, rgba(26, 158, 254, 0.4) 50%, rgba(26, 158, 254, 0.2) 75%);
+        background-size: 200% 100%;
+        animation: loadingPulse 1.5s ease-in-out infinite;
+        flex-shrink: 0;
+    }
+    
+    /* 骨架屏闪烁动画 */
+    @keyframes loadingPulse {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+    
+    /* 有数据状态 */
+    .preview-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    /* 用户头像 */
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid rgba(26, 158, 254, 0.5);
+        box-shadow: 0 2px 6px rgba(26, 158, 254, 0.3);
+        flex-shrink: 0;
+    }
+    
+    /* 用户信息容器 */
+    .user-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+    }
+    
+    /* 用户名 */
+    .user-name {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 16px;
+        font-weight: 500;
+    }
+    
+    /* 用户ID */
+    .user-id {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+    }
+    
+    /* 无数据状态 */
+    .preview-error {
+        color: rgba(255, 107, 107, 0.9);
+        font-size: 14px;
+        width: 100%;
+        text-align: center;
     }
 </style>

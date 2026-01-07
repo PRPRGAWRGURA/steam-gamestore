@@ -31,11 +31,15 @@ GS_User/
 │   ├── UserImage/       # 用户头像资源
 │   └── WebResources/    # 其他Web资源
 ├── src/
-│   ├── components/      # Vue组件
+│   ├── componets/       # Vue组件
 │   ├── layouts/         # 布局组件
 │   ├── router/          # 路由配置
 │   ├── stores/          # Pinia状态管理
 │   ├── utils/           # 工具函数
+│   │   ├── api/         # API请求封装
+│   │   ├── core/        # 核心工具
+│   │   ├── tools/       # 辅助工具
+│   │   └── README.md    # 工具说明文档
 │   ├── views/           # 页面视图
 │   ├── App.vue          # 根组件
 │   └── main.js          # 入口文件
@@ -50,15 +54,24 @@ GS_User/
 
 | 组件名称 | 功能描述 |
 |----------|----------|
-| GS_header | 页面头部，包含导航菜单和用户信息 |
-| GS_body | 页面主体容器 |
-| GS_bottom | 页面底部，包含版权信息 |
-| GS_login | 登录/注册表单组件 |
-| GS_post_creator | 帖子创建组件 |
-| GS_post_list | 帖子列表组件 |
-| GS_support_form | 客服支持表单 |
-| GS_showgames | 游戏展示组件 |
-| GS_Carousel | 轮播图组件 |
+| BaseHeader | 页面头部，包含导航菜单和用户信息 |
+| BaseBody | 页面主体容器 |
+| BaseFooter | 页面底部，包含版权信息 |
+| LoginForm | 登录/注册表单组件 |
+| PostCreator | 帖子创建组件 |
+| PostList | 帖子列表组件 |
+| SupportForm | 客服支持表单 |
+| HomeGameShowcase | 游戏展示组件 |
+| HomeCarousel | 轮播图组件 |
+| AvatarCropper | 头像裁剪组件 |
+| GameLibrary | 游戏库组件 |
+| HeaderUser | 头部用户信息组件 |
+| BaseContainer | 基础容器组件 |
+| BaseTitle | 基础标题组件 |
+| TitleExpand | 标题扩展组件 |
+| TitleInner | 标题内部组件 |
+| TitleSearch | 标题搜索组件 |
+| UserProfileEdit | 用户资料编辑组件 |
 
 ### 2.3 核心视图
 
@@ -72,6 +85,7 @@ GS_User/
 | SupportView | 客服支持页面 |
 | UseritemView | 用户个人中心 |
 | AboutView | 关于页面，包含用户增长数据 |
+| ShoppingCartView | 购物车页面 |
 
 ## 3. 核心功能
 
