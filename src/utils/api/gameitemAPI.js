@@ -10,7 +10,7 @@ import supabase from "../core/supabase.js";
  * - game_publisher: TEXT - 游戏发行商名称
  * - game_name: VARCHAR - 游戏名称
  * - game_price: FLOAT8 - 游戏原价
- * - game_discount: FLOAT8 - 游戏折扣比例
+ * - game_discount: FLOAT8 - 游戏折扣比例（表内数字为0.7时价格折扣显示30%off）
  * - game_description: TEXT - 游戏详细描述
  * - game_type: VARCHAR - 游戏类型（如Action、Adventure等）
  * - game_tags: JSONB - 游戏标签，可存储多个标签
@@ -47,7 +47,7 @@ export const gameitemAPI = {
                 page = 1,
                 pageSize = 20,
                 fields = '*',
-                state = ''
+                state = '已发布'
             } = options;
             
             let query = supabase.from('game_item').select(fields, { count: 'exact' });
@@ -75,11 +75,17 @@ export const gameitemAPI = {
             // 添加排序
             query = query.order(sortBy, { ascending: sortAsc });
             
-            // 添加分页
-            const offset = (page - 1) * pageSize;
-            query = query.range(offset, offset + pageSize - 1);
+            // 添加分页，当pageSize为'unlimited'时不进行分页
+            if (pageSize !== 'unlimited') {
+                // 添加分页
+                const offset = (page - 1) * pageSize;
+                query = query.range(offset, offset + pageSize - 1);
+            }
             
             const response = await query;
+            
+            // 计算总页数，当pageSize为'unlimited'时，总页数为1
+            const totalPages = pageSize !== 'unlimited' ? Math.ceil(response.count / pageSize) : 1;
             
             return {
                 success: true,
@@ -89,7 +95,7 @@ export const gameitemAPI = {
                         page,
                         pageSize,
                         total: response.count,
-                        totalPages: Math.ceil(response.count / pageSize)
+                        totalPages: totalPages
                     }
                 },
                 error: null

@@ -1,145 +1,208 @@
 <script>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
+import { gameitemAPI } from '@/utils/api/gameitemAPI';
 
 export default {
   name: 'HomeGameShowcase',
   setup() {
-    // 游戏列表 - 这里会从数据库获取，目前使用模拟数据
+    // 游戏列表 - 从数据库获取
     const games = ref([]);
+    const loading = ref(false);
     
     // 当前悬停的游戏
     const hoveredGame = ref(null);
-    const hoverPosition = reactive({ x: 0, y: 0 });
-    
-    // 游戏名称列表
-    const gameNames = [
-      'Journey',
-      '逃鸭科夫',
-      'Horizon Zero Dawn',
-      'Undertale',
-      'Stellar Blade',
-      'Uncharted',
-      'Red Dead Redemption 2',
-      'Animal Well',
-      'Colt Canyon',
-      'First Cut: Samurai Duel',
-      'Celeste',
-      'Katana Zero',
-      'Bongo Cat',
-      'World War V: Last Call',
-      'The Last of Us',
-      'God of War',
-      'Spider-Man',
-      'Cyberpunk 2077',
-      'Assassin\'s Creed Valhalla',
-      'Far Cry 6',
-      'Call of Duty: Warzone',
-      'Fortnite',
-      'Minecraft',
-      'Grand Theft Auto V',
-      'League of Legends',
-      'Apex Legends',
-      'Overwatch 2',
-      'Rainbow Six Siege',
-      'Valorant',
-      'Dota 2'
-    ];
-    
-    // GamesImage目录下的实际图片文件名
-    const gamesImages = [
-      '1007_header.jpg',
-      '1024110_header.jpg',
-      '1046400_library_header.jpg',
-      '1054830_header.jpg',
-      '105600_header.jpg',
-      '1057090_header.jpg',
-      '1070560_header.jpg',
-      '107600_header.jpg',
-      '1093910_header.jpg',
-      '1112520_header.jpg',
-      '1112521_header.jpg',
-      '1113280_header.jpg',
-      '1135280_header.jpg',
-      '1143852_header.jpg',
-      '1151640_header.jpg',
-      '1161040_header.jpg',
-      '1174180_header.jpg',
-      '1174580_header.jpg',
-      '1177880_header.jpg',
-      '1179800_header.jpg',
-      '1222680_header.jpg',
-      '1230140_library_header.jpg',
-      '1237970_header.jpg',
-      '1238840_header.jpg',
-      '1241570_header.jpg',
-      '1245040_header.jpg',
-      '1245620_header.jpg',
-      '1277930_header.jpg',
-      '1281930_header.jpg',
-      '1282100_header.jpg'
-    ];
+    // 详情面板样式
+    const detailStyle = reactive({});
+    // 延迟隐藏计时器
+    let hideTimer = null;
+    // 倒计时计时器
+    let countdownTimer = null;
+    // 当前倒计时秒数
+    const countdown = ref(0);
+    // 悬停状态标志
+    const isHovering = ref(false);
     
     // 加载游戏数据
-    const loadGames = () => {
-      // 模拟数据：生成30个游戏对象，之后可替换为从数据库或API导入的数据
-      games.value = Array.from({ length: 30 }, (_, i) => ({
-        id: i + 1,
-        name: gameNames[i % gameNames.length],
-        image: `/GamesImage/${gamesImages[i % gamesImages.length]}`, // 使用实际的GamesImage图片
-        price: (Math.random() * 100).toFixed(2), // 随机价格模拟
-        tags: ['Action', 'Adventure'][i % 2], // 示例标签，可扩展
-        genre: ['Action', 'Adventure', 'RPG', 'Shooter', 'Strategy'][i % 5],
-        developer: `Developer ${i + 1}`,
-        releaseDate: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000))
-      }));
+    const loadGames = async () => {
+      try {
+        loading.value = true;
+        // 使用真实API获取游戏列表，只返回需要的字段，加载全部数据，按创建时间倒序
+        // 重新添加game_tags字段，因为需要显示标签
+        // 使用'unlimited'作为pageSize，加载所有游戏数据
+        const response = await gameitemAPI.getGames({
+          page: 1,
+          pageSize: 'unlimited',
+          sortBy: 'created_at',
+          sortAsc: false,
+          fields: 'id,game_name,game_price,game_discount,game_tags,hero_img,created_at'
+        });
+        
+        if (response.success && response.data) {
+          // 转换API返回的数据结构，适配组件需要的字段名
+          games.value = response.data.items.map(game => {
+            // 处理game_tags字段，将逗号分隔的字符串转换为数组
+            let tagsArray = [];
+
+            // 根据需求，游戏标签只会是多个且用逗号分隔的字符串
+            tagsArray = game.game_tags ? game.game_tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+            
+            return {
+              id: game.id,
+              name: game.game_name,
+              image: game.hero_img, // 使用hero_img作为游戏卡片图片
+              price: game.game_price,
+              discount: game.game_discount,
+              game_tags: tagsArray, // 完整的标签数组
+              releaseDate: game.created_at
+            };
+          });
+        }
+      } catch (error) {
+        console.error('加载游戏数据失败:', error);
+      } finally {
+        loading.value = false;
+      }
     };
     
     // 处理游戏卡片悬停事件
     const handleGameHover = (game, event) => {
+      // 清除所有计时器
+      clearCountdown();
+      
+      isHovering.value = true;
       hoveredGame.value = game;
       
-      // 计算悬停信息框的位置
-      let x = event.clientX + 20;
-      let y = Math.max(20, event.clientY - 50);
+      // 获取游戏卡片的元素
+      const cardElement = event.currentTarget;
+      // 获取卡片在视口中的位置和尺寸
+      const cardRect = cardElement.getBoundingClientRect();
+      // 获取游戏卡片包装器的元素
+      const wrapperElement = cardElement.parentElement;
+      // 获取包装器在视口中的位置
+      const wrapperRect = wrapperElement.getBoundingClientRect();
       
       // 固定每行显示5个游戏
       const cardsPerRow = 5;
       const gameIndex = games.value.findIndex(g => g.id === game.id);
       const positionInRow = gameIndex % cardsPerRow;
       
-      // 如果是每行的后两个游戏，将详细信息面板显示在鼠标左侧
+      // 详情面板的尺寸
+      const panelWidth = 350;
+      const panelHeight = 450;
+      
+      // 计算详情面板的位置（相对于包装器）
+      let left = cardRect.width + 10; // 显示在卡片右侧，间距10px
+      let top = 0; // 与卡片顶部对齐
+      
+      // 如果是每行的后两个游戏，将详细信息面板显示在卡片左侧（与卡片左侧间距50px千万不要修改）
       if (positionInRow >= cardsPerRow - 2) {
-        x = event.clientX - 370; // 350px面板宽度 + 20px间距
+        left = -panelWidth - 50;
       }
       
       // 确保信息框不会超出浏览器视口
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const panelWidth = 350;
-      const panelHeight = 450;
+      
+      // 获取详情面板在视口中的预计位置
+      const panelViewportLeft = wrapperRect.left + left;
+      const panelViewportRight = panelViewportLeft + panelWidth;
+      const panelViewportTop = wrapperRect.top + top;
+      const panelViewportBottom = panelViewportTop + panelHeight;
       
       // 如果信息框超出右侧视口，调整到左侧
-      if (x + panelWidth > viewportWidth) {
-        x = viewportWidth - panelWidth - 20;
+      if (panelViewportRight > viewportWidth) {
+        left = -panelWidth - 50;
       }
       
       // 如果信息框超出左侧视口，调整到右侧
-      if (x < 20) {
-        x = 20;
+      if (panelViewportLeft < 0) {
+        left = cardRect.width + 10;
       }
       
       // 如果信息框超出底部视口，调整到上方
-      if (y + panelHeight > viewportHeight) {
-        y = viewportHeight - panelHeight - 20;
+      if (panelViewportBottom > viewportHeight) {
+        top = viewportHeight - panelViewportTop - panelHeight - 20;
       }
       
-      hoverPosition.x = x;
-      hoverPosition.y = y;
+      
+      // 设置详情面板样式
+      detailStyle.left = `${left}px`;
+      detailStyle.top = `${top}px`;
+    };
+    
+    // 开始倒计时
+    const startCountdown = () => {
+      // 清除现有的计时器
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      
+      // 设置初始倒计时时间（200ms）
+      const delay = 200;
+      const interval = 10; // 每10ms更新一次
+      const totalSteps = delay / interval;
+      let step = 0;
+      
+      // 立即输出开始信息
+      console.log('倒计时开始:', delay, 'ms');
+      
+      // 开始倒计时间隔
+      countdownTimer = setInterval(() => {
+        step++;
+        const remaining = delay - (step * interval);
+        
+        // 输出当前倒计时和isHovering状态
+        console.log('倒计时剩余:', remaining, 'ms, isHovering:', isHovering.value);
+        
+        // 如果倒计时结束
+        if (step >= totalSteps) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+          
+          // 执行隐藏操作，添加详细日志
+          console.log('倒计时结束，准备隐藏详情面板，isHovering:', isHovering.value);
+          // 直接隐藏面板，不考虑isHovering状态，因为倒计时结束说明用户已经离开
+          hoveredGame.value = null;
+          console.log('详情面板已隐藏');
+        }
+      }, interval);
+    };
+    
+    // 清除倒计时
+    const clearCountdown = () => {
+      if (hideTimer) {
+        clearTimeout(hideTimer);
+        hideTimer = null;
+      }
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        console.log('倒计时已清除');
+      }
     };
     
     // 处理鼠标离开事件
     const handleMouseLeave = () => {
-      hoveredGame.value = null;
+      // 设置延迟隐藏，给用户时间移动鼠标到详情面板
+      startCountdown();
+    };
+    
+    // 处理详情面板鼠标进入事件
+    const handleDetailMouseEnter = () => {
+      isHovering.value = true;
+      clearCountdown();
+    };
+    
+    // 处理详情面板鼠标离开事件
+    const handleDetailMouseLeave = () => {
+      isHovering.value = false;
+      // 延迟隐藏，防止快速移动时闪烁
+      startCountdown();
     };
     
     // 格式化日期
@@ -151,16 +214,39 @@ export default {
       });
     };
     
+    // 计算折扣价格
+    const calculateDiscountPrice = (price, discount) => {
+      if (discount && discount < 1) {
+        return (price * discount).toFixed(2);
+      }
+      return price.toFixed(2);
+    };
+    
+    // 计算折扣百分比
+    const calculateDiscountPercent = (discount) => {
+      if (discount && discount < 1) {
+        return Math.round((1 - discount) * 100);
+      }
+      return 0;
+    };
+    
     // 组件挂载时加载游戏数据
-    loadGames();
+    onMounted(() => {
+      loadGames();
+    });
     
     return {
       games,
+      loading,
       hoveredGame,
-      hoverPosition,
+      detailStyle,
       handleGameHover,
       handleMouseLeave,
-      formatDate
+      handleDetailMouseEnter,
+      handleDetailMouseLeave,
+      formatDate,
+      calculateDiscountPrice,
+      calculateDiscountPercent
     };
   }
 };
@@ -168,83 +254,85 @@ export default {
 
 <template>
   <div class="GS_container_games">
-    <router-link 
+    <div 
       v-for="game in games" 
       :key="game.id"
-      :to="{ path: '/gamedetail/' + game.id }"
-      class="game-card"
-      @mouseenter="handleGameHover(game, $event)"
-      @mouseleave="handleMouseLeave"
-      @mousemove="handleGameHover(game, $event)"
+      class="game-card-wrapper"
     >
-      <div class="game-image">
-        <img :src="game.image" :alt="game.name" />
-      </div>
-      <div class="game-info">
-        <h3 class="game-title">{{ game.name }}</h3>
-        <div class="game-tags">
-          <span class="tag">{{ game.tags }}</span>
+      <router-link 
+        :to="{ path: '/gamedetail/' + game.id }"
+        class="game-card"
+        @mouseenter="handleGameHover(game, $event)"
+        @mouseleave="handleMouseLeave"
+      >
+        <div class="game-image">
+          <img :src="game.image" :alt="game.name" />
         </div>
-        <div class="game-price">
-          ${{ game.price }}
-        </div>
-      </div>
-    </router-link>
-    
-    <!-- 悬停详情 -->
-    <div 
-      v-if="hoveredGame" 
-      class="game-detail"
-      :style="{
-        left: `${hoverPosition.x}px`,
-        top: `${hoverPosition.y}px`
-      }"
-    >
-      <div class="detail-content">
-        <!-- 游戏名称 -->
-        <h3 class="detail-title">{{ hoveredGame.name }}</h3>
-        
-        <!-- 详细图片 -->
-        <div class="detail-image">
-          <img :src="hoveredGame.image" :alt="hoveredGame.name" />
-        </div>
-        
-        <!-- 游戏信息 -->
-        <div class="detail-info">
-          <div class="info-section">
-            <h4>游戏详情</h4>
-            <div class="detail-meta">
-              <div class="meta-item">
-                <span class="meta-label">类型：</span>
-                <span class="meta-value">{{ hoveredGame.genre }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">开发商：</span>
-                <span class="meta-value">{{ hoveredGame.developer }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">发布日期：</span>
-                <span class="meta-value">{{ formatDate(hoveredGame.releaseDate) }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">价格：</span>
-                <span class="meta-value">${{ hoveredGame.price }}</span>
+        <div class="game-info">
+            <!-- 去掉游戏标题 -->
+            <!-- <h3 class="game-title">{{ game.name }}</h3> -->
+            <!-- 隐藏标签显示 -->
+            <!-- <div class="game-tags">
+              <span class="tag">{{ game.tags }}</span>
+            </div> -->
+            <div class="game-price-container">
+              <!-- 折扣标签 -->
+              <span class="discount-badge" v-if="game.discount && game.discount < 1">
+                -{{ calculateDiscountPercent(game.discount) }}%
+              </span>
+              <!-- 原价 -->
+              <span class="original-price" v-if="game.discount && game.discount < 1">
+                ￥{{ game.price.toFixed(2) }}
+              </span>
+              <!-- 折扣价格 -->
+              <span class="game-price">
+                ￥{{ calculateDiscountPrice(game.price, game.discount) }}
+              </span>
+            </div>
+          </div>
+      </router-link>
+      
+      <!-- 悬停详情 - 绝对定位在卡片右侧 -->
+      <div 
+        v-if="hoveredGame && hoveredGame.id === game.id" 
+        class="game-detail"
+        :style="detailStyle"
+        @mouseenter="handleDetailMouseEnter"
+        @mouseleave="handleDetailMouseLeave"
+      >
+        <div class="detail-content">
+          <!-- 游戏名称 -->
+          <h3 class="detail-title">{{ hoveredGame.name }}</h3>
+          <!-- 发行日期 -->
+          <p class="detail-release-date">发行日期：{{ formatDate(hoveredGame.releaseDate) }}</p>
+
+          <!-- 详细图片 -->
+          <div class="detail-image">
+            <img :src="hoveredGame.image" :alt="hoveredGame.name" />
+          </div>
+          
+          <!-- 游戏信息 -->
+          <div class="detail-info">
+            <!-- 显示游戏标签 -->
+            <div class="info-section">
+              <h4>游戏标签</h4>
+              <div class="game-tags">
+                <span 
+                  v-for="(tag, index) in hoveredGame.game_tags" 
+                  :key="index" 
+                  class="tag"
+                >
+                  {{ tag }}
+                </span>
               </div>
             </div>
           </div>
           
-          <div class="info-section">
-            <h4>游戏标签</h4>
-            <div class="game-tags">
-              <span class="tag">{{ hoveredGame.tags }}</span>
-            </div>
+          <!-- 操作按钮 -->
+          <div class="detail-actions">
+            <button class="add-to-cart">加入购物车</button>
+            <button class="wishlist">愿望单</button>
           </div>
-        </div>
-        
-        <!-- 操作按钮 -->
-        <div class="detail-actions">
-          <button class="add-to-cart">加入购物车</button>
-          <button class="wishlist">愿望单</button>
         </div>
       </div>
     </div>
@@ -262,6 +350,12 @@ export default {
   position: relative;
 }
 
+.game-card-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
 .game-card {
   background-color: #1b2838; /* Steam暗色主题背景 */
   border-radius: 4px; /* 轻微圆角 */
@@ -269,6 +363,13 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 轻微阴影 */
   transition: transform 0.2s, box-shadow 0.2s; /* hover效果 */
   cursor: pointer;
+  text-decoration: none; /* 去除下划线 */
+  color: #c7d5e0; /* 添加这一行，设置正确的文字颜色 */
+}
+
+/* 确保所有链接都没有下划线 */
+.game-card, .game-card:hover, .game-card:active, .game-card:visited {
+  text-decoration: none; /* 去除所有状态下的下划线 */
 }
 
 .game-card:hover {
@@ -299,13 +400,17 @@ export default {
   background-color: #1b2838;
 }
 
-.game-title {
-  font-size: 14px;
-  margin: 0 0 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-weight: 600;
+/* 确保游戏信息区域的所有文字都没有下划线 */
+.game-info {
+  text-decoration: none; /* 去除下划线 */
+  color: inherit; /* 继承父元素颜色 */
+  padding: 8px;
+}
+
+/* 确保所有链接文字都没有下划线 */
+.game-card * {
+  text-decoration: none; /* 确保所有子元素都没有下划线 */
+  color: inherit; /* 继承父元素颜色 */
 }
 
 .game-tags {
@@ -322,18 +427,48 @@ export default {
   padding: 2px 6px;
   border-radius: 2px;
   font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1.4;
+  height: 20px;
+  box-sizing: border-box;
+}
+
+.game-price-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  flex-wrap: nowrap;
 }
 
 .game-price {
-  text-align: right;
+  color: #fff; /* 白色文字 */
+  font-weight: 600;
+  font-size: 18px; /* 更大的字体 */
+}
+
+.original-price {
+  color: #999; /* 灰色文字 */
+  text-decoration: line-through;
   font-size: 14px;
-  color: #acdbf5; /* Steam价格色 */
+}
+
+.discount-badge {
+  background-color: #e61c44; /* 红色背景 */
+  color: white; /* 白色文字 */
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
   font-weight: 600;
 }
 
 /* 悬停详情 */
 .game-detail {
-  position: fixed;
+  position: absolute;
   width: 350px;
   background: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(10px);
@@ -342,8 +477,12 @@ export default {
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
   padding: 20px;
   z-index: 1000;
-  pointer-events: none;
+  pointer-events: auto;
   color: white;
+  top: 0;
+  height: auto;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 .detail-content {
@@ -357,6 +496,13 @@ export default {
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
+}
+
+.detail-release-date {
+  font-size: 0.9rem;
+  color: #67c1f5;
+  margin: 5px 0 15px 0;
+  font-weight: 500;
 }
 
 .detail-image {
@@ -383,26 +529,6 @@ export default {
   font-weight: 600;
   margin: 0 0 10px 0;
   color: #4299e1;
-}
-
-.detail-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 0.9rem;
-}
-
-.meta-item {
-  display: flex;
-  justify-content: space-between;
-}
-
-.meta-label {
-  opacity: 0.8;
-}
-
-.meta-value {
-  font-weight: 500;
 }
 
 .detail-actions {
