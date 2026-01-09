@@ -6,30 +6,56 @@ import supabase from "../core/supabase.js";
  * 表名：game_item
  * 
  * 字段说明：
- * - id: INT, PRIMARY KEY - 游戏唯一标识符
- * - game_publisher: VARCHAR - 游戏发行商名称
+ * - id: INT8, PRIMARY KEY - 游戏唯一标识符
+ * - game_publisher: TEXT - 游戏发行商名称
  * - game_name: VARCHAR - 游戏名称
  * - game_price: FLOAT8 - 游戏原价
  * - game_discount: FLOAT8 - 游戏折扣比例
  * - game_description: TEXT - 游戏详细描述
  * - game_type: VARCHAR - 游戏类型（如Action、Adventure等）
- * - game_tags: VARCHAR/JSON - 游戏标签，可存储多个标签
- * - library_img: VARCHAR - 游戏库存展示图
- * - header_img: VARCHAR - 游戏头图（在库中显示的缩略图）
+ * - game_tags: JSONB - 游戏标签，可存储多个标签
+ * - library_img: TEXT - 游戏库存展示图
+ * - header_img: TEXT - 游戏头图（在库中显示的缩略图）
+ * - hero_img: TEXT - 游戏英雄图（在详情页显示的大图）
+ * - state: VARCHAR - 游戏状态（如Available、Unavailable等）
  * - created_at: TIMESTAMP - 游戏记录创建时间
  */
 
 export const gameitemAPI = {
     /**
      * 获取游戏列表
-     * @param {Object} options - 筛选和分页选项
-     * @returns {Promise<Object>} - 包含游戏列表的响应对象
+     * 支持多种场景：商城首页、搜索结果、游戏库等
+     * @param {Object} options - 筛选选项
+     * @param {string} [options.search=''] - 搜索关键词，用于模糊匹配游戏名称
+     * @param {string} [options.type=''] - 游戏类型筛选
+     * @param {string} [options.sortBy='created_at'] - 排序字段，支持：created_at, game_price, game_name
+     * @param {boolean} [options.sortAsc=false] - 是否升序排序
+     * @param {number} [options.page=1] - 页码，用于分页
+     * @param {number} [options.pageSize=20] - 每页数量，用于分页
+     * @param {string} [options.fields='*'] - 返回字段，用逗号分隔，如：id,game_name,game_price,library_img
+     * @param {string} [options.state=''] - 游戏状态筛选，如：Available, Unavailable
+     * @param {string} [gamePublisher] - 游戏发行商名称，用于过滤当前发行商的游戏
+     * @returns {Promise<Object>} - 包含游戏列表和分页信息的响应对象
      */
-    async getGames(options = {}) {
+    async getGames(options = {}, gamePublisher) {
         try {
-            const { limit = 20, offset = 0, search = '', type = '' } = options;
+            const {
+                search = '',
+                type = '',
+                sortBy = 'created_at',
+                sortAsc = false,
+                page = 1,
+                pageSize = 20,
+                fields = '*',
+                state = ''
+            } = options;
             
-            let query = supabase.from('game_item').select('*');
+            let query = supabase.from('game_item').select(fields, { count: 'exact' });
+            
+            // 添加发行商过滤，只返回当前发行商的游戏
+            if (gamePublisher) {
+                query = query.eq('game_publisher', gamePublisher);
+            }
             
             // 添加搜索条件
             if (search) {
@@ -41,17 +67,31 @@ export const gameitemAPI = {
                 query = query.eq('game_type', type);
             }
             
-            // 添加分页
-            query = query.limit(limit).offset(offset);
+            // 添加状态筛选
+            if (state) {
+                query = query.eq('state', state);
+            }
             
-            // 按创建时间排序，最新的在前
-            query = query.order('created_at', { ascending: false });
+            // 添加排序
+            query = query.order(sortBy, { ascending: sortAsc });
+            
+            // 添加分页
+            const offset = (page - 1) * pageSize;
+            query = query.range(offset, offset + pageSize - 1);
             
             const response = await query;
             
             return {
                 success: true,
-                data: response.data,
+                data: {
+                    items: response.data,
+                    pagination: {
+                        page,
+                        pageSize,
+                        total: response.count,
+                        totalPages: Math.ceil(response.count / pageSize)
+                    }
+                },
                 error: null
             };
         } catch (error) {
@@ -87,112 +127,6 @@ export const gameitemAPI = {
             return {
                 success: true,
                 data: response.data,
-                error: null
-            };
-        } catch (error) {
-            return {
-                success: false,
-                data: null,
-                error: error.message
-            };
-        }
-    },
-    
-    /**
-     * 添加新游戏
-     * @param {Object} gameData - 游戏数据
-     * @returns {Promise<Object>} - 包含结果的响应对象
-     */
-    async addGame(gameData) {
-        try {
-            const response = await supabase
-                .from('game_item')
-                .insert([gameData])
-                .select()
-                .single();
-            
-            if (response.error) {
-                return {
-                    success: false,
-                    data: null,
-                    error: response.error.message
-                };
-            }
-            
-            return {
-                success: true,
-                data: response.data,
-                error: null
-            };
-        } catch (error) {
-            return {
-                success: false,
-                data: null,
-                error: error.message
-            };
-        }
-    },
-    
-    /**
-     * 更新游戏信息
-     * @param {number} gameId - 游戏ID
-     * @param {Object} gameData - 要更新的游戏数据
-     * @returns {Promise<Object>} - 包含结果的响应对象
-     */
-    async updateGame(gameId, gameData) {
-        try {
-            const response = await supabase
-                .from('game_item')
-                .update(gameData)
-                .eq('id', gameId)
-                .select()
-                .single();
-            
-            if (response.error) {
-                return {
-                    success: false,
-                    data: null,
-                    error: response.error.message
-                };
-            }
-            
-            return {
-                success: true,
-                data: response.data,
-                error: null
-            };
-        } catch (error) {
-            return {
-                success: false,
-                data: null,
-                error: error.message
-            };
-        }
-    },
-    
-    /**
-     * 删除游戏
-     * @param {number} gameId - 游戏ID
-     * @returns {Promise<Object>} - 包含结果的响应对象
-     */
-    async deleteGame(gameId) {
-        try {
-            const response = await supabase
-                .from('game_item')
-                .delete()
-                .eq('id', gameId);
-            
-            if (response.error) {
-                return {
-                    success: false,
-                    data: null,
-                    error: response.error.message
-                };
-            }
-            
-            return {
-                success: true,
-                data: { deleted: true },
                 error: null
             };
         } catch (error) {
