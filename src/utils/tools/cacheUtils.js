@@ -4,6 +4,10 @@
 export const COMMUNITY_POSTS_CACHE_KEY = 'community_posts'
 export const COMMUNITY_POSTS_CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
 
+// 游戏列表缓存常量
+export const GAME_LIST_CACHE_KEY = 'game_list'
+export const GAME_LIST_CACHE_EXPIRE_TIME = 30 * 60 * 1000 // 30分钟
+
 /**
  * 设置缓存
  * @param {string} key - 缓存键
@@ -92,4 +96,22 @@ export const removePostsCache = () => {
 // 从社区帖子缓存中移除指定帖子
 export const removePostFromCache = (postId) => {
   removeItemFromListCache(COMMUNITY_POSTS_CACHE_KEY, postId, COMMUNITY_POSTS_CACHE_EXPIRE_TIME)
+}
+
+/**
+ * 游戏列表缓存管理方法
+ */
+// 从缓存加载游戏列表
+export const loadGamesFromCache = () => {
+  return getCache(GAME_LIST_CACHE_KEY)
+}
+
+// 保存游戏列表到缓存
+export const saveGamesToCache = (games) => {
+  setCache(GAME_LIST_CACHE_KEY, games, GAME_LIST_CACHE_EXPIRE_TIME)
+}
+
+// 删除游戏列表缓存
+export const removeGamesCache = () => {
+  removeCache(GAME_LIST_CACHE_KEY)
 }

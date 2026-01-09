@@ -40,6 +40,7 @@ export default {
           <h1 class="gamebar-title">游戏库</h1>
           <div class="login-prompt">
             <div class="prompt-icon"><FontAwesomeIcon icon="lock" /></div>
+            <h3>您似乎在错误的时间进入了错误的地点</h3>
             <h2>请先登录查看您的游戏库</h2>
             <p>登录后即可访问您的游戏收藏和游戏时间统计</p>
           </div>
@@ -93,7 +94,14 @@ export default {
 .prompt-icon {
   font-size: 4rem;
   margin-bottom: 20px;
+  color: rgba(255, 0, 0, 0.658);
   animation: bounce 2s ease-in-out infinite;
+}
+
+.login-prompt h3 {
+  font-size: 1rem;
+  margin: 0;
+  color: rgba(255, 0, 0, 0.776);
 }
 
 .login-prompt h2 {
