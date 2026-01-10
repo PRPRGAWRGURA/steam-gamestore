@@ -10,8 +10,8 @@ export default {
       isAutoPlaying: true,
       // 轮播间隔时间（毫秒）
       timeout: 5000,
-      // 用于标识当前循环的ID
-      autoPlayId: 0,
+      // 单个定时器ID，用于统一管理
+      timerId: null,
       gamelite: [
         { id: 1, GameName:'SPLIT FICTION', GamePrice: 298, GamePriceSave: 50},
         { id: 2, GameName:'三角洲行动', GamePrice: 0, GamePriceSave: 0},
@@ -34,30 +34,67 @@ export default {
     // 向前切换轮播图
     prevSlide() {
       this.GameId = this.GameId > 1 ? this.GameId - 1 : this.gamelite.length;
+      // 重置自动播放定时器
+      this.resetAutoPlayTimer();
     },
     // 向后切换轮播图
     nextSlide() {
       this.GameId = this.GameId < this.gamelite.length ? this.GameId + 1 : 1;
+      // 重置自动播放定时器
+      this.resetAutoPlayTimer();
     },
     // 点击缩略图切换到对应轮播项
     goToSlide(id) {
       this.GameId = id;
+      // 重置自动播放定时器
+      this.resetAutoPlayTimer();
     },
+    
+    // 新增：重置自动播放定时器
+    resetAutoPlayTimer() {
+      if (this.isAutoPlaying) {
+        console.log('🔄  重置自动播放定时器');
+        this.clearTimer();
+        this.startTimer();
+      }
+    },
+    
+    // 新增：清除定时器
+    clearTimer() {
+      if (this.timerId) {
+        console.log(`⏹️  清除旧定时器，ID: ${this.timerId}`);
+        clearTimeout(this.timerId);
+        this.timerId = null;
+      }
+    },
+    
+    // 新增：启动定时器
+    startTimer() {
+      this.timerId = setTimeout(() => {
+        if (this.isAutoPlaying) {
+          console.log('🔥  定时器触发，切换轮播图');
+          this.nextSlide();
+        }
+      }, this.timeout);
+      console.log(`📌  创建新定时器，ID: ${this.timerId}，延迟: ${this.timeout}ms`);
+    },
+    
     // 新增：暂停自动播放
     pauseAutoPlay() {
+      console.log('⏸️  暂停自动播放');
       this.isAutoPlaying = false;
+      this.clearTimer();
     },
+    
     // 新增：恢复自动播放
     resumeAutoPlay() {
       if (!this.isAutoPlaying) {
+        console.log('▶️  恢复自动播放');
         this.isAutoPlaying = true;
-        this.autoPlayId++;
-        // 重新调用loopFunction重启递归链条
-        setTimeout(() => {
-          this.loopFunction(this.autoPlayId);
-        }, this.timeout);
+        this.startTimer();
       }
     },    
+    
     // 新增：鼠标悬停到缩略图时的处理函数
     handleThumbHover(shotIndex) {
       this.hoveredShotIndex = shotIndex + 1; // 修正：缩略图索引从1开始
@@ -82,21 +119,14 @@ export default {
         // 根据悬停的缩略图显示对应图片
         return imageData[`item${this.hoveredShotIndex}`] || imageData.header;
       }
-    },
-    loopFunction(currentId) {
-      if(!this.isAutoPlaying || currentId !== this.autoPlayId) {
-        return
-      }
-      this.nextSlide();
-      setTimeout(() => {
-        this.loopFunction(currentId);
-      }, this.timeout);
     }
   },
   mounted() {
-    this.loopFunction(this.autoPlayId);
+    console.log('🚀  轮播图组件挂载，开始自动播放');
+    this.startTimer();
   },
   beforeUnmount() {
+    console.log('🛑  轮播图组件卸载，停止自动播放');
     this.pauseAutoPlay();
   }
 }
