@@ -107,10 +107,18 @@ export default {
     
     // 计算折扣价格
     const calculateDiscountPrice = (price, discount) => {
+      // 先计算最终价格
+      let finalPrice = price;
       if (discount && discount < 1) {
-        return (price * discount).toFixed(2);
+        finalPrice = price * discount;
       }
-      return price.toFixed(2);
+      
+      // 如果最终价格为0，显示"免费"
+      if (finalPrice === 0) {
+        return "免费";
+      }
+      
+      return finalPrice.toFixed(2);
     };
     
     // 计算折扣百分比
@@ -154,16 +162,16 @@ export default {
         <div class="game-info">
             <div class="game-price-container">
               <!-- 折扣标签 -->
-              <span class="discount-badge" v-if="game.discount && game.discount < 1">
+              <span class="discount-badge" v-if="game.discount && game.discount < 1 && game.price > 0">
                 -{{ calculateDiscountPercent(game.discount) }}%
               </span>
               <!-- 原价 -->
-              <span class="original-price" v-if="game.discount && game.discount < 1">
+              <span class="original-price" v-if="game.discount && game.discount < 1 && game.price > 0">
                 ￥{{ game.price.toFixed(2) }}
               </span>
               <!-- 折扣价格 -->
               <span class="game-price">
-                ￥{{ calculateDiscountPrice(game.price, game.discount) }}
+                {{ calculateDiscountPrice(game.price, game.discount) === '免费' ? '' : '￥' }}{{ calculateDiscountPrice(game.price, game.discount) }}
               </span>
             </div>
           </div>

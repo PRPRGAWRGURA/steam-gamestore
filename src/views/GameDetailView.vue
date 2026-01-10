@@ -2,8 +2,9 @@
 import BaseBody from '@/componets/BaseBody.vue';
 import BaseContainer from '@/componets/BaseContainer.vue';
 import BaseTitle from '@/componets/BaseTitle.vue';
-import { ref, reactive, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { gameitemAPI } from '@/utils/api/gameitemAPI';
 
 export default {
     name: 'GameDetailView',
@@ -24,112 +25,7 @@ export default {
             router.go(-1);
         };
         
-        // 游戏名称列表
-        const gameNames = [
-          'Journey',
-          '逃鸭科夫',
-          'Horizon Zero Dawn',
-          'Undertale',
-          'Stellar Blade',
-          'Uncharted',
-          'Red Dead Redemption 2',
-          'Animal Well',
-          'Colt Canyon',
-          'First Cut: Samurai Duel',
-          'Celeste',
-          'Katana Zero',
-          'Bongo Cat',
-          'World War V: Last Call',
-          'The Last of Us',
-          'God of War',
-          'Spider-Man',
-          'Cyberpunk 2077',
-          'Assassin\'s Creed Valhalla',
-          'Far Cry 6',
-          'Call of Duty: Warzone',
-          'Fortnite',
-          'Minecraft',
-          'Grand Theft Auto V',
-          'League of Legends',
-          'Apex Legends',
-          'Overwatch 2',
-          'Rainbow Six Siege',
-          'Valorant',
-          'Dota 2'
-        ];
-        
-        // GamesImage目录下的实际图片文件名
-        const gamesImages = [
-          '1007_header.jpg',
-          '1024110_header.jpg',
-          '1046400_library_header.jpg',
-          '1054830_header.jpg',
-          '105600_header.jpg',
-          '1057090_header.jpg',
-          '1070560_header.jpg',
-          '107600_header.jpg',
-          '1093910_header.jpg',
-          '1112520_header.jpg',
-          '1112521_header.jpg',
-          '1113280_header.jpg',
-          '1135280_header.jpg',
-          '1143852_header.jpg',
-          '1151640_header.jpg',
-          '1161040_header.jpg',
-          '1174180_header.jpg',
-          '1174580_header.jpg',
-          '1177880_header.jpg',
-          '1179800_header.jpg',
-          '1222680_header.jpg',
-          '1230140_library_header.jpg',
-          '1237970_header.jpg',
-          '1238840_header.jpg',
-          '1241570_header.jpg',
-          '1245040_header.jpg',
-          '1245620_header.jpg',
-          '1277930_header.jpg',
-          '1281930_header.jpg',
-          '1282100_header.jpg'
-        ];
-        
-        // 生成游戏数据，与GS_showgames.vue保持一致
-        const generateGameData = () => {
-          return Array.from({ length: 30 }, (_, i) => ({
-            id: i + 1,
-            name: gameNames[i % gameNames.length],
-            image: `/GamesImage/${gamesImages[i % gamesImages.length]}`,
-            price: (Math.random() * 100).toFixed(2),
-            tags: ['Action', 'Adventure'][i % 2],
-            genre: ['Action', 'Adventure', 'RPG', 'Shooter', 'Strategy'][i % 5],
-            developer: `Developer ${i + 1}`,
-            publisher: `Publisher ${i + 1}`,
-            releaseDate: new Date(Date.now() - Math.floor(Math.random() * 365 * 24 * 60 * 60 * 1000)),
-            description: `这是一款精彩的${['Action', 'Adventure', 'RPG', 'Shooter', 'Strategy'][i % 5]}游戏，由${`Developer ${i + 1}`}开发。在游戏中，你将体验到令人兴奋的游戏玩法和精彩的故事情节。探索广阔的游戏世界，完成各种任务和挑战，与其他玩家互动，创造属于你的游戏传奇。`,
-            features: [
-              '精美的游戏画面',
-              '流畅的游戏体验',
-              '丰富的游戏内容',
-              '多种游戏模式',
-              '支持多人联机'
-            ],
-            systemRequirements: {
-              minimum: {
-                os: 'Windows 10 64-bit',
-                processor: 'Intel Core i5-6600K / AMD Ryzen 5 1600',
-                memory: '8 GB RAM',
-                graphics: 'NVIDIA GeForce GTX 1060 3GB / AMD Radeon RX 580 4GB',
-                storage: '50 GB available space'
-              },
-              recommended: {
-                os: 'Windows 10 64-bit',
-                processor: 'Intel Core i7-8700K / AMD Ryzen 7 2700X',
-                memory: '16 GB RAM',
-                graphics: 'NVIDIA GeForce RTX 2070 SUPER / AMD Radeon RX 5700 XT',
-                storage: '50 GB available space SSD'
-              }
-            }
-          }));
-        };
+
         
         const gameitem = ref(null);
         
@@ -142,17 +38,67 @@ export default {
           });
         };
         
+        // 计算显示价格
+        const calculateDisplayPrice = (price) => {
+          if (price === 0) {
+            return "免费";
+          }
+          return price.toFixed(2);
+        };
+        
         // 加载游戏详情
-        const loadGameDetail = () => {
+        const loadGameDetail = async () => {
           isLoading.value = true;
           notFound.value = false;
           
           try {
-            const games = generateGameData();
-            const foundGame = games.find(game => game.id === gameId);
+            // 使用真实API获取游戏详情
+            const response = await gameitemAPI.getGameById(gameId);
             
-            if (foundGame) {
-              gameitem.value = foundGame;
+            if (response.success && response.data) {
+              // 处理game_tags字段，将逗号分隔的字符串转换为数组
+              let tagsArray = [];
+              if (response.data.game_tags) {
+                // 需求：游戏标签只会是多个且用逗号分隔的字符串
+                tagsArray = response.data.game_tags.split(',').map(tag => tag.trim()).filter(tag => tag);
+              }
+              
+              // 转换API返回的数据结构，适配组件需要的字段名
+              gameitem.value = {
+                id: response.data.id,
+                name: response.data.game_name,
+                image: response.data.hero_img || response.data.header_img || response.data.library_img,
+                price: response.data.game_price,
+                discount: response.data.game_discount,
+                tags: tagsArray,
+                genre: response.data.game_type,
+                publisher: response.data.game_publisher,
+                releaseDate: response.data.created_at,
+                description: response.data.game_description || '暂无游戏描述',
+                features: [
+                  '精美的游戏画面',
+                  '流畅的游戏体验',
+                  '丰富的游戏内容',
+                  '多种游戏模式',
+                  '支持多人联机'
+                ],
+                systemRequirements: {
+                  minimum: {
+                    os: 'Windows 10 64-bit',
+                    processor: 'Intel Core i5-6600K / AMD Ryzen 5 1600',
+                    memory: '8 GB RAM',
+                    graphics: 'NVIDIA GeForce GTX 1060 3GB / AMD Radeon RX 580 4GB',
+                    storage: '50 GB available space'
+                  },
+                  recommended: {
+                    os: 'Windows 10 64-bit',
+                    processor: 'Intel Core i7-8700K / AMD Ryzen 7 2700X',
+                    memory: '16 GB RAM',
+                    graphics: 'NVIDIA GeForce RTX 2070 SUPER / AMD Radeon RX 5700 XT',
+                    storage: '50 GB available space SSD'
+                  }
+                }
+              };
             } else {
               notFound.value = true;
             }
@@ -174,7 +120,8 @@ export default {
           isLoading,
           notFound,
           formatDate,
-          goBack
+          goBack,
+          calculateDisplayPrice
         };
     }
 }
@@ -225,10 +172,10 @@ export default {
                             <span class="meta-divider">•</span>
                             <span class="meta-text">发布日期: {{ formatDate(gameitem.releaseDate) }}</span>
                             <span class="meta-divider">•</span>
-                            <span class="meta-text">{{ gameitem.developer }}</span>
+                            <span class="meta-text">{{ gameitem.publisher }}</span>
                         </div>
                         <div class="game-price">
-                            <span class="price">${{ gameitem.price }}</span>
+                            <span class="price">{{ calculateDisplayPrice(gameitem.price) === '免费' ? '' : '$' }}{{ calculateDisplayPrice(gameitem.price) }}</span>
                         </div>
                         <div class="game-actions">
                             <button class="add-to-cart">加入购物车</button>
@@ -237,50 +184,55 @@ export default {
                     </div>
                 </div>
                 
-                <!-- 游戏描述 -->
-                <div class="game-description">
-                    <h2>游戏描述</h2>
-                    <p>{{ gameitem.description }}</p>
-                </div>
-                
-                <!-- 游戏特色 -->
-                <div class="game-features">
-                    <h2>游戏特色</h2>
-                    <div class="features-list">
-                        <div v-for="(feature, index) in gameitem.features" :key="index" class="feature-item">
-                            <span class="feature-icon"><FontAwesomeIcon icon="check" /></span>
-                            <span class="feature-text">{{ feature }}</span>
+                <!-- A区和B区容器 -->
+                <div class="content-grid">
+                    <!-- A区：游戏描述和游戏特色 -->
+                    <div class="a-section">
+                        <!-- 游戏描述 -->
+                        <div class="game-description">
+                            <h2>游戏描述</h2>
+                            <p>{{ gameitem.description }}</p>
+                        </div>
+                        
+                        <!-- 游戏特色 -->
+                        <div class="game-features">
+                            <h2>游戏特色</h2>
+                            <div class="features-list">
+                                <div v-for="(feature, index) in gameitem.features" :key="index" class="feature-item">
+                                    <span class="feature-icon">✓</span>
+                                    <span class="feature-text">{{ feature }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                
-                <!-- 详细信息 -->
-                <div class="game-details">
-                    <h2>详细信息</h2>
-                    <div class="details-grid">
-                        <div class="detail-item">
-                            <span class="detail-label">开发商:</span>
-                            <span class="detail-value">{{ gameitem.developer }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">发行商:</span>
-                            <span class="detail-value">{{ gameitem.publisher }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">发布日期:</span>
-                            <span class="detail-value">{{ formatDate(gameitem.releaseDate) }}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">类型:</span>
-                            <span class="detail-value">{{ gameitem.genre }}</span>
-                        </div>
-                        <div class="detail-item">
+                    
+                    <!-- B区：详细信息 -->
+                    <div class="b-section">
+                        <div class="game-details">
+                            <h2>详细信息</h2>
+                            <div class="details-grid">
+                                <div class="detail-item">
+                                    <span class="detail-label">发行商:</span>
+                                    <span class="detail-value">{{ gameitem.publisher }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">发布日期:</span>
+                                    <span class="detail-value">{{ formatDate(gameitem.releaseDate) }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">类型:</span>
+                                    <span class="detail-value">{{ gameitem.genre }}</span>
+                                </div>
+                                <div class="detail-item">
                             <span class="detail-label">标签:</span>
-                            <span class="detail-value">{{ gameitem.tags }}</span>
+                            <span class="detail-value tag-container">
+                                <span v-for="tag in gameitem.tags" :key="tag" class="tag-item">
+                                    {{ tag }}
+                                </span>
+                            </span>
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">价格:</span>
-                            <span class="detail-value">${{ gameitem.price }}</span>
+
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -447,18 +399,11 @@ export default {
 .hero-image {
     grid-column: 1;
     height: 100%;
-    overflow: hidden;
 }
 
 .cover-image {
-    width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.cover-image:hover {
-    transform: scale(1.05);
 }
 
 .hero-info {
@@ -555,13 +500,17 @@ export default {
 .game-features,
 .game-details,
 .system-requirements {
-    margin-bottom: 40px;
     background: rgba(17, 24, 39, 0.8);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 24px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* 系统要求保留margin-bottom */
+.system-requirements {
+    margin-bottom: 40px;
 }
 
 .game-description h2,
@@ -598,6 +547,41 @@ export default {
     font-weight: bold;
 }
 
+/* 内容网格布局 */
+.content-grid {
+    display: grid;
+    grid-template-columns: 60% 40%;
+    gap: 20px;
+    margin-bottom: 40px;
+    height: 600px; /* 设置固定高度 */
+    align-items: stretch;
+}
+
+/* A区和B区共享样式 */
+.a-section,
+.b-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* A区和B区内的容器样式 */
+.a-section > div,
+.b-section > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+/* 游戏特色列表样式 */
+.features-list {
+    flex: 1;
+    overflow-y: auto;
+}
+
 /* 详细信息 */
 .details-grid {
     display: grid;
@@ -610,6 +594,37 @@ export default {
     justify-content: space-between;
     padding: 8px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* 标签容器样式 */
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    flex: 1;
+    min-width: 0;
+}
+
+/* 胶囊标签样式 */
+.tag-item {
+    background: linear-gradient(45deg, #67c1f5 0%, #4299e1 100%);
+    color: #182838;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.tag-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
 }
 
 .detail-label {
