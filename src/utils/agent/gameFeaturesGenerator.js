@@ -1,4 +1,4 @@
-import { checkIflowConfig, callIflowCommand, callIflowApi } from '@/utils/core/iflowClient';
+import { checkIflowConfig, callIflowCommand } from '@/utils/core/iflowClient';
 
 /**
  * 生成游戏特色列表

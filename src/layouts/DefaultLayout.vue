@@ -1,12 +1,14 @@
 <script>
 import BaseHeader from '@/componets/BaseHeader.vue';
 import BaseFooter from '@/componets/BaseFooter.vue';
+import SiderAgent from '@/componets/SiderAgent.vue';
 
 export default {
   name: 'DefaultLayout',
   components: {
     BaseHeader,
-    BaseFooter
+    BaseFooter,
+    SiderAgent
   }
 };
 </script>
@@ -15,6 +17,7 @@ export default {
   <div class="default-layout">
     <BaseHeader></BaseHeader>
     <main class="main-content">
+      <SiderAgent></SiderAgent>
       <router-view></router-view>
     </main>
     <BaseFooter></BaseFooter>

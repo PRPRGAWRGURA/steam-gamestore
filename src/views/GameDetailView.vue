@@ -19,6 +19,7 @@ export default {
         const router = useRouter();
         const gameId = parseInt(route.params.id);
         const isLoading = ref(true);
+        const isFeaturesLoading = ref(false); // 专门控制游戏特色的加载状态
         const notFound = ref(false);
         
         // 返回上一页
@@ -91,21 +92,15 @@ export default {
                     graphics: 'NVIDIA GeForce RTX 2070 SUPER / AMD Radeon RX 5700 XT',
                     storage: '50 GB available space SSD'
                   }
-                }
+                },
+                features: [] // 初始为空数组
               };
               
-              // 生成游戏特色
-              const gameFeatures = await generateGameFeatures({
-                gameName: baseGameInfo.name,
-                gameDescription: baseGameInfo.description,
-                gameTags: baseGameInfo.tags
-              });
+              // 立即设置游戏信息，让页面显示
+              gameitem.value = baseGameInfo;
               
-              // 设置游戏信息，包括生成的特色
-              gameitem.value = {
-                ...baseGameInfo,
-                features: gameFeatures
-              };
+              // 异步加载AI总结的游戏特色，不阻塞页面显示
+              loadGameFeatures(response.data.game_name, response.data.game_description || '暂无游戏描述', tagsArray);
             } else {
               notFound.value = true;
             }
@@ -117,6 +112,31 @@ export default {
           }
         };
         
+        // 异步加载AI总结的游戏特色
+        const loadGameFeatures = async (gameName, gameDescription, gameTags) => {
+          // 设置游戏特色加载状态为true
+          isFeaturesLoading.value = true;
+          
+          try {
+            const gameFeatures = await generateGameFeatures({
+              gameName: gameName,
+              gameDescription: gameDescription,
+              gameTags: gameTags
+            });
+            
+            // 更新游戏特色，Vue会自动触发视图更新
+            if (gameitem.value) {
+              gameitem.value.features = gameFeatures;
+            }
+          } catch (error) {
+            console.error('Failed to generate game features:', error);
+            // 失败时保持空数组，不影响页面显示
+          } finally {
+            // 无论成功失败，都设置加载状态为false
+            isFeaturesLoading.value = false;
+          }
+        };
+        
         // 组件挂载时加载游戏详情
         onMounted(() => {
           loadGameDetail();
@@ -125,6 +145,7 @@ export default {
         return {
           gameitem,
           isLoading,
+          isFeaturesLoading,
           notFound,
           formatDate,
           goBack,
@@ -203,15 +224,15 @@ export default {
                         
                         <!-- 游戏特色 -->
                         <div class="game-features">
-                            <h2>游戏特色</h2>
+                            <h2>AI总结</h2>
                             <!-- 加载状态 -->
-                            <div v-if="isLoading" class="features-loading">
+                            <div v-if="isFeaturesLoading" class="features-loading">
                                 <div class="loading-spinner"></div>
-                                <p>生成游戏特色中...</p>
+                                <p>正在为您总结中...</p>
                             </div>
-                            <!-- 空状态 -->
+                            <!-- 加载失败状态 -->
                             <div v-else-if="gameitem.features && gameitem.features.length === 0" class="features-empty">
-                                <p>暂无游戏特色信息</p>
+                                <p>暂无AI总结信息</p>
                             </div>
                             <!-- 特色列表 -->
                             <div v-else class="features-list">
@@ -345,6 +366,17 @@ export default {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 16px;
+}
+
+/* 游戏特色加载状态 */
+.features-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 0;
+    color: white;
+    gap: 16px;
 }
 
 @keyframes spin {
@@ -590,13 +622,13 @@ export default {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 /* 游戏特色列表样式 */
 .features-list {
     flex: 1;
-    overflow-y: auto;
+    overflow-y: hidden;
 }
 
 /* 详细信息 */
