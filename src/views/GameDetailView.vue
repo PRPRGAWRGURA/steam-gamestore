@@ -6,6 +6,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { gameitemAPI } from '@/utils/api/gameitemAPI';
 import { generateGameFeatures } from '@/utils/agent/gameFeaturesGenerator';
+import { loadGamesFromCache } from '@/utils/tools/cacheUtils';
 
 export default {
     name: 'GameDetailView',
@@ -54,7 +55,54 @@ export default {
           notFound.value = false;
           
           try {
-            // 使用真实API获取游戏详情
+            // 1. 首先从缓存中获取数据，快速显示基本信息
+            const cachedGames = loadGamesFromCache();
+            let cachedGame = null;
+            
+            if (cachedGames) {
+              cachedGame = cachedGames.find(game => game.id === gameId);
+              if (cachedGame) {
+                // 从缓存创建基本游戏信息，立即渲染页面
+                const baseGameInfoFromCache = {
+                  id: cachedGame.id,
+                  name: cachedGame.name,
+                  image: cachedGame.image,
+                  price: cachedGame.price,
+                  discount: cachedGame.discount,
+                  tags: cachedGame.game_tags,
+                  releaseDate: cachedGame.releaseDate,
+                  // 使用缓存中新增的字段
+                  genre: cachedGame.genre,
+                  publisher: cachedGame.publisher,
+                  // 这些字段缓存中没有，先使用默认值
+                  description: '加载中...',
+                  systemRequirements: {
+                    minimum: {
+                      os: '加载中...',
+                      processor: '加载中...',
+                      memory: '加载中...',
+                      graphics: '加载中...',
+                      storage: '加载中...'
+                    },
+                    recommended: {
+                      os: '加载中...',
+                      processor: '加载中...',
+                      memory: '加载中...',
+                      graphics: '加载中...',
+                      storage: '加载中...'
+                    }
+                  },
+                  features: []
+                };
+                
+                // 立即设置游戏信息，让页面快速显示
+                gameitem.value = baseGameInfoFromCache;
+                // 提前开始生成AI特色，使用缓存中的标签
+                loadGameFeatures(cachedGame.name, '加载中...', cachedGame.game_tags);
+              }
+            }
+            
+            // 2. 异步请求完整游戏详情
             const response = await gameitemAPI.getGameById(gameId);
             
             if (response.success && response.data) {
@@ -66,7 +114,7 @@ export default {
               }
               
               // 转换API返回的数据结构，适配组件需要的字段名
-              const baseGameInfo = {
+              const fullGameInfo = {
                 id: response.data.id,
                 name: response.data.game_name,
                 image: response.data.hero_img || response.data.header_img || response.data.library_img,
@@ -93,20 +141,24 @@ export default {
                     storage: '50 GB available space SSD'
                   }
                 },
-                features: [] // 初始为空数组
+                features: gameitem.value?.features || [] // 保留已生成的AI特色
               };
               
-              // 立即设置游戏信息，让页面显示
-              gameitem.value = baseGameInfo;
+              // 更新完整游戏信息，Vue会自动触发视图更新
+              gameitem.value = fullGameInfo;
               
-              // 异步加载AI总结的游戏特色，不阻塞页面显示
-              loadGameFeatures(response.data.game_name, response.data.game_description || '暂无游戏描述', tagsArray);
+              // 不再重复生成AI特色，仅使用缓存生成的版本
+              // 这样可以避免重复调用API，提高性能
             } else {
               notFound.value = true;
             }
           } catch (error) {
             console.error('Failed to load game details:', error);
-            notFound.value = true;
+            if (!gameitem.value) {
+              // 如果缓存中也没有数据，显示未找到
+              notFound.value = true;
+            }
+            // 否则保持显示缓存数据
           } finally {
             isLoading.value = false;
           }
@@ -594,6 +646,10 @@ export default {
 .feature-icon {
     color: #4299e1;
     font-weight: bold;
+}
+
+.feature-text {
+    font-size: 0.9rem;
 }
 
 /* 内容网格布局 */

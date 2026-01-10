@@ -38,13 +38,13 @@ export default {
     const loadGames = async () => {
       try {
         loading.value = true;
-        // 每次刷新页面都进行API请求
+        // 每次刷新页面都进行API请求，增加字段以便在详情页使用缓存数据
         const response = await gameitemAPI.getGames({
           page: 1,
           pageSize: 'unlimited',
           sortBy: 'created_at',
           sortAsc: false,
-          fields: 'id,game_name,game_price,game_discount,game_tags,hero_img,created_at'
+          fields: 'id,game_name,game_price,game_discount,game_tags,hero_img,created_at,game_publisher,game_type'
         });
         
         if (response.success && response.data) {
@@ -63,7 +63,9 @@ export default {
               price: game.game_price,
               discount: game.game_discount,
               game_tags: tagsArray, // 完整的标签数组
-              releaseDate: game.created_at
+              releaseDate: game.created_at,
+              publisher: game.game_publisher, // 新增：保存发行商信息到缓存
+              genre: game.game_type // 新增：保存游戏类型到缓存
             };
           });
           

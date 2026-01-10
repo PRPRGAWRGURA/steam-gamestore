@@ -53,7 +53,6 @@ export default {
     // 新增：重置自动播放定时器
     resetAutoPlayTimer() {
       if (this.isAutoPlaying) {
-        console.log('🔄  重置自动播放定时器');
         this.clearTimer();
         this.startTimer();
       }
@@ -62,7 +61,6 @@ export default {
     // 新增：清除定时器
     clearTimer() {
       if (this.timerId) {
-        console.log(`⏹️  清除旧定时器，ID: ${this.timerId}`);
         clearTimeout(this.timerId);
         this.timerId = null;
       }
@@ -72,16 +70,13 @@ export default {
     startTimer() {
       this.timerId = setTimeout(() => {
         if (this.isAutoPlaying) {
-          console.log('🔥  定时器触发，切换轮播图');
           this.nextSlide();
         }
       }, this.timeout);
-      console.log(`📌  创建新定时器，ID: ${this.timerId}，延迟: ${this.timeout}ms`);
     },
     
     // 新增：暂停自动播放
     pauseAutoPlay() {
-      console.log('⏸️  暂停自动播放');
       this.isAutoPlaying = false;
       this.clearTimer();
     },
@@ -89,7 +84,6 @@ export default {
     // 新增：恢复自动播放
     resumeAutoPlay() {
       if (!this.isAutoPlaying) {
-        console.log('▶️  恢复自动播放');
         this.isAutoPlaying = true;
         this.startTimer();
       }
@@ -122,11 +116,9 @@ export default {
     }
   },
   mounted() {
-    console.log('🚀  轮播图组件挂载，开始自动播放');
     this.startTimer();
   },
   beforeUnmount() {
-    console.log('🛑  轮播图组件卸载，停止自动播放');
     this.pauseAutoPlay();
   }
 }

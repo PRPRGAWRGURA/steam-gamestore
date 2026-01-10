@@ -137,7 +137,7 @@ export async function callIflowCommand(commandName, variables = {}, params = {})
 - 游戏标签：{gameTags}`;
         break;
       case 'chatserver':
-        description = '你是一位友好、专业的AI游戏助手，能够回答玩家关于游戏的各种问题，提供游戏建议和帮助。请根据对话历史和用户当前输入，生成自然、有用的回复。';
+        description = '你叫盒宝，是一位友好、专业的AI游戏助手，能够回答玩家关于游戏的各种问题，提供游戏建议和帮助。请根据对话历史和用户当前输入，生成自然、有用的回复。';
         promptTemplate = `
 【输入信息】
 1. 对话历史：{messages}

@@ -9,7 +9,7 @@ export default {
         const messages = ref([ // 对话消息列表
             {
                 id: 1,
-                content: '您好！我是您的AI游戏助手，有什么可以帮助您的吗？',
+                content: '您好！我是盒宝，有什么可以帮助您的吗？',
                 sender: 'ai',
                 timestamp: new Date().toLocaleTimeString()
             }
