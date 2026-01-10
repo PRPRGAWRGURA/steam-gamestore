@@ -107,27 +107,7 @@ export async function generateGameFeatures(gameInfo) {
   }
 }
 
-/**
- * 生成提示词
- * @param {Object} gameInfo 游戏信息
- * @returns {string} 提示词
- */
-function generatePrompt(gameInfo) {
-  const { gameName, gameDescription, gameTags } = gameInfo;
-  const gameTagsStr = Array.isArray(gameTags) ? gameTags.join(',') : gameTags || '';
 
-  return `基于以下游戏信息，生成5条吸引人的游戏特色：
-- 游戏名称：${gameName}
-- 游戏描述：${gameDescription}
-- 游戏标签：${gameTagsStr}
-
-要求：
-1. 每条特色简洁有力，不超过20字
-2. 突出游戏核心亮点
-3. 语言风格符合游戏类型
-4. 返回格式为JSON数组，例如：["特色1", "特色2", "特色3", "特色4", "特色5"]
-5. 禁止输出任何JSON格式之外的额外说明、道歉或总结文字`;
-}
 
 /**
  * 从文本中解析游戏特色
