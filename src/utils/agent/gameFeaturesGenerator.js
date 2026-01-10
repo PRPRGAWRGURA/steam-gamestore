@@ -55,24 +55,47 @@ export async function generateGameFeatures(gameInfo) {
           
           try {
             // 尝试多种解析方式
-            // 方式1: 提取JSON数组
-            const jsonMatch = aiResponse.match(/\[.*?\]/s);
-            if (jsonMatch) {
-              features = JSON.parse(jsonMatch[0]);
-              console.log('=== 解析结果 ===');
-              console.log('通过提取JSON数组解析成功:', features);
+            let parsedFeatures = [];
+            let parseMethod = '';
+            
+            // 方式1: 直接解析整个内容（优先）
+            if (aiResponse.trim().startsWith('[')) {
+              parsedFeatures = JSON.parse(aiResponse);
+              parseMethod = '直接解析整个内容';
             } 
-            // 方式2: 直接解析整个内容
-            else if (aiResponse.trim().startsWith('[')) {
-              features = JSON.parse(aiResponse);
-              console.log('=== 解析结果 ===');
-              console.log('通过直接解析整个内容解析成功:', features);
-            }
-            // 方式3: 按行解析
+            // 方式2: 提取完整JSON数组（使用贪婪匹配）
             else {
+              // 使用贪婪匹配，确保匹配到完整的数组
+              const jsonMatch = aiResponse.match(/\[.*\]/s);
+              if (jsonMatch) {
+                parsedFeatures = JSON.parse(jsonMatch[0]);
+                parseMethod = '提取完整JSON数组';
+              } else {
+                // 方式3: 按行解析
+                parsedFeatures = parseFeaturesFromText(aiResponse);
+                parseMethod = '按行解析';
+              }
+            }
+            
+            // 处理嵌套数组情况（例如：[["特色1"], ["特色2"]]）
+            if (Array.isArray(parsedFeatures) && parsedFeatures.length > 0) {
+              // 检查是否是嵌套数组
+              if (Array.isArray(parsedFeatures[0])) {
+                // 将嵌套数组扁平化为一维数组
+                features = parsedFeatures.flat();
+                console.log('=== 解析结果 ===');
+                console.log(`通过${parseMethod}解析成功，处理了嵌套数组:`, features);
+              } else {
+                // 已经是一维数组，直接使用
+                features = parsedFeatures;
+                console.log('=== 解析结果 ===');
+                console.log(`通过${parseMethod}解析成功:`, features);
+              }
+            } else {
+              // 解析结果无效，使用按行解析
               features = parseFeaturesFromText(aiResponse);
               console.log('=== 解析结果 ===');
-              console.log('通过按行解析:', features);
+              console.log('解析结果无效，使用按行解析:', features);
             }
           } catch (parseError) {
             console.error('解析游戏特色失败:', parseError);

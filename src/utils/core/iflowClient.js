@@ -15,7 +15,7 @@ const iflowConfig = {
   defaultModel: 'deepseek-v3.2',
   // 默认API参数
   defaultParams: {
-    temperature: 0.7,
+    temperature: 0.85,
     max_tokens: 500
   }
 };
@@ -25,7 +25,7 @@ const iflowConfig = {
  * @returns {boolean} 配置是否完整
  */
 export function checkIflowConfig() {
-  return !!iflowConfig.apiKey && !!iflowConfig.apiUrl;
+  return !!iflowConfig.apiKey;
 }
 
 /**
