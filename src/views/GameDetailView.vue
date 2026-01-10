@@ -5,6 +5,7 @@ import BaseTitle from '@/componets/BaseTitle.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { gameitemAPI } from '@/utils/api/gameitemAPI';
+import { generateGameFeatures } from '@/utils/agent/gameFeaturesGenerator';
 
 export default {
     name: 'GameDetailView',
@@ -64,7 +65,7 @@ export default {
               }
               
               // 转换API返回的数据结构，适配组件需要的字段名
-              gameitem.value = {
+              const baseGameInfo = {
                 id: response.data.id,
                 name: response.data.game_name,
                 image: response.data.hero_img || response.data.header_img || response.data.library_img,
@@ -75,13 +76,6 @@ export default {
                 publisher: response.data.game_publisher,
                 releaseDate: response.data.created_at,
                 description: response.data.game_description || '暂无游戏描述',
-                features: [
-                  '精美的游戏画面',
-                  '流畅的游戏体验',
-                  '丰富的游戏内容',
-                  '多种游戏模式',
-                  '支持多人联机'
-                ],
                 systemRequirements: {
                   minimum: {
                     os: 'Windows 10 64-bit',
@@ -98,6 +92,19 @@ export default {
                     storage: '50 GB available space SSD'
                   }
                 }
+              };
+              
+              // 生成游戏特色
+              const gameFeatures = await generateGameFeatures({
+                gameName: baseGameInfo.name,
+                gameDescription: baseGameInfo.description,
+                gameTags: baseGameInfo.tags
+              });
+              
+              // 设置游戏信息，包括生成的特色
+              gameitem.value = {
+                ...baseGameInfo,
+                features: gameFeatures
               };
             } else {
               notFound.value = true;
