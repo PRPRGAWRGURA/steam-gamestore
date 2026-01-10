@@ -18,7 +18,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/iflow-api': {
-        target: 'http://localhost:3000',
+        target: 'https://apis.iflow.cn',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/iflow-api/, '')
       }

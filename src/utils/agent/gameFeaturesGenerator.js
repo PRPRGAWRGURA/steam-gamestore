@@ -34,25 +34,62 @@ export async function generateGameFeatures(gameInfo) {
     // 调用.iflow目录下的GameServer指令
     const response = await callIflowCommand('gameserver', variables);
     
+    // 输出完整响应到控制台
+    console.log('=== 心流API完整响应 ===');
+    console.log('响应状态:', response.status || '无状态');
+    console.log('响应头:', response.headers || '无响应头');
+    console.log('响应数据:', JSON.stringify(response, null, 2));
+    console.log('=== 心流API完整响应结束 ===');
+    
     // 解析响应
     let features = [];
-    if (response && response.choices && response.choices[0] && response.choices[0].message) {
-      const aiResponse = response.choices[0].message.content;
-      
-      try {
-        const jsonMatch = aiResponse.match(/\[.*?\]/s);
-        if (jsonMatch) {
-          features = JSON.parse(jsonMatch[0]);
+    try {
+      // 检查响应基本结构
+      if (response && response.choices && Array.isArray(response.choices) && response.choices.length > 0) {
+        const firstChoice = response.choices[0];
+        if (firstChoice.message && firstChoice.message.content) {
+          const aiResponse = firstChoice.message.content;
+          console.log('=== AI生成的原始内容 ===');
+          console.log(aiResponse);
+          console.log('=== AI生成内容结束 ===');
+          
+          try {
+            // 尝试多种解析方式
+            // 方式1: 提取JSON数组
+            const jsonMatch = aiResponse.match(/\[.*?\]/s);
+            if (jsonMatch) {
+              features = JSON.parse(jsonMatch[0]);
+              console.log('=== 解析结果 ===');
+              console.log('通过提取JSON数组解析成功:', features);
+            } 
+            // 方式2: 直接解析整个内容
+            else if (aiResponse.trim().startsWith('[')) {
+              features = JSON.parse(aiResponse);
+              console.log('=== 解析结果 ===');
+              console.log('通过直接解析整个内容解析成功:', features);
+            }
+            // 方式3: 按行解析
+            else {
+              features = parseFeaturesFromText(aiResponse);
+              console.log('=== 解析结果 ===');
+              console.log('通过按行解析:', features);
+            }
+          } catch (parseError) {
+            console.error('解析游戏特色失败:', parseError);
+            console.error('原始输出:', aiResponse);
+            features = getDefaultGameFeatures();
+            console.log('使用默认游戏特色:', features);
+          }
         } else {
-          features = parseFeaturesFromText(aiResponse);
+          console.warn('响应缺少message.content字段');
+          features = getDefaultGameFeatures();
         }
-      } catch (parseError) {
-        console.error('解析游戏特色失败:', parseError);
-        console.error('原始输出:', aiResponse);
+      } else {
+        console.warn('响应缺少有效choices数组');
         features = getDefaultGameFeatures();
       }
-    } else {
-      console.warn('API响应格式异常，使用默认特色');
+    } catch (error) {
+      console.error('处理响应时发生错误:', error);
       features = getDefaultGameFeatures();
     }
 

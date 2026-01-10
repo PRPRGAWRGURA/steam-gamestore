@@ -5,13 +5,14 @@
 
 // 从环境变量获取配置
 const iflowConfig = {
-  apiKey: 'sk-7a80aaee92346c7af44681c59a6a3456',
-  // 使用心流平台默认API地址（通过Vite代理）
-  apiUrl: '/api/v1/chat/completions',
-  // 指令API地址（用于调用.iflow目录下的自定义指令）
-  commandApiUrl: '/api/v1/commands',
-  // 默认模型配置
-  defaultModel: 'glm-4',
+  // 从环境变量获取API密钥
+  apiKey: import.meta.env.VITE_IFLOW_API_KEY,
+  // 使用Vite代理地址，解决CORS问题
+  apiUrl: '/iflow-api/v1/chat/completions',
+  // 官网配置的OpenAi Base URL
+  openAiBaseUrl: 'https://apis.iflow.cn/v1',
+  // 使用指令指定的模型：deepseek-v3.2
+  defaultModel: 'deepseek-v3.2',
   // 默认API参数
   defaultParams: {
     temperature: 0.7,

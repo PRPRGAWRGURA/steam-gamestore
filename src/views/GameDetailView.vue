@@ -204,7 +204,17 @@ export default {
                         <!-- 游戏特色 -->
                         <div class="game-features">
                             <h2>游戏特色</h2>
-                            <div class="features-list">
+                            <!-- 加载状态 -->
+                            <div v-if="isLoading" class="features-loading">
+                                <div class="loading-spinner"></div>
+                                <p>生成游戏特色中...</p>
+                            </div>
+                            <!-- 空状态 -->
+                            <div v-else-if="gameitem.features && gameitem.features.length === 0" class="features-empty">
+                                <p>暂无游戏特色信息</p>
+                            </div>
+                            <!-- 特色列表 -->
+                            <div v-else class="features-list">
                                 <div v-for="(feature, index) in gameitem.features" :key="index" class="feature-item">
                                     <span class="feature-icon">✓</span>
                                     <span class="feature-text">{{ feature }}</span>
