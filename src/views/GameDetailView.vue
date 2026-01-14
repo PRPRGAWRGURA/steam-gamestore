@@ -41,12 +41,28 @@ export default {
           });
         };
         
-        // 计算显示价格
-        const calculateDisplayPrice = (price) => {
-          if (price === 0) {
+        // 计算折扣价格
+        const calculateDiscountPrice = (price, discount) => {
+          // 先计算最终价格
+          let finalPrice = price;
+          if (discount && discount < 1) {
+            finalPrice = price * discount;
+          }
+          
+          // 如果最终价格为0，显示"免费"
+          if (finalPrice === 0) {
             return "免费";
           }
-          return price.toFixed(2);
+          
+          return finalPrice.toFixed(2);
+        };
+        
+        // 计算折扣百分比
+        const calculateDiscountPercent = (discount) => {
+          if (discount && discount < 1) {
+            return Math.round((1 - discount) * 100);
+          }
+          return 0;
         };
         
         // 加载游戏详情
@@ -201,7 +217,8 @@ export default {
           notFound,
           formatDate,
           goBack,
-          calculateDisplayPrice
+          calculateDiscountPrice,
+          calculateDiscountPercent
         };
     }
 }
@@ -254,8 +271,17 @@ export default {
                             <span class="meta-divider">•</span>
                             <span class="meta-text">{{ gameitem.publisher }}</span>
                         </div>
-                        <div class="game-price">
-                            <span class="price">{{ calculateDisplayPrice(gameitem.price) === '免费' ? '' : '$' }}{{ calculateDisplayPrice(gameitem.price) }}</span>
+                        <div class="game-price" :class="{ 'free': gameitem.discount && gameitem.discount < 1 && gameitem.price > 0 }">
+                            <!-- 折扣标签 -->
+                            <span class="discount-badge" v-if="gameitem.discount && gameitem.discount < 1 && gameitem.price > 0">
+                                -{{ calculateDiscountPercent(gameitem.discount) }}%
+                            </span>
+                            <!-- 原价 -->
+                            <span class="original-price" v-if="gameitem.discount && gameitem.discount < 1 && gameitem.price > 0">
+                                ￥{{ gameitem.price.toFixed(2) }}
+                            </span>
+                            <!-- 折扣价格 -->
+                            <span class="price" :class="{'discount': gameitem.discount && gameitem.discount < 1 && gameitem.price > 0}">{{ calculateDiscountPrice(gameitem.price, gameitem.discount) === '免费' ? '' : '￥' }}{{ calculateDiscountPrice(gameitem.price, gameitem.discount) }}</span>
                         </div>
                         <div class="game-actions">
                             <button class="add-to-cart">加入购物车</button>
@@ -549,13 +575,49 @@ export default {
 }
 
 .game-price {
-    margin-bottom: 24px;
+    background-color: transparent;
+    width: fit-content;
+    height: 24px;
+    line-height: 24px;
+    margin-bottom: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 14px;
+    flex-wrap: nowrap;
 }
 
-.price {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: #acdbf5;
+.free {
+    background-color: #4a4949;
+}
+
+.price {  
+  padding: 0 5px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff; /* 白色文字 */
+}
+
+.discount {
+  color: rgb(95, 219, 37);
+}
+
+.original-price {
+    color: #999;
+    text-decoration: line-through;
+    font-size: 1.2rem;
+}
+
+.discount-badge {
+  background-color: rgba(74, 185, 18, 0.643);
+  color: rgb(69, 230, 33);
+  width: 60px;
+  padding: 0 5px;
+  text-align: center;
+  box-sizing: border-box;
+  font-weight: 800;
+  font-size: 16px;
 }
 
 .game-actions {

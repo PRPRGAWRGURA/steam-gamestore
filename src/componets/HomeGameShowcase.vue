@@ -162,7 +162,7 @@ export default {
           <img :src="game.image" :alt="game.name" />
         </div>
         <div class="game-info">
-            <div class="game-price-container">
+            <div class="game-price-container" :class="{'free': game.discount && game.discount < 1 && game.price > 0}">
               <!-- 折扣标签 -->
               <span class="discount-badge" v-if="game.discount && game.discount < 1 && game.price > 0">
                 -{{ calculateDiscountPercent(game.discount) }}%
@@ -172,7 +172,7 @@ export default {
                 ￥{{ game.price.toFixed(2) }}
               </span>
               <!-- 折扣价格 -->
-              <span class="game-price">
+              <span class="game-price" :class="{'discount': game.discount && game.discount < 1 && game.price > 0}">
                 {{ calculateDiscountPrice(game.price, game.discount) === '免费' ? '' : '￥' }}{{ calculateDiscountPrice(game.price, game.discount) }}
               </span>
             </div>
@@ -209,11 +209,7 @@ export default {
             </div>
           </div>
           
-          <!-- 操作按钮 -->
-          <div class="detail-actions">
-            <button class="add-to-cart">加入购物车</button>
-            <button class="wishlist">愿望单</button>
-          </div>
+          
         </div>
       </div>
     </div>
@@ -222,7 +218,7 @@ export default {
 
 <style scoped>
 .GS_container_games {
-  padding-top: 48px;
+  padding: 48px 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(200px, 1fr)); /* 每行显示5个游戏 */
   gap: 16px; /* 卡片间隙 */
@@ -239,7 +235,6 @@ export default {
 
 .game-card {
   background-color: #1b2838; /* Steam暗色主题背景 */
-  border-radius: 4px; /* 轻微圆角 */
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 轻微阴影 */
   transition: transform 0.2s, box-shadow 0.2s; /* hover效果 */
@@ -260,6 +255,8 @@ export default {
 
 .game-image {
   width: 100%;
+  height: auto;
+  background-color: #4773a07f;
   overflow: hidden;
 }
 
@@ -275,16 +272,11 @@ export default {
 }
 
 .game-info {
-  padding: 8px;
+  padding-bottom: 4px;
+  padding-left: 4px;
   color: #c7d5e0; /* Steam文字色 */
-  background-color: #1b2838;
-}
-
-/* 确保游戏信息区域的所有文字都没有下划线 */
-.game-info {
+  background-color: #4773a07f;
   text-decoration: none; /* 去除下划线 */
-  color: inherit; /* 继承父元素颜色 */
-  padding: 8px;
 }
 
 /* 确保所有链接文字都没有下划线 */
@@ -320,15 +312,29 @@ export default {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  background-color: transparent;
+  width: fit-content;
+  height: 18px;
+  line-height: 18px;
+  box-sizing: border-box;
   gap: 8px;
   font-size: 14px;
   flex-wrap: nowrap;
 }
 
+.free {
+  background-color: #4a4949;
+}
+
 .game-price {
-  color: #fff; /* 白色文字 */
+  padding: 0 5px;
+  font-size: 14px;
   font-weight: 600;
-  font-size: 18px; /* 更大的字体 */
+  color: #fff; /* 白色文字 */
+}
+
+.discount {
+  color: rgb(95, 219, 37);
 }
 
 .original-price {
@@ -338,12 +344,14 @@ export default {
 }
 
 .discount-badge {
-  background-color: #e61c44; /* 红色背景 */
-  color: white; /* 白色文字 */
+  background-color: rgba(74, 185, 18, 0.643);
+  color: rgb(69, 230, 33);
+  width: 40px;
+  padding: 0 5px;
+  text-align: center;
+  box-sizing: border-box;
+  font-weight: 800;
   font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
 }
 
 /* 悬停详情 */
@@ -431,47 +439,6 @@ export default {
   color: #4299e1;
 }
 
-.detail-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
 
-.add-to-cart {
-  flex: 1;
-  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: auto;
-}
-
-.add-to-cart:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
-}
-
-.wishlist {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: auto;
-}
-
-.wishlist:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
 
 </style>
