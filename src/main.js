@@ -19,7 +19,8 @@ import {
   faCheckCircle, 
   faPenToSquare, 
   faList, 
-  faSpinner 
+  faSpinner, 
+  faRobot 
 } from '@fortawesome/free-solid-svg-icons'
 
 // 注册图标到库
@@ -34,7 +35,8 @@ library.add(
   faCheckCircle, 
   faPenToSquare, 
   faList,
-  faSpinner
+  faSpinner,
+  faRobot
 )
 
 const app = createApp(App)

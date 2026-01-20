@@ -612,29 +612,33 @@ const updateIntroduction = async () => {
         </div>
     </div>
   </div>
-  <!-- 修改头像区域 -->
-  <div class="ChangeAvatarSection">
-    <h3 class="SectionTitle">修改头像</h3>
-    
-    <div class="AvatarUploadContainer">
-      <!-- 头像预览 -->
-      <div class="AvatarPreview" @click="openCropper">
-        <div class="AvatarPreviewBorder">{{ !!avatarFile ? '点击裁剪头像':'预览头像' }}</div>
-        <img :src="avatarPreview" alt="裁剪头像" class="AvatarImage" />
-      </div>
-      <!-- 上传控件 -->
-      <div class="AvatarUploadControls">
-        <div class="FileInputContainer">
-          <input
-            type="file"
-            id="avatarFile"
-            accept="image/*"
-            @change="handleFileChange"
-            class="FileInput"
-          />
-          <label for="avatarFile" class="FileLabel">
-            选择头像
-          </label>
+  <!-- 修改头像和密码的flex容器 -->
+  <div class="ProfileActionsContainer">
+    <!-- 修改头像区域 -->
+    <div class="ChangeAvatarSection">
+      <h3 class="SectionTitle">修改头像</h3>
+      
+      <div class="AvatarUploadContainer">
+        <!-- 头像预览 -->
+        <div class="AvatarPreview" @click="openCropper">
+          <div class="AvatarPreviewBorder">{{ !!avatarFile ? '点击裁剪头像':'预览头像' }}</div>
+          <img :src="avatarPreview" alt="裁剪头像" class="AvatarImage" />
+        </div>
+        <!-- 上传控件 -->
+        <div class="AvatarUploadControls">
+          <div class="FileInputContainer">
+            <input
+              type="file"
+              id="avatarFile"
+              accept="image/*"
+              @change="handleFileChange"
+              class="FileInput"
+            />
+            <label for="avatarFile" class="FileLabel">
+              选择头像
+            </label>
+          </div>
+          
           <button
             type="button"
             class="CancelBtn"
@@ -643,40 +647,26 @@ const updateIntroduction = async () => {
           >
             取消上传
           </button>
-        </div>
-        
-        <div class="AvatarActionButtons">
-          <button
-            type="button"
-            class="UploadBtn"
-            @click="uploadAvatar"
-            :disabled="isUploading"
-          >
-            {{ isUploading ? '上传中...' : '上传头像' }}
-          </button>
           
-          
+          <div class="AvatarActionButtons">
+            <button
+              type="button"
+              class="UploadBtn"
+              @click="uploadAvatar"
+              :disabled="isUploading"
+            >
+              {{ isUploading ? '上传中...' : '上传头像' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <!-- 头像裁剪区域 -->
-  <AvatarCropper
-    v-if="croppedAvatar"
-    :image-url="croppedAvatar"
-    @confirm="handleCropConfirm"
-    @cancel="closeCropper"
-  />
-
-
-
-
-
-  <!-- 修改密码区域 -->
-  <div class="ChangePasswordSection">
-    <h3 class="SectionTitle">修改密码</h3>
     
-    <form @submit.prevent="submitChangePassword" class="PasswordForm">
+    <!-- 修改密码区域 -->
+    <div class="ChangePasswordSection">
+      <h3 class="SectionTitle">修改密码</h3>
+      
+      <form @submit.prevent="submitChangePassword" class="PasswordForm">
       <!-- 当前密码 -->
       <div class="FormGroup">
         <label for="oldPassword">当前密码</label>
@@ -778,6 +768,7 @@ const updateIntroduction = async () => {
       </div>
     </form>
   </div>
+  </div>
 </template>
 
 <style scoped>
@@ -823,6 +814,8 @@ const updateIntroduction = async () => {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   animation: fadeIn 0.5s ease-out;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .UserInfoSection:hover,
@@ -1443,8 +1436,8 @@ const updateIntroduction = async () => {
 
 /* 头像预览 */
 .AvatarPreview {
-  width: 180px;
-  height: 180px;
+  width: auto;
+  height: 100%;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
@@ -1541,31 +1534,75 @@ const updateIntroduction = async () => {
 }
 
 /* 响应式设计 */
-@media (max-width: 768px) {
-  .AvatarUploadContainer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .AvatarPreview {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto;
-  }
-  
-  .PasswordForm,
-  .ChangeNameForm {
-    max-width: 100%;
-  }
-  
-  .ButtonGroup {
-    flex-direction: column;
-  }
-  
-  .SubmitBtn,
-  .ResetBtn,
-  .UploadBtn {
-    min-width: auto;
-  }
+/* Profile Actions Container - 将修改头像和修改密码区域放在同一行 */
+.ProfileActionsContainer {
+  display: flex;
+  gap: 25px;
+  flex-wrap: wrap;
+  align-items: stretch;
 }
+
+.ProfileActionsContainer .ChangeAvatarSection,
+.ProfileActionsContainer .ChangePasswordSection {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  min-height: 530px;
+}
+
+/* 强制两个区域的卡片高度完全一致 */
+.ProfileActionsContainer {
+  position: relative;
+}
+
+/* 确保修改头像区域的内容区域能填充整个卡片高度 */
+.ChangeAvatarSection > .AvatarUploadContainer {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  padding-bottom: 20px; /* 添加底部内边距，使内容与修改密码区域更协调 */
+}
+
+/* 确保修改密码区域的内容区域能填充整个卡片高度 */
+.ChangePasswordSection > .PasswordForm {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 缩短修改头像区域的按钮长度 */
+.ProfileActionsContainer .FileLabel,
+.ProfileActionsContainer .CancelBtn {
+  min-width: 120px;
+  padding: 12px 15px;
+}
+
+.ProfileActionsContainer .UploadBtn {
+  min-width: 100px;
+  padding: 12px 15px;
+}
+
+/* 头像上传容器 - 左侧头像预览，右侧按钮垂直排列 */
+.AvatarUploadContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  height: 100%;
+}
+
+
+/* 调整修改头像区域的高度，使其与修改密码区域一致 */
+.ChangeAvatarSection {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 确保修改头像区域和修改密码区域高度一致 */
+.ProfileActionsContainer {
+  align-items: stretch;
+}
+
+
 </style>

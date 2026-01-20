@@ -178,8 +178,8 @@ export default {
         <!-- 收起状态 -->
         <div v-else class="agent-collapsed">
             <button class="expand-btn" @click="toggleExpand" title="展开AI助手">
-                <span class="expand-icon">🤖</span>
-                <span class="expand-text">AI助手</span>
+                <FontAwesomeIcon icon="robot" class="expand-icon" />
+                <span class="expand-text">Al助手</span>
             </button>
         </div>
     </div>
@@ -220,9 +220,40 @@ export default {
 
 .agent-header h3 {
     margin: 0;
-    color: white;
     font-size: 18px;
     font-weight: 600;
+    position: relative;
+    color: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(
+        45deg,
+        #ffffff 0%,
+        #ffd7ff 20%,
+        #e6ffff 40%,
+        #ffffe6 60%,
+        #ffe6ff 80%,
+        #ffffff 100%
+    );
+    background-size: 300% 300%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    animation: laserShine 2s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.3));
+}
+
+/* 镭射贴纸光效动画关键帧 */
+@keyframes laserShine {
+    0%, 100% {
+        background-position: 0% 50%;
+    }
+    25% {
+        background-position: 100% 50%;
+    }
+    50% {
+        background-position: 100% 100%;
+    }
+    75% {
+        background-position: 0% 100%;
+    }
 }
 
 /* 切换按钮样式 */
@@ -382,67 +413,84 @@ export default {
 
 /* 展开按钮样式 */
 .expand-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #1e3a8a 100%);
-    border: none;
-    border-radius: 25px;
-    padding: 12px 20px;
+    background: #1e3a8a;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 10px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
     color: white;
     font-weight: 600;
     font-size: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 高光扫过动画效果 */
+.expand-btn::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -120%;
+    width: 100%;
+    height: 200%;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.3),
+        transparent
+    );
+    transform: rotate(30deg);
+    transition: left 0.4s ease;
+}
+
+.expand-btn:hover::before {
+    left: 100%;
 }
 
 .expand-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.5);
+    background: #2563eb;
 }
 
 .expand-btn:active {
     transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(59, 130, 246, 0.3);
 }
 
 /* 展开按钮图标 */
 .expand-icon {
     font-size: 20px;
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
 }
 
-/* 滚动条样式 */
-.agent-messages::-webkit-scrollbar {
-    width: 8px;
+.expand-btn:hover .expand-icon {
+    transform: scale(1.1) rotate(5deg);
+    color: #f0f9ff;
 }
 
-.agent-messages::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    margin: 10px 0;
+/* 展开按钮文字 */
+.expand-text {
+    position: relative;
+    z-index: 1;
+    transition: all 0.3s ease;
 }
 
-.agent-messages::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(59, 130, 246, 0.6), rgba(37, 99, 235, 0.6));
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-    transition: all 0.2s ease;
-}
-
-.agent-messages::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(59, 130, 246, 0.8), rgba(37, 99, 235, 0.8));
-    background-clip: content-box;
-}
-
-.agent-messages::-webkit-scrollbar-thumb:active {
-    background: linear-gradient(180deg, rgba(37, 99, 235, 1), rgba(29, 78, 216, 1));
-    background-clip: content-box;
+.expand-btn:hover .expand-text {
+    color: #f0f9ff;
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
 }
 
 /* Firefox滚动条样式 */
 .agent-messages {
     scrollbar-width: thin;
-    scrollbar-color: rgba(59, 130, 246, 0.6) rgba(255, 255, 255, 0.1);
+    scrollbar-color: rgba(10, 63, 112, 0.6) rgba(5, 36, 53, 0.268);
 }
 </style>
