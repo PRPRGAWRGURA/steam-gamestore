@@ -783,7 +783,6 @@ const updateIntroduction = async () => {
       </form>
     </div>
   </div>
-  </div>
 </template>
 
 <style scoped>
