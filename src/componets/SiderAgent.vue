@@ -261,6 +261,8 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.6) rgba(255, 255, 255, 0.1);
 }
 
 /* 消息项 */
@@ -440,9 +442,4 @@ export default {
     background-clip: content-box;
 }
 
-/* Firefox滚动条样式 */
-.agent-messages {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(59, 130, 246, 0.6) rgba(255, 255, 255, 0.1);
-}
 </style>

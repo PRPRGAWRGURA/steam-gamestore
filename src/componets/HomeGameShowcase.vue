@@ -109,23 +109,24 @@ export default {
     
     // 计算折扣价格
     const calculateDiscountPrice = (price, discount) => {
-      // 先计算最终价格
-      let finalPrice = price;
-      if (discount && discount < 1) {
-        finalPrice = price * discount;
-      }
-      
-      // 如果最终价格为0，显示"免费"
-      if (finalPrice === 0) {
+      // 如果原价为0，直接显示"免费"
+      if (price === 0) {
         return "免费";
       }
       
+      // 计算折扣后价格
+      let finalPrice = price;
+      if (discount !== undefined && discount < 1) {
+        finalPrice = price * discount;
+      }
+      
+      // 原价不为0时，显示实际折扣价格
       return finalPrice.toFixed(2);
     };
     
     // 计算折扣百分比
     const calculateDiscountPercent = (discount) => {
-      if (discount && discount < 1) {
+      if (discount !== undefined && discount < 1) {
         return Math.round((1 - discount) * 100);
       }
       return 0;
@@ -162,17 +163,17 @@ export default {
           <img :src="game.image" :alt="game.name" />
         </div>
         <div class="game-info">
-            <div class="game-price-container" :class="{'free': game.discount && game.discount < 1 && game.price > 0}">
+            <div class="game-price-container" :class="{'isdiscount': game.discount !== 1}">
               <!-- 折扣标签 -->
-              <span class="discount-badge" v-if="game.discount && game.discount < 1 && game.price > 0">
+              <span class="discount-badge" v-if="game.discount !== undefined && game.discount < 1 && game.price > 0">
                 -{{ calculateDiscountPercent(game.discount) }}%
               </span>
               <!-- 原价 -->
-              <span class="original-price" v-if="game.discount && game.discount < 1 && game.price > 0">
+              <span class="original-price" v-if="game.discount !== undefined && game.discount < 1 && game.price > 0">
                 ￥{{ game.price.toFixed(2) }}
               </span>
               <!-- 折扣价格 -->
-              <span class="game-price" :class="{'discount': game.discount && game.discount < 1 && game.price > 0}">
+              <span class="game-price" :class="{'discount': game.discount !== undefined && game.discount < 1 && game.price > 0}">
                 {{ calculateDiscountPrice(game.price, game.discount) === '免费' ? '' : '￥' }}{{ calculateDiscountPrice(game.price, game.discount) }}
               </span>
             </div>
@@ -322,7 +323,7 @@ export default {
   flex-wrap: nowrap;
 }
 
-.free {
+.isdiscount {
   background-color: #4a4949;
 }
 

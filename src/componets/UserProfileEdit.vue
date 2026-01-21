@@ -612,171 +612,176 @@ const updateIntroduction = async () => {
         </div>
     </div>
   </div>
+
+  <!-- 修改头像和密码区域 -->
+  <div class="ChangeSections">  
+
   <!-- 修改头像区域 -->
-  <div class="ChangeAvatarSection">
-    <h3 class="SectionTitle">修改头像</h3>
-    
-    <div class="AvatarUploadContainer">
-      <!-- 头像预览 -->
-      <div class="AvatarPreview" @click="openCropper">
-        <div class="AvatarPreviewBorder">{{ !!avatarFile ? '点击裁剪头像':'预览头像' }}</div>
-        <img :src="avatarPreview" alt="裁剪头像" class="AvatarImage" />
-      </div>
-      <!-- 上传控件 -->
-      <div class="AvatarUploadControls">
-        <div class="FileInputContainer">
-          <input
-            type="file"
-            id="avatarFile"
-            accept="image/*"
-            @change="handleFileChange"
-            class="FileInput"
-          />
-          <label for="avatarFile" class="FileLabel">
-            选择头像
-          </label>
-          <button
-            type="button"
-            class="CancelBtn"
-            @click="cancelUploadAvatar"
-            :disabled="isUploading || !avatarFile"
-          >
-            取消上传
-          </button>
+    <div class="ChangeAvatarSection">
+      <h3 class="SectionTitle">修改头像</h3>
+      
+      <div class="AvatarUploadContainer">
+        <!-- 头像预览 -->
+        <div class="AvatarPreview" @click="openCropper">
+          <div class="AvatarPreviewBorder">{{ !!avatarFile ? '点击裁剪头像':'预览头像' }}</div>
+          <img :src="avatarPreview" alt="裁剪头像" class="AvatarImage" />
         </div>
-        
-        <div class="AvatarActionButtons">
-          <button
-            type="button"
-            class="UploadBtn"
-            @click="uploadAvatar"
-            :disabled="isUploading"
-          >
-            {{ isUploading ? '上传中...' : '上传头像' }}
-          </button>
+        <!-- 上传控件 -->
+        <div class="AvatarUploadControls">
+          <div class="FileInputContainer">
+            <input
+              type="file"
+              id="avatarFile"
+              accept="image/*"
+              @change="handleFileChange"
+              class="FileInput"
+            />
+            <label for="avatarFile" class="FileLabel">
+              选择头像
+            </label>
+            <button
+              type="button"
+              class="CancelBtn"
+              @click="cancelUploadAvatar"
+              :disabled="isUploading || !avatarFile"
+            >
+              取消上传
+            </button>
+          </div>
           
-          
+          <div class="AvatarActionButtons">
+            <button
+              type="button"
+              class="UploadBtn"
+              @click="uploadAvatar"
+              :disabled="isUploading"
+            >
+              {{ isUploading ? '上传中...' : '上传头像' }}
+            </button>
+            
+            
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <!-- 头像裁剪区域 -->
-  <AvatarCropper
-    v-if="croppedAvatar"
-    :image-url="croppedAvatar"
-    @confirm="handleCropConfirm"
-    @cancel="closeCropper"
-  />
+    <!-- 头像裁剪区域 -->
+    <AvatarCropper
+      v-if="croppedAvatar"
+      :image-url="croppedAvatar"
+      @confirm="handleCropConfirm"
+      @cancel="closeCropper"
+    />
 
 
 
 
 
-  <!-- 修改密码区域 -->
-  <div class="ChangePasswordSection">
-    <h3 class="SectionTitle">修改密码</h3>
-    
-    <form @submit.prevent="submitChangePassword" class="PasswordForm">
-      <!-- 当前密码 -->
-      <div class="FormGroup">
-        <label for="oldPassword">当前密码</label>
-        <div class="PasswordInputContainer">
-          <input
-            id="oldPassword"
-            v-model="passwordForm.oldPassword"
-            :type="showPasswords.oldPassword ? 'text' : 'password'"
-            :class="{ 'error': passwordValidationErrors.oldPassword }"
-            placeholder="请输入当前密码"
-            @input="handlePasswordInput('oldPassword', $event.target.value)"
-          />
+    <!-- 修改密码区域 -->
+    <div class="ChangePasswordSection">
+      <h3 class="SectionTitle">修改密码</h3>
+      
+      <form @submit.prevent="submitChangePassword" class="PasswordForm">
+        <!-- 当前密码 -->
+        <div class="FormGroup">
+          <label for="oldPassword">当前密码</label>
+          <div class="PasswordInputContainer">
+            <input
+              id="oldPassword"
+              v-model="passwordForm.oldPassword"
+              :type="showPasswords.oldPassword ? 'text' : 'password'"
+              :class="{ 'error': passwordValidationErrors.oldPassword }"
+              placeholder="请输入当前密码"
+              @input="handlePasswordInput('oldPassword', $event.target.value)"
+            />
+            <button
+              type="button"
+              class="TogglePasswordBtn"
+              @click="togglePasswordVisibility('oldPassword')"
+              aria-label="切换密码可见性"
+            >
+              {{ showPasswords.oldPassword ? '隐藏' : '显示' }}
+            </button>
+          </div>
+          <div v-if="passwordValidationErrors.oldPassword" class="ErrorText">
+            {{ passwordValidationErrors.oldPassword }}
+          </div>
+        </div>
+        
+        <!-- 新密码 -->
+        <div class="FormGroup">
+          <label for="newPassword">新密码</label>
+          <div class="PasswordInputContainer">
+            <input
+              id="newPassword"
+              v-model="passwordForm.newPassword"
+              :type="showPasswords.newPassword ? 'text' : 'password'"
+              :class="{ 'error': passwordValidationErrors.newPassword }"
+              placeholder="请输入新密码"
+              @input="handlePasswordInput('newPassword', $event.target.value)"
+            />
+            <button
+              type="button"
+              class="TogglePasswordBtn"
+              @click="togglePasswordVisibility('newPassword')"
+              aria-label="切换密码可见性"
+            >
+              {{ showPasswords.newPassword ? '隐藏' : '显示' }}
+            </button>
+          </div>
+          <div v-if="passwordValidationErrors.newPassword" class="ErrorText">
+            {{ passwordValidationErrors.newPassword }}
+          </div>
+          <div class="PasswordHint">
+            密码必须包含至少8个字符，最多25个字符，必须包含字母、数字和特殊字符。
+          </div>
+        </div>
+        
+        <!-- 确认新密码 -->
+        <div class="FormGroup">
+          <label for="confirmPassword">确认新密码</label>
+          <div class="PasswordInputContainer">
+            <input
+              id="confirmPassword"
+              v-model="passwordForm.confirmPassword"
+              :type="showPasswords.confirmPassword ? 'text' : 'password'"
+              :class="{ 'error': passwordValidationErrors.confirmPassword }"
+              placeholder="请再次输入新密码"
+              @input="handlePasswordInput('confirmPassword', $event.target.value)"
+            />
+            <button
+              type="button"
+              class="TogglePasswordBtn"
+              @click="togglePasswordVisibility('confirmPassword')"
+              aria-label="切换密码可见性"
+            >
+              {{ showPasswords.confirmPassword ? '隐藏' : '显示' }}
+            </button>
+          </div>
+          <div v-if="passwordValidationErrors.confirmPassword" class="ErrorText">
+            {{ passwordValidationErrors.confirmPassword }}
+          </div>
+        </div>
+        
+        <!-- 按钮区域 -->
+        <div class="ButtonGroup">
+          <button
+            type="submit"
+            class="SubmitBtn"
+            :disabled="isSubmitting"
+          >
+            {{ isSubmitting ? '处理中...' : '确认修改' }}
+          </button>
           <button
             type="button"
-            class="TogglePasswordBtn"
-            @click="togglePasswordVisibility('oldPassword')"
-            aria-label="切换密码可见性"
+            class="ResetBtn"
+            @click="resetPasswordForm"
+            :disabled="isSubmitting"
           >
-            {{ showPasswords.oldPassword ? '隐藏' : '显示' }}
+            重置
           </button>
         </div>
-        <div v-if="passwordValidationErrors.oldPassword" class="ErrorText">
-          {{ passwordValidationErrors.oldPassword }}
-        </div>
-      </div>
-      
-      <!-- 新密码 -->
-      <div class="FormGroup">
-        <label for="newPassword">新密码</label>
-        <div class="PasswordInputContainer">
-          <input
-            id="newPassword"
-            v-model="passwordForm.newPassword"
-            :type="showPasswords.newPassword ? 'text' : 'password'"
-            :class="{ 'error': passwordValidationErrors.newPassword }"
-            placeholder="请输入新密码"
-            @input="handlePasswordInput('newPassword', $event.target.value)"
-          />
-          <button
-            type="button"
-            class="TogglePasswordBtn"
-            @click="togglePasswordVisibility('newPassword')"
-            aria-label="切换密码可见性"
-          >
-            {{ showPasswords.newPassword ? '隐藏' : '显示' }}
-          </button>
-        </div>
-        <div v-if="passwordValidationErrors.newPassword" class="ErrorText">
-          {{ passwordValidationErrors.newPassword }}
-        </div>
-        <div class="PasswordHint">
-          密码必须包含至少8个字符，最多25个字符，必须包含字母、数字和特殊字符。
-        </div>
-      </div>
-      
-      <!-- 确认新密码 -->
-      <div class="FormGroup">
-        <label for="confirmPassword">确认新密码</label>
-        <div class="PasswordInputContainer">
-          <input
-            id="confirmPassword"
-            v-model="passwordForm.confirmPassword"
-            :type="showPasswords.confirmPassword ? 'text' : 'password'"
-            :class="{ 'error': passwordValidationErrors.confirmPassword }"
-            placeholder="请再次输入新密码"
-            @input="handlePasswordInput('confirmPassword', $event.target.value)"
-          />
-          <button
-            type="button"
-            class="TogglePasswordBtn"
-            @click="togglePasswordVisibility('confirmPassword')"
-            aria-label="切换密码可见性"
-          >
-            {{ showPasswords.confirmPassword ? '隐藏' : '显示' }}
-          </button>
-        </div>
-        <div v-if="passwordValidationErrors.confirmPassword" class="ErrorText">
-          {{ passwordValidationErrors.confirmPassword }}
-        </div>
-      </div>
-      
-      <!-- 按钮区域 -->
-      <div class="ButtonGroup">
-        <button
-          type="submit"
-          class="SubmitBtn"
-          :disabled="isSubmitting"
-        >
-          {{ isSubmitting ? '处理中...' : '确认修改' }}
-        </button>
-        <button
-          type="button"
-          class="ResetBtn"
-          @click="resetPasswordForm"
-          :disabled="isSubmitting"
-        >
-          重置
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -846,8 +851,8 @@ const updateIntroduction = async () => {
 }
 
 .UserAvatar {
-  width: 160px;
-  height: 160px;
+  width: 200px;
+  height: 200px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(66, 153, 225, 0.3);
@@ -856,7 +861,7 @@ const updateIntroduction = async () => {
 }
 
 .UserAvatar:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   border-color: rgba(66, 153, 225, 0.5);
 }
@@ -1186,6 +1191,18 @@ const updateIntroduction = async () => {
   margin-bottom: 4px;
 }
 
+.ChangeSections {
+  display: flex;
+  width: 100%;
+  height: 600px;
+  gap: 25px;
+}
+
+.ChangeAvatarSection,
+.ChangePasswordSection {
+  flex: 1;
+}
+
 .SectionTitle {
   font-size: 1.5rem;
   font-weight: 700;
@@ -1197,13 +1214,10 @@ const updateIntroduction = async () => {
   color: transparent;
 }
 
-/* 表单通用样式 */
-.PasswordForm,
-.ChangeNameForm {
+.PasswordForm {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 500px;
+  gap: 30px;
 }
 
 .FormGroup {
@@ -1436,15 +1450,37 @@ const updateIntroduction = async () => {
 /* 头像上传样式 */
 .AvatarUploadContainer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 40px;
+  gap: 37px;
   flex-wrap: wrap;
 }
 
+.AvatarUploadContainer::after {
+  content: '';
+  position: absolute;
+  z-index: 10;
+  background-image: 
+    linear-gradient(45deg, #000 25%, transparent 25%),
+    linear-gradient(-45deg, #000 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #000 75%),
+    linear-gradient(-45deg, transparent 75%, #000 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  border-radius: 5px;
+  width: 90%;
+  height: 44%;
+  top: 20%;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+
+
 /* 头像预览 */
 .AvatarPreview {
-  width: 180px;
-  height: 180px;
+  width: 250px;
+  height: 250px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
@@ -1455,12 +1491,17 @@ const updateIntroduction = async () => {
   flex-shrink: 0;
   transition: all 0.3s ease;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  z-index: 10;
 }
 
 .AvatarPreview:hover {
   border-color: rgba(66, 153, 225, 0.5);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
   transform: scale(1.05);
+}
+
+.AvatarUploadContainer:has(.AvatarPreview:hover)::after {
+  transform: scale(0.95);
 }
 
 .AvatarPreviewBorder {
@@ -1540,32 +1581,4 @@ const updateIntroduction = async () => {
   }
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
-  .AvatarUploadContainer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .AvatarPreview {
-    width: 150px;
-    height: 150px;
-    margin: 0 auto;
-  }
-  
-  .PasswordForm,
-  .ChangeNameForm {
-    max-width: 100%;
-  }
-  
-  .ButtonGroup {
-    flex-direction: column;
-  }
-  
-  .SubmitBtn,
-  .ResetBtn,
-  .UploadBtn {
-    min-width: auto;
-  }
-}
 </style>
