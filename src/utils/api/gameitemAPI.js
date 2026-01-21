@@ -23,6 +23,53 @@ import supabase from "../core/supabase.js";
 
 export const gameitemAPI = {
     /**
+     * 格式化日期
+     * @param {string|Date} date - 日期字符串或Date对象
+     * @returns {string} - 格式化后的日期字符串
+     */
+    formatDate(date) {
+        return new Date(date).toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    },
+    
+    /**
+     * 计算折扣价格
+     * @param {number} price - 原价
+     * @param {number} discount - 折扣比例（0-1之间的小数）
+     * @returns {string} - 折扣后价格，原价为0时显示"免费"
+     */
+    calculateDiscountPrice(price, discount) {
+        // 如果原价为0，直接显示"免费"
+        if (price === 0) {
+            return "免费";
+        }
+        
+        // 计算折扣后价格
+        let finalPrice = price;
+        if (discount !== undefined && discount < 1) {
+            finalPrice = price * discount;
+        }
+        
+        // 原价不为0时，显示实际折扣价格
+        return finalPrice.toFixed(2);
+    },
+    
+    /**
+     * 计算折扣百分比
+     * @param {number} discount - 折扣比例（0-1之间的小数）
+     * @returns {number} - 折扣百分比（如30表示30%off）
+     */
+    calculateDiscountPercent(discount) {
+        if (discount !== undefined && discount < 1) {
+            return Math.round((1 - discount) * 100);
+        }
+        return 0;
+    },
+    
+    /**
      * 获取游戏列表
      * 支持多种场景：商城首页、搜索结果、游戏库等
      * @param {Object} options - 筛选选项
