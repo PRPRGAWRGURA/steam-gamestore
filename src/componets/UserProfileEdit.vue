@@ -783,6 +783,7 @@ const updateIntroduction = async () => {
       </form>
     </div>
   </div>
+  </div>
 </template>
 
 <style scoped>
@@ -828,6 +829,8 @@ const updateIntroduction = async () => {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   animation: fadeIn 0.5s ease-out;
+  height: auto;
+  box-sizing: border-box;
 }
 
 .UserInfoSection:hover,
