@@ -153,6 +153,7 @@ export default {
       />
     </div>
     <div class="bilibili_container">
+      <h3>游戏资讯</h3>
       <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=115909255496009&bvid=BV1U1rmBHEoZ&cid=35439903800&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
     </div>
     <!-- 按折扣推荐游戏列表 -->
@@ -215,11 +216,21 @@ export default {
 .bilibili_container {
   max-width: 1200px; /* 与主容器宽度一致 */
   margin: 40px auto; /* 居中并添加上下外边距 */
+  margin-top: 50px;
   width: 100%;
   position: relative;
   padding-bottom: 56.25%; /* 16:9宽高比 (9/16 = 0.5625) */
   height: 0;
-  overflow: hidden;
+}
+
+.bilibili_container h3 {
+  position: absolute;
+  top: -90px;
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #fff;
 }
 
 .bilibili_container iframe {

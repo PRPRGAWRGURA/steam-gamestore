@@ -1074,24 +1074,60 @@ export const communityAPI = {
   },
 
   /**
-   * 格式化帖子内容，将URL转换为可点击的链接
+   * 格式化帖子内容，将URL转换为可点击的链接，将B站视频URL转换为iframe
    * @param {string} content - 原始帖子内容
-   * @returns {string} 格式化后的内容，包含可点击的链接
+   * @returns {string} 格式化后的内容，包含可点击的链接和B站iframe
    */
   formatContent(content) {
     if (!content) return ''
     
-    // URL正则表达式，匹配http/https链接
-    const urlRegex = /(https?:\/\/[^\s]+)/g
+    let formattedContent = content
     
-    // 将URL转换为a标签
-    return content.replace(urlRegex, (url) => {
+    // 1. 先处理B站视频URL，转换为iframe
+    // B站视频URL格式：
+    // - https://www.bilibili.com/video/BV1xxx.../?spm_id_from=xxx&vd_source=xxx
+    // - https://b23.tv/xxxx
+    // - https://www.bilibili.com/watchlater/#/avxxxxxx
+    // 匹配完整URL，包括所有查询参数
+    const bilibiliRegex = /https?:\/\/(www\.)?(bilibili\.com\/video\/BV[0-9A-Za-z]+|b23\.tv\/[0-9A-Za-z]+)(?:\/[\s\S]*?)?(?=\s|$)/g
+    
+    formattedContent = formattedContent.replace(bilibiliRegex, (match) => {
+      // 提取BV号或b23短链接，忽略其他参数
+      let bvid = ''
+      let page = 1
+      
+      // 提取核心URL部分，去除查询参数
+      const coreUrl = match.split('?')[0].replace(/\/$/, '')
+      
+      if (coreUrl.includes('bilibili.com/video/')) {
+        // 标准BV格式：bilibili.com/video/BV1xxx...
+        bvid = coreUrl.match(/BV[0-9A-Za-z]+/)[0]
+        // 检查原始URL中是否有page参数
+        const pageMatch = match.match(/\?.*?p=(\d+)/)
+        if (pageMatch) {
+          page = parseInt(pageMatch[1])
+        }
+      } else if (coreUrl.includes('b23.tv/')) {
+        // b23短链接格式：b23.tv/xxxx
+        bvid = coreUrl.replace('b23.tv/', '')
+      }
+      
+      // 生成B站iframe，使用标准的iframe格式
+      return `<iframe src="//player.bilibili.com/player.html?isOutside=true&bvid=${bvid}&page=${page}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width: 100%; height: 300px;"></iframe>`
+    })
+    
+    // 2. 处理其他普通URL，转换为a标签
+    const urlRegex = /(https?:\/\/[^\s<>]+)/g
+    
+    formattedContent = formattedContent.replace(urlRegex, (url) => {
       // 确保URL的完整性
       let fullUrl = url
       // 移除可能的标点符号
       fullUrl = fullUrl.replace(/[.,!?;:)]$/, '')
       return `<a href="${fullUrl}" target="_blank" rel="noopener noreferrer" class="post-link">${fullUrl}</a>`
     })
+    
+    return formattedContent
   },
 
   /**

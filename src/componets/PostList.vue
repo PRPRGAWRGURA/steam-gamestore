@@ -1185,6 +1185,29 @@ export default {
   word-break: break-word;
 }
 
+/* B站视频iframe样式 */
+.content-text iframe {
+  display: block;
+  margin: 15px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  width: 100% !important;
+  height: 300px !important;
+  max-width: 100%;
+}
+
+/* 确保链接样式不影响iframe */
+.content-text a.post-link {
+  color: #499deb;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.content-text a.post-link:hover {
+  color: #6bb8f0;
+  text-decoration: underline;
+}
+
 
 
 .post-image {
