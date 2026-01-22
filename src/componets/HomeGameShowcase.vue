@@ -2,13 +2,13 @@
 import { ref, onMounted, watch } from 'vue';
 import { gameitemAPI } from '@/utils/api/gameitemAPI';
 import { loadGamesFromCache, saveGamesToCache } from '@/utils/tools/cacheUtils';
-import HomeGameShowcaseCard from './GameShowcaseHorizontalCard.vue';
+import GameShowcaseHorizontalCard from './GameShowcaseHorizontalCard.vue';
 import GameDisplayList from './GameDisplayList.vue';
 
 export default {
   name: 'HomeGameShowcase',
   components: {
-    HomeGameShowcaseCard,
+    GameShowcaseHorizontalCard,
     GameDisplayList
   },
   setup() {
@@ -143,7 +143,7 @@ export default {
   <div>
     <!-- 前20个游戏 -->
     <div class="GS_container_games">
-      <HomeGameShowcaseCard 
+      <GameShowcaseHorizontalCard 
         v-for="game in games.slice(0, 20)" 
         :key="game.id"
         :game="game"
@@ -152,7 +152,9 @@ export default {
         :calculate-discount-percent="calculateDiscountPercent"
       />
     </div>
-    
+    <div class="bilibili_container">
+      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=115909255496009&bvid=BV1U1rmBHEoZ&cid=35439903800&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+    </div>
     <!-- 按折扣推荐游戏列表 -->
     <GameDisplayList 
       :games="discountedGames()"
@@ -164,7 +166,7 @@ export default {
 
     <!-- 中部10个游戏 -->
     <div class="GS_container_games">
-      <HomeGameShowcaseCard 
+      <GameShowcaseHorizontalCard 
         v-for="game in games.slice(20,30)" 
         :key="game.id"
         :game="game"
@@ -185,7 +187,7 @@ export default {
     
     <!-- 剩余的所有游戏 -->
     <div class="GS_container_games">
-      <HomeGameShowcaseCard 
+      <GameShowcaseHorizontalCard 
         v-for="game in games.slice(30)" 
         :key="game.id"
         :game="game"
@@ -199,6 +201,8 @@ export default {
 
 <style scoped>
 .GS_container_games {
+  background-color: rgba(14, 19, 27, 0.1);
+  border-radius: 10px;
   padding: 48px 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(200px, 1fr)); /* 每行显示5个游戏 */
@@ -208,5 +212,22 @@ export default {
   position: relative;
 }
 
+.bilibili_container {
+  max-width: 1200px; /* 与主容器宽度一致 */
+  margin: 40px auto; /* 居中并添加上下外边距 */
+  width: 100%;
+  position: relative;
+  padding-bottom: 56.25%; /* 16:9宽高比 (9/16 = 0.5625) */
+  height: 0;
+  overflow: hidden;
+}
 
+.bilibili_container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
 </style>

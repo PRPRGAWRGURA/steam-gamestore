@@ -76,12 +76,6 @@ export default {
   transition-delay: 0.3s;
 }
 
-/* 每行后两个游戏，将详情面板显示在左侧 */
-.game-card-wrapper:nth-child(5n+4) .game-detail,
-.game-card-wrapper:nth-child(5n+5) .game-detail {
-  right: auto;
-  left: -400px; /* 显示在卡片左侧，间距10px */
-}
 
 /* 悬停时显示详情面板 */
 .game-card:hover + .game-detail {
@@ -93,11 +87,11 @@ export default {
 .detail-content {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
 }
 
 .detail-title {
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
   line-height: 1.2;
@@ -111,10 +105,8 @@ export default {
 }
 
 .detail-image {
+  aspect-ratio: 227 / 97; /* 图片比例为2：3 */
   width: 100%;
-  border-radius: 4px;
-  overflow: hidden;
-  aspect-ratio: 16/9;
 }
 
 .detail-image img {

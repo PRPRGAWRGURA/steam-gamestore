@@ -1,11 +1,6 @@
 <script>
-import GameShowcaseHoverCard from './GameShowcaseHoverCard.vue';
-
 export default {
   name: 'GameShowcaseVerticalCard',
-  components: {
-    GameShowcaseHoverCard
-  },
   props: {
     game: {
       type: Object,
@@ -51,12 +46,6 @@ export default {
           </div>
         </div>
     </router-link>
-    
-    <!-- 使用外部悬停卡片组件 -->
-    <GameShowcaseHoverCard 
-      :game="game"
-      :format-date="formatDate"
-    />
   </div>
 </template>
 
@@ -99,7 +88,6 @@ export default {
 .game-image {
   width: 100%;
   height: auto;
-  background-color: #4773a07f;
   overflow: hidden;
 }
 
@@ -121,19 +109,13 @@ export default {
 }
 
 .game-info {
-  padding: 8px;
+  padding: 4px;
   color: #c7d5e0; /* Steam文字色 */
   background-color: #4773a07f;
   text-decoration: none; /* 去除下划线 */
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-}
-
-/* 纵向游戏卡片信息 */
-.game-info.vertical {
-  padding: 12px;
-  gap: 8px;
 }
 
 /* 确保所有链接文字都没有下划线 */
@@ -186,4 +168,5 @@ export default {
   font-weight: 800;
   font-size: 12px;
 }
+
 </style>

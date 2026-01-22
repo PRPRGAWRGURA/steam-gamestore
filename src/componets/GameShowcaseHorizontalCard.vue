@@ -73,10 +73,12 @@ export default {
   background-color: #1b2838; /* Steam暗色主题背景 */
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 轻微阴影 */
-  transition: transform 0.2s, box-shadow 0.2s; /* hover效果 */
+  transition: all 0.3s ease;
   cursor: pointer;
   text-decoration: none; /* 去除下划线 */
   color: #c7d5e0; /* 添加这一行，设置正确的文字颜色 */
+  display: block; /* 改为块级元素，使transform: scale()生效 */
+  height: 100%; /* 确保卡片占满父容器高度 */
 }
 
 /* 确保所有链接都没有下划线 */
@@ -90,9 +92,9 @@ export default {
 }
 
 .game-image {
+  aspect-ratio: 227 / 97; /* 图片比例为21：9 */
   width: 100%;
   height: auto;
-  background-color: #4773a07f;
   overflow: hidden;
 }
 
@@ -108,8 +110,7 @@ export default {
 }
 
 .game-info {
-  padding-bottom: 4px;
-  padding-left: 4px;
+  padding: 4px;
   color: #c7d5e0; /* Steam文字色 */
   background-color: #4773a07f;
   text-decoration: none; /* 去除下划线 */
@@ -120,6 +121,7 @@ export default {
   text-decoration: none; /* 确保所有子元素都没有下划线 */
   color: inherit; /* 继承父元素颜色 */
 }
+
 
 .game-price-container {
   display: flex;
@@ -165,4 +167,12 @@ export default {
   font-weight: 800;
   font-size: 12px;
 }
+
+/* 每行后两个游戏，将详情面板显示在左侧 */
+.game-card-wrapper:nth-child(5n+4) .game-detail,
+.game-card-wrapper:nth-child(5n+5) .game-detail {
+  right: auto;
+  left: -400px; /* 显示在卡片左侧，间距10px */
+}
+
 </style>

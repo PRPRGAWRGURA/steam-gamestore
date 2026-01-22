@@ -59,7 +59,9 @@ export default {
 <style scoped>
 /* 推荐游戏区域 */
 .GS_featured_games_section {
-  padding-bottom: 48px;
+  background: radial-gradient(circle at 50% 140%, #1ec6f530 0%, transparent 60%);
+  border-bottom: 2px solid #1121324e;
+  padding-bottom: 24px;
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -75,16 +77,20 @@ export default {
 
 /* 纵向卡片横向排列容器 */
 .GS_container_games_vertical {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(10, minmax(180px, 1fr)); /* 横向显示10个游戏 */
-  gap: 24px; /* 较大的间隙 */
+  gap: 30px; /* 较大的间隙 */
   max-width: 1200px; /* 与主容器宽度一致 */
-  overflow-x: auto; /* 允许水平滚动 */
+  height: 320px;
+  overflow-x: auto;
   overflow-y: hidden;
   margin: 0 auto; /* 居中 */
-  padding-bottom: 10px;
+  padding-top: 15px;
+  padding-bottom: 25px;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: #234a6ab4 transparent;
 }
+
 </style>

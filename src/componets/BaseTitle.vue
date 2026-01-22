@@ -66,7 +66,7 @@ export default {
         transform: translateX(-50%);
         width: 100%;
         height: 100%;
-        z-index: 50;
+        z-index: 1001;
         pointer-events: none;
     }
     .GS_title{
