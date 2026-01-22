@@ -1113,7 +1113,7 @@ export const communityAPI = {
       }
       
       // 生成B站iframe，使用标准的iframe格式
-      return `<iframe src="//player.bilibili.com/player.html?isOutside=true&bvid=${bvid}&page=${page}" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" style="width: 100%; height: 300px;"></iframe>`
+      return `<iframe src="//player.bilibili.com/player.html?isOutside=true&bvid=${bvid}&page=${page}&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" autoplay="0" style="width: 100%; height: 300px;"></iframe>`
     })
     
     // 2. 处理其他普通URL，转换为a标签

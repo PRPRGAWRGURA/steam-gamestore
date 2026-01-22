@@ -1,6 +1,7 @@
 <script>
 import { ref, onMounted, watch } from 'vue';
 import { gameitemAPI } from '@/utils/api/gameitemAPI';
+import { bvideoAPI } from '@/utils/api/BvideoAPI';
 import { loadGamesFromCache, saveGamesToCache } from '@/utils/tools/cacheUtils';
 import GameShowcaseHorizontalCard from './GameShowcaseHorizontalCard.vue';
 import GameDisplayList from './GameDisplayList.vue';
@@ -15,6 +16,8 @@ export default {
     // 游戏列表 - 从数据库获取
     const games = ref([]);
     const loading = ref(false);
+    // B站视频iframe URL，初始为null，从Supabase获取
+    const bilibiliIframeUrl = ref(null);
     
     // 比较两个游戏列表是否相同
     const areGamesEqual = (games1, games2) => {
@@ -104,10 +107,33 @@ export default {
         loading.value = false;
       }
     };
+    
+    // 获取B站最新视频iframe URL
+    const loadBilibiliVideo = async () => {
+      try {
+        console.log('开始获取B站最新视频...');
+        
+        // 从Supabase获取最新视频URL
+        const response = await bvideoAPI.getLatestVideoUrl();
+        console.log('获取B站视频结果:', response);
+        
+        if (response.success) {
+          bilibiliIframeUrl.value = response.data.video_url;
+          console.log('成功获取B站视频URL:', bilibiliIframeUrl.value);
+        } else {
+          console.error('获取视频失败:', response.error);
+          bilibiliIframeUrl.value = null; // 获取失败时设为null
+        }
+      } catch (error) {
+        console.error('获取B站视频失败:', error);
+        bilibiliIframeUrl.value = null; // 发生异常时设为null
+      }
+    };
 
-    // 组件挂载时加载游戏数据
+    // 组件挂载时加载游戏数据和B站视频
     onMounted(() => {
       loadGames();
+      loadBilibiliVideo();
     });
     
     // 计算折扣最多的5个游戏
@@ -131,6 +157,7 @@ export default {
       loading,
       discountedGames,
       gamesByType,
+      bilibiliIframeUrl,
       formatDate: gameitemAPI.formatDate,
       calculateDiscountPrice: gameitemAPI.calculateDiscountPrice,
       calculateDiscountPercent: gameitemAPI.calculateDiscountPercent
@@ -152,9 +179,9 @@ export default {
         :calculate-discount-percent="calculateDiscountPercent"
       />
     </div>
-    <div class="bilibili_container">
+    <div class="bilibili_container" v-if="bilibiliIframeUrl">
       <h3>游戏资讯</h3>
-      <iframe src="//player.bilibili.com/player.html?isOutside=true&aid=115909255496009&bvid=BV1U1rmBHEoZ&cid=35439903800&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+      <iframe :src="bilibiliIframeUrl" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true" autoplay="0"></iframe>
     </div>
     <!-- 按折扣推荐游戏列表 -->
     <GameDisplayList 
