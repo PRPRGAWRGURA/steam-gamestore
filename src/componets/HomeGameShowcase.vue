@@ -46,8 +46,15 @@ export default {
     // 加载游戏数据
     const loadGames = async () => {
       try {
+        // 1. 先检查缓存，立即加载缓存数据显示，提升初始加载速度
+        const cachedGames = loadGamesFromCache();
+        if (cachedGames) {
+          games.value = cachedGames;
+          console.log('立即使用缓存的游戏列表，提升初始加载速度');
+        }
+        
         loading.value = true;
-        // 每次刷新页面都进行API请求，增加字段以便在详情页使用缓存数据
+        // 2. 异步请求最新数据，不影响页面初始渲染
         const response = await gameitemAPI.getGames({
           page: 1,
           pageSize: 'unlimited',
@@ -79,29 +86,26 @@ export default {
             };
           });
           
-          // 获取当前缓存数据
-          const cachedGames = loadGamesFromCache();
-          
-          // 比较新数据与缓存数据
+          // 3. 比较新数据与缓存数据
           if (!cachedGames || !areGamesEqual(formattedGames, cachedGames)) {
-            // 数据不一致，更新缓存
+            // 数据不一致，更新缓存和显示
             saveGamesToCache(formattedGames);
+            games.value = formattedGames;
             console.log('游戏列表已更新并保存到缓存');
           } else {
-            console.log('游戏列表未变化，使用缓存数据');
+            console.log('游戏列表未变化，继续使用缓存数据');
           }
-          
-          // 无论是否更新缓存，都使用新获取的数据
-          games.value = formattedGames;
         }
       } catch (error) {
         console.error('加载游戏数据失败:', error);
         
-        // 加载失败时，尝试从缓存获取数据
-        const cachedGames = loadGamesFromCache();
-        if (cachedGames) {
-          console.log('API请求失败，从缓存加载游戏列表');
-          games.value = cachedGames;
+        // 加载失败时，如果之前没有缓存数据，再尝试从缓存获取
+        if (games.value.length === 0) {
+          const cachedGames = loadGamesFromCache();
+          if (cachedGames) {
+            console.log('API请求失败，从缓存加载游戏列表');
+            games.value = cachedGames;
+          }
         }
       } finally {
         loading.value = false;

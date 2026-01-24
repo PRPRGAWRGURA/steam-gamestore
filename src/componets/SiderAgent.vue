@@ -17,9 +17,39 @@ export default {
         const inputContent = ref(''); // 输入框内容
         const messagesContainer = ref(null); // 消息容器引用，用于滚动到底部
         
+        // 拖拽相关状态
+        const agentContainer = ref(null); // AI助手容器引用
+        const isDragging = ref(false); // 是否正在拖拽
+        const startX = ref(0); // 拖拽开始时的鼠标X坐标
+        const startY = ref(0); // 拖拽开始时的鼠标Y坐标
+        const offsetX = ref(0); // 容器X偏移量
+        const offsetY = ref(0); // 容器Y偏移量
+        
+        // 节流函数，优化拖拽性能
+        const throttle = (func, delay) => {
+            let lastCall = 0;
+            return (...args) => {
+                const now = Date.now();
+                if (now - lastCall < delay) {
+                    return;
+                }
+                lastCall = now;
+                return func(...args);
+            };
+        };
+        
         // 切换展开/收起状态
         const toggleExpand = () => {
             isExpanded.value = !isExpanded.value;
+            
+            // 如果收起，恢复原来的位置
+            if (!isExpanded.value) {
+                offsetX.value = 0;
+                offsetY.value = 0;
+                if (agentContainer.value) {
+                    agentContainer.value.style.transform = `translate(0px, 0px)`;
+                }
+            }
         };
         
         // 发送消息
@@ -113,6 +143,47 @@ export default {
             }
         };
         
+        // 拖拽过程（使用节流优化）
+        const handleDragMove = throttle((event) => {
+            if (!isDragging.value || !agentContainer.value) return;
+            
+            const deltaX = event.clientX - startX.value;
+            const deltaY = event.clientY - startY.value;
+            
+            offsetX.value += deltaX;
+            offsetY.value += deltaY;
+            
+            startX.value = event.clientX;
+            startY.value = event.clientY;
+            
+            // 更新容器位置
+            agentContainer.value.style.transform = `translate(${offsetX.value}px, ${offsetY.value}px)`;
+        }, 16); // 约60fps
+        
+        // 拖拽开始
+        const handleDragStart = (event) => {
+            isDragging.value = true;
+            startX.value = event.clientX;
+            startY.value = event.clientY;
+            
+            // 设置鼠标样式
+            document.body.style.cursor = 'grabbing';
+            
+            // 添加全局事件监听器
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+        };
+        
+        // 拖拽结束
+        const handleDragEnd = () => {
+            isDragging.value = false;
+            document.body.style.cursor = '';
+            
+            // 移除全局事件监听器
+            document.removeEventListener('mousemove', handleDragMove);
+            document.removeEventListener('mouseup', handleDragEnd);
+        };
+        
         // 组件挂载时滚动到底部
         onMounted(() => {
             scrollToBottom();
@@ -126,18 +197,20 @@ export default {
             inputContent,
             messagesContainer,
             sendMessage,
-            handleKeyPress
+            handleKeyPress,
+            agentContainer,
+            handleDragStart
         };
     }
 };
 </script>
 <template>
     <!-- AI助手容器 -->
-    <div class="sider-agent" :class="{ 'expanded': isExpanded }">
+    <div class="sider-agent" :class="{ 'expanded': isExpanded }" ref="agentContainer">
         <!-- 展开/收起状态 -->
         <div v-if="isExpanded" class="agent-container">
             <!-- 头部 -->
-            <div class="agent-header">
+            <div class="agent-header" @mousedown="handleDragStart">
                 <h3>AI助手</h3>
                 <button class="toggle-btn" @click="toggleExpand" title="收起">
                     <span class="toggle-icon">−</span>
@@ -216,6 +289,27 @@ export default {
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: grab;
+    transition: cursor 0.2s ease;
+    user-select: none;
+}
+
+.agent-header:active {
+    cursor: grabbing;
+}
+
+.agent-header:hover {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+/* 按钮不受拖拽影响 */
+.agent-header .toggle-btn {
+    cursor: pointer;
+    user-select: none;
+}
+
+.agent-header .toggle-btn:active {
+    cursor: pointer;
 }
 
 .agent-header h3 {
