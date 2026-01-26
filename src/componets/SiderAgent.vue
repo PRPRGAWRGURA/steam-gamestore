@@ -280,7 +280,7 @@ export default {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    z-index: 999;
+    z-index: 10002;
     transition: all 0.3s ease;
 }
 

@@ -138,15 +138,177 @@ onUnmounted(() => {
 <style scoped>
 .move-area {
     position: fixed;
+    top: 0px;
     width: 100%;
-    height: 93%;
+    height: 100vh;
     overflow: hidden;
-    z-index: 100;
+    z-index: 10001;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    /* 电磁波噪点雪花效果 */
+    background-image: 
+        /* 噪点纹理 */
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0px, transparent 1px, transparent 2px),
+        /* 扫描线 */
+        repeating-linear-gradient(0deg, transparent 0px, rgba(0,0,0,0.1) 1px, transparent 2px);
+    background-size: 
+        /* 噪点大小 */
+        5px 5px,
+        7px 7px,
+        /* 扫描线间隔 */
+        100% 2px;
+    background-position: 0 0;
+    animation: 
+        /* 电磁波噪点随机闪烁 - 放慢到0.5秒 */
+        noise 5s infinite,
+        /* 扫描线滚动 */
+        scanline 8s linear infinite,
+        /* 信号干扰 - 放慢到5秒 */
+        interference 5s linear infinite;
+    /* 添加电视信号干扰效果 */
+    filter: contrast(1.2) brightness(0.9);
+}
+
+/* 电磁波噪点随机闪烁 */
+@keyframes noise {
+    0% {
+        background-position: 
+            0px 0px,
+            0px 0px,
+            0px 0px;
+        opacity: 0.9;
+    }
+    10% {
+        background-position: 
+            1px 1px,
+            -1px -1px,
+            0px 20px;
+        opacity: 0.85;
+    }
+    20% {
+        background-position: 
+            -1px 0px,
+            2px 0px,
+            0px 40px;
+        opacity: 0.92;
+    }
+    30% {
+        background-position: 
+            2px -1px,
+            -2px 1px,
+            0px 60px;
+        opacity: 0.88;
+    }
+    40% {
+        background-position: 
+            -1px 2px,
+            1px -2px,
+            0px 80px;
+        opacity: 0.95;
+    }
+    50% {
+        background-position: 
+            1px -2px,
+            -1px 2px,
+            0px 100px;
+        opacity: 0.9;
+    }
+    60% {
+        background-position: 
+            -2px -1px,
+            2px 1px,
+            0px 120px;
+        opacity: 0.93;
+    }
+    70% {
+        background-position: 
+            2px 2px,
+            -2px -2px,
+            0px 140px;
+        opacity: 0.87;
+    }
+    80% {
+        background-position: 
+            -1px 1px,
+            1px -1px,
+            0px 160px;
+        opacity: 0.91;
+    }
+    90% {
+        background-position: 
+            1px -1px,
+            -1px 1px,
+            0px 180px;
+        opacity: 0.94;
+    }
+    100% {
+        background-position: 
+            0px 0px,
+            0px 0px,
+            0px 200px;
+        opacity: 0.9;
+    }
+}
+
+/* 扫描线滚动效果 */
+@keyframes scanline {
+    0% {
+        background-position-y: 
+            0%,
+            0%,
+            0%;
+    }
+    100% {
+        background-position-y: 
+            0%,
+            0%,
+            100vh;
+    }
+}
+
+/* 信号干扰效果 */
+@keyframes interference {
+    0%, 100% {
+        filter: contrast(1.2) brightness(0.9);
+    }
+    10% {
+        filter: contrast(1.5) brightness(1.1) hue-rotate(5deg);
+    }
+    20% {
+        filter: contrast(0.9) brightness(0.8) saturate(0.8);
+    }
+    30% {
+        filter: contrast(1.3) brightness(1.0) hue-rotate(-3deg);
+    }
+    40% {
+        filter: contrast(1.1) brightness(0.95) saturate(1.1);
+    }
+    50% {
+        filter: contrast(1.4) brightness(1.05) hue-rotate(2deg);
+    }
+    60% {
+        filter: contrast(0.85) brightness(0.85) saturate(0.9);
+    }
+    70% {
+        filter: contrast(1.25) brightness(1.0) hue-rotate(-5deg);
+    }
+    80% {
+        filter: contrast(1.15) brightness(0.9) saturate(1.05);
+    }
+    90% {
+        filter: contrast(1.35) brightness(1.1) hue-rotate(3deg);
+    }
 }
 
 .dvdvideo {
+    width: 180px;
+    height: 120px;
     position: absolute;
     transition: all 0.016s linear;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .dvdvideo img {
