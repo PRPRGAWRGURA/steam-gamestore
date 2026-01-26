@@ -3,7 +3,15 @@ import { ref, onMounted, nextTick } from 'vue';
 import { generateChatResponse } from '@/utils/agent/aiChatGenerator';
 
 export default {
-    setup() {
+    props: {
+        // 接收父组件传递的显示DVD状态
+        showDvd: {
+            type: Boolean,
+            default: false
+        }
+    },
+    emits: ['update:showDvd'], // 定义事件用于通知父组件更新showDvd状态
+    setup(props, { emit }) {
         const isExpanded = ref(true); // 控制小助手展开/收起状态
         const isTyping = ref(false); // 控制AI正在输入状态
         const messages = ref([ // 对话消息列表
@@ -56,10 +64,12 @@ export default {
         const sendMessage = async () => {
             if (!inputContent.value.trim()) return;
             
+            const userInput = inputContent.value.trim();
+            
             // 添加用户消息
             const userMessage = {
                 id: Date.now(),
-                content: inputContent.value.trim(),
+                content: userInput,
                 sender: 'user',
                 timestamp: new Date().toLocaleTimeString()
             };
@@ -106,6 +116,12 @@ export default {
                     timestamp: new Date().toLocaleTimeString()
                 };
                 messages.value.push(finalAiMessage);
+                
+                // 彩蛋：检测用户输入是否包含"DVD screensaver"
+                if (userInput.toLowerCase().includes('dvd screensaver')) {
+                    // 通知父组件显示DVD
+                    emit('update:showDvd', true);
+                }
             } catch (error) {
                 console.error('AI对话失败:', error);
                 
@@ -206,6 +222,7 @@ export default {
 </script>
 <template>
     <!-- AI助手容器 -->
+    <!-- 👀 尝试在输入框中输入 "DVD screensaver" -->
     <div class="sider-agent" :class="{ 'expanded': isExpanded }" ref="agentContainer">
         <!-- 展开/收起状态 -->
         <div v-if="isExpanded" class="agent-container">

@@ -54,6 +54,13 @@ export async function generateChatResponse(chatInfo) {
       throw new Error('缺少必要的对话信息');
     }
 
+    // 彩蛋：检测"DVD screensaver"关键词
+    const userInput = chatInfo.userInput.toLowerCase();
+    if (userInput.includes('dvd screensaver')) {
+      // 直接返回彩蛋回复
+      return '据说dvd图标在精准地碰到屏幕的四个角时，它的颜色会在蓝、红、黄、绿之间变换';
+    }
+
     // 检查心流配置
     if (!checkIflowConfig()) {
       console.warn('心流API配置不完整，使用默认回复');
