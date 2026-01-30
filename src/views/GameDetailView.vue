@@ -108,7 +108,9 @@ export default {
                 isAddingToCart.value = true;
 
                 // 计算实际价格（考虑折扣）
-                const actualPrice = gameitemAPI.calculateDiscountPrice(gameitem.value.price, gameitem.value.discount);
+                // 确保传递数字类型的价格
+                const actualPrice = typeof gameitem.value.price === 'number' ? 
+                    gameitem.value.price * (gameitem.value.discount || 1) : 0;
 
                 // 创建订单
                 const result = await gameorderAPI.createOrder(
@@ -120,7 +122,8 @@ export default {
                 if (result.success) {
                     // 更新游戏状态
                     gameStatus.value.inCart = true;
-                    alert('已加入购物车');
+                    // 触发全局事件，通知其他组件更新购物车数量
+                    window.dispatchEvent(new CustomEvent('cartUpdated'));
                 } else {
                     alert(result.error || '加入购物车失败');
                 }

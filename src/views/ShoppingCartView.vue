@@ -73,6 +73,9 @@ export default {
                     setTimeout(() => {
                         successMessage.value = '';
                     }, 3000);
+                    
+                    // 触发全局事件，通知其他组件更新购物车数量
+                    window.dispatchEvent(new CustomEvent('cartUpdated'));
                 } else {
                     errorMessage.value = result.error || '移除失败';
                     setTimeout(() => {
@@ -117,6 +120,8 @@ export default {
                     successMessage.value = '结算成功！';
                     // 清空购物车
                     cartItems.value = [];
+                    // 触发全局事件，通知其他组件更新购物车数量
+                    window.dispatchEvent(new CustomEvent('cartUpdated'));
                     // 3秒后跳转到首页
                     setTimeout(() => {
                         router.push('/');

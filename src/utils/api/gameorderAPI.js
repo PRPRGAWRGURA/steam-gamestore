@@ -51,13 +51,16 @@ export const createOrder = async (userId, gameId, price) => {
       return { success: true, data: existingOrder, error: null }
     }
 
+    // 确保价格是数字类型
+    const numericPrice = typeof price === 'number' ? price : parseFloat(price) || 0;
+
     // 创建新订单
     const { data, error } = await supabase
       .from('user_gameorder')
       .insert({
         user_id: userId,
         game_id: gameId,
-        buy_price: price,
+        buy_price: numericPrice,
         status: ORDER_STATUS.PENDING
       })
       .select()
@@ -236,11 +239,37 @@ export const deleteOrder = async (orderId, userId) => {
 }
 
 /**
+ * 获取购物车数量（未支付订单数）
+ * @param {number} userId - 用户ID
+ * @returns {Promise<{success: boolean, data: number, error: string}>}
+ */
+export const getCartCount = async (userId) => {
+  try {
+    const { count, error } = await supabase
+      .from('user_gameorder')
+      .select('id', { count: 'exact' })
+      .eq('user_id', userId)
+      .eq('status', ORDER_STATUS.PENDING)
+
+    if (error) {
+      console.error('获取购物车数量失败:', error)
+      return { success: false, error: '获取购物车数量失败' }
+    }
+
+    return { success: true, data: count || 0, error: null }
+  } catch (error) {
+    console.error('获取购物车数量时发生错误:', error)
+    return { success: false, error: '获取购物车数量时发生错误' }
+  }
+}
+
+/**
  * 导出游戏订单API
  */
 export const gameorderAPI = {
   createOrder,
   getShoppingCart,
+  getCartCount,
   updateOrderStatus,
   batchUpdateOrderStatus,
   deleteOrder,

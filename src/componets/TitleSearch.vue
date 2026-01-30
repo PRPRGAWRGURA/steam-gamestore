@@ -1,15 +1,67 @@
 <script>
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { gameorderAPI } from '@/utils/api/gameorderAPI';
+import { useUserStore } from '@/stores/userStore';
+
 export default {
-    data() {
+    setup() {
+        const userStore = useUserStore();
+        const searchText = ref('');
+        const cartCount = ref(0);
+        const isLoading = ref(false);
+        
+        // 获取购物车数量
+        const fetchCartCount = async () => {
+            if (!userStore.currentUser) {
+                cartCount.value = 0;
+                return;
+            }
+            
+            try {
+                isLoading.value = true;
+                const result = await gameorderAPI.getCartCount(userStore.currentUser.id);
+                if (result.success) {
+                    cartCount.value = result.data;
+                }
+            } catch (error) {
+                console.error('获取购物车数量失败:', error);
+            } finally {
+                isLoading.value = false;
+            }
+        };
+        
+        // 处理搜索
+        const handleSearch = () => {
+            console.log(searchText.value);
+        };
+        
+        // 组件挂载时获取购物车数量
+        onMounted(() => {
+            fetchCartCount();
+            
+            // 监听全局购物车更新事件
+            window.addEventListener('cartUpdated', fetchCartCount);
+        });
+        
+        // 清理事件监听器
+        onUnmounted(() => {
+            window.removeEventListener('cartUpdated', fetchCartCount);
+        });
+        
+        // 监听用户登录状态变化
+        watch(
+            () => userStore.currentUser,
+            () => {
+                fetchCartCount();
+            }
+        );
+        
         return {
-            searchText: '',
-            cartCount: 1,
-        }
-    },
-    methods: {
-        handleSearch() {
-            console.log(this.searchText);
-        }
+            searchText,
+            cartCount,
+            handleSearch,
+            fetchCartCount
+        };
     }
 }
 </script>
