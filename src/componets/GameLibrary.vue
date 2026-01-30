@@ -1,16 +1,21 @@
 <script>
 import { ref, reactive, onMounted } from 'vue';
+import { gamelibraryAPI } from '@/utils/api/gamelibraryAPI';
+import { useUserStore } from '@/stores/userStore';
 
 export default {
   name: 'GameLibrary',
   setup() {
-    // 游戏列表 - 这里会从数据库获取，目前使用模拟数据
+    const userStore = useUserStore();
+    // 游戏列表 - 从数据库获取
     const games = ref([]);
+    const isLoading = ref(false);
+    const errorMessage = ref('');
     
     // 游戏库统计信息
     const libraryStats = reactive({
-      totalGames: 50,
-      displayedGames: 14
+      totalGames: 0,
+      displayedGames: 0
     });
     
     // 排序选项
@@ -22,210 +27,34 @@ export default {
     
     const selectedSort = ref('date');
     
-    // 生成模拟游戏数据
-    const generateMockGames = () => {
-      // 从public/library目录获取的实际图片文件名
-      const libraryImages = [
-        '1016920_library_600x900.jpg',
-        '1044620_library_600x900_schinese.jpg',
-        '1046400_library_600x900.jpg',
-        '105600_library_600x900.jpg',
-        '1057090_library_600x900.jpg',
-        '1070910_library_600x900.jpg',
-        '107600_library_600x900.jpg',
-        '1093910_library_600x900.jpg',
-        '1144400_library_600x900_schinese.jpg',
-        '1151640_library_600x900.jpg',
-        '1174180_library_600x900.jpg',
-        '1202540_library_600x900_schinese.jpg',
-        '1222140_library_600x900.jpg',
-        '1222680_library_600x900.jpg',
-        '1227890_library_600x900_schinese.jpg',
-        '1230140_library_600x900.jpg',
-        '1237970_library_600x900.jpg',
-        '1238840_library_600x900.jpg',
-        '1245620_library_600x900.jpg',
-        '1250760_library_600x900_schinese.jpg',
-        '1277930_library_600x900.jpg',
-        '1281930_library_600x900.jpg',
-        '1282100_library_600x900.jpg',
-        '1285670_library_600x900.jpg',
-        '1289310_library_600x900.jpg',
-        '1306630_library_600x900.jpg',
-        '1326470_library_600x900.jpg',
-        '1369630_library_600x900.jpg',
-        '1398210_library_600x900.jpg',
-        '1434480_library_600x900_schinese.jpg',
-        '1446780_library_600x900.jpg',
-        '1449560_library_600x900.jpg',
-        '1451940_library_600x900_schinese.jpg',
-        '1501750_library_600x900_schinese.jpg',
-        '1549690_library_600x900.jpg',
-        '1562700_library_600x900_schinese.jpg',
-        '1584090_library_600x900.jpg',
-        '1592670_library_600x900.jpg',
-        '1608640_library_600x900.jpg',
-        '1623730_library_600x900_schinese.jpg',
-        '1659420_library_600x900_schinese.jpg',
-        '1669980_library_600x900_schinese.jpg',
-        '1672970_library_600x900.jpg',
-        '1701520_library_600x900_schinese.jpg',
-        '1752760_library_600x900.jpg',
-        '1755910_library_600x900.jpg',
-        '1756470_library_600x900.jpg',
-        '18010_library_600x900.jpg',
-        '18030_library_600x900.jpg',
-        '1817070_library_600x900.jpg'
-      ];
-      
-      // 从public/GamesImage目录获取的实际图片文件名
-      const gamesImages = [
-        '1007_header.jpg',
-        '1024110_header.jpg',
-        '1046400_library_header.jpg',
-        '1054830_header.jpg',
-        '105600_header.jpg',
-        '1057090_header.jpg',
-        '1070560_header.jpg',
-        '107600_header.jpg',
-        '1093910_header.jpg',
-        '1112520_header.jpg',
-        '1112521_header.jpg',
-        '1113280_header.jpg',
-        '1135280_header.jpg',
-        '1143852_header.jpg',
-        '1151640_header.jpg',
-        '1161040_header.jpg',
-        '1174180_header.jpg',
-        '1174580_header.jpg',
-        '1177880_header.jpg',
-        '1179800_header.jpg',
-        '1222680_header.jpg',
-        '1230140_library_header.jpg',
-        '1237970_header.jpg',
-        '1238840_header.jpg',
-        '1241570_header.jpg',
-        '1245040_header.jpg',
-        '1245620_header.jpg',
-        '1277930_header.jpg',
-        '1281930_header.jpg',
-        '1282100_header.jpg',
-        '1289310_header.jpg',
-        '1300710_header.jpg',
-        '1306630_header.jpg',
-        '1324970_header.jpg',
-        '1326470_header.jpg',
-        '1354960_header.jpg',
-        '1369630_header.jpg',
-        '1391110_header.jpg',
-        '1420170_header.jpg',
-        '1432640_header.jpg',
-        '1446780_header.jpg',
-        '1449560_header.jpg',
-        '1468290_header.jpg',
-        '1493710_header.jpg',
-        '1498210_header.jpg',
-        '1517030_header.jpg',
-        '1543420_header.jpg',
-        '1549690_header.jpg',
-        '1562700_header.jpg',
-        '1580130_header.jpg'
-      ];
-      
-      // 游戏名称列表
-      const gameNames = [
-        'Journey',
-        '逃鸭科夫',
-        'Horizon Zero Dawn',
-        'Undertale',
-        'Stellar Blade',
-        'Uncharted',
-        'Red Dead Redemption 2',
-        'Animal Well',
-        'Colt Canyon',
-        'First Cut: Samurai Duel',
-        'Celeste',
-        'Katana Zero',
-        'Bongo Cat',
-        'World War V: Last Call',
-        'The Last of Us',
-        'God of War',
-        'Spider-Man',
-        'Cyberpunk 2077',
-        'Assassin\'s Creed Valhalla',
-        'Far Cry 6',
-        'Call of Duty: Warzone',
-        'Fortnite',
-        'Minecraft',
-        'Grand Theft Auto V',
-        'League of Legends',
-        'Apex Legends',
-        'Overwatch 2',
-        'Rainbow Six Siege',
-        'Valorant',
-        'Dota 2',
-        'Rocket League',
-        'Among Us',
-        'Fall Guys',
-        'The Sims 4',
-        'Civilization VI',
-        'Stardew Valley',
-        'Terraria',
-        'Hollow Knight',
-        'Dead Cells',
-        'Dark Souls III',
-        'Bloodborne',
-        'Sekiro: Shadows Die Twice',
-        'Elden Ring',
-        'Monster Hunter: World',
-        'Resident Evil Village',
-        'Death Stranding',
-        'Ghost of Tsushima',
-        'Persona 5 Royal',
-        'Final Fantasy VII Remake',
-        'Kingdom Hearts III'
-      ];
-      
-      // 生成50个游戏对象
-      const gamesList = [];
-      for (let i = 0; i < 50; i++) {
-        // 随机生成添加日期
-        const randomDate = new Date();
-        randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 365));
-        
-        // 随机生成游戏时间
-        const totalPlaytime = Math.floor(Math.random() * 100);
-        const recentPlaytime = Math.floor(Math.random() * 20);
-        
-        gamesList.push({
-          id: i + 1,
-          name: gameNames[i % gameNames.length] + (gameNames.length <= i ? ` ${i + 1}` : ''),
-          coverImage: `/library/${libraryImages[i % libraryImages.length]}`,
-          detailImage: `/GamesImage/${gamesImages[i % gamesImages.length]}`, // 使用实际的详细图片
-          addedDate: randomDate,
-          playtime: {
-            total: totalPlaytime,
-            recent: recentPlaytime
-          },
-          genre: ['Action', 'Adventure'][i % 2],
-          developer: `Developer ${i + 1}`
-        });
-      }
-      
-      return gamesList;
-    };
-    
     // 加载游戏数据
     const loadGames = async () => {
       try {
-        // 实际项目中，这里会从数据库或API获取数据
-        // 例如：const response = await fetch('/api/games');
-        //       games.value = await response.json();
+        isLoading.value = true;
+        errorMessage.value = '';
         
-        // 目前使用模拟数据
-        games.value = generateMockGames();
+        // 检查用户是否登录
+        if (!userStore.currentUser) {
+          errorMessage.value = '请先登录';
+          return;
+        }
+        
+        // 从API获取游戏库数据
+        const result = await gamelibraryAPI.getUserGameLibrary(userStore.currentUser.id);
+        
+        if (result.success) {
+          games.value = result.data;
+          // 更新统计信息
+          libraryStats.totalGames = result.data.length;
+          libraryStats.displayedGames = result.data.length;
+        } else {
+          errorMessage.value = result.error || '获取游戏库失败';
+        }
       } catch (error) {
-        console.error('Failed to load games:', error);
+        console.error('加载游戏库时发生错误:', error);
+        errorMessage.value = '加载游戏库时发生错误';
+      } finally {
+        isLoading.value = false;
       }
     };
     
@@ -403,6 +232,8 @@ export default {
       libraryStats,
       sortOptions,
       selectedSort,
+      isLoading,
+      errorMessage,
       formatDate,
       formatPlaytime
     };
@@ -412,6 +243,11 @@ export default {
 
 <template>
   <div class="gs-game-library">
+    <!-- 消息提示区域 -->
+    <div v-if="errorMessage" class="message error">
+      {{ errorMessage }}
+    </div>
+    
     <!-- 游戏库头部 -->
     <div class="library-header">
       <div class="library-title">
@@ -441,8 +277,20 @@ export default {
       </div>
     </div>
     
+    <!-- 加载状态 -->
+    <div v-if="isLoading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>加载游戏库...</p>
+    </div>
+    
+    <!-- 游戏库为空时的提示 -->
+    <div v-else-if="games.length === 0 && !errorMessage" class="empty-library">
+      <p>游戏库是空的</p>
+      <p class="empty-hint">购买游戏后会显示在这里</p>
+    </div>
+    
     <!-- 游戏网格 -->
-    <div class="games-grid">
+    <div v-else class="games-grid">
       <div 
         v-for="game in games" 
         :key="game.id"
@@ -522,6 +370,85 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+}
+
+/* 消息提示样式 */
+.message {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.message.error {
+  background-color: rgba(231, 76, 60, 0.1);
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+}
+
+/* 加载状态样式 */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background-color: rgba(10, 26, 46, 0.8);
+  border-radius: 8px;
+  margin: 20px 0;
+  color: white;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #499deb;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 空游戏库样式 */
+.empty-library {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background-color: rgba(10, 26, 46, 0.8);
+  border-radius: 8px;
+  margin: 20px 0;
+  color: white;
+  text-align: center;
+}
+
+.empty-library p {
+  margin: 8px 0;
+  font-size: 18px;
+}
+
+.empty-hint {
+  color: #666;
+  font-size: 14px !important;
 }
 
 /* 游戏库头部 */

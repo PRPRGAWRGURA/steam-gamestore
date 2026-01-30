@@ -5,6 +5,10 @@ import BaseTitle from '@/componets/BaseTitle.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { gameitemAPI } from '@/utils/api/gameitemAPI';
+import { gameorderAPI } from '@/utils/api/gameorderAPI';
+import { gamelibraryAPI } from '@/utils/api/gamelibraryAPI';
+import { useUserStore } from '@/stores/userStore';
+import supabase from '@/utils/core/supabase';
 import { generateGameFeatures } from '@/utils/agent/gameFeaturesGenerator';
 import { loadGamesFromCache } from '@/utils/tools/cacheUtils';
 
@@ -18,17 +22,115 @@ export default {
     setup() {
         const route = useRoute();
         const router = useRouter();
+        const userStore = useUserStore();
         const gameId = parseInt(route.params.id);
         const isLoading = ref(true);
         const isFeaturesLoading = ref(false); // 专门控制游戏特色的加载状态
         const notFound = ref(false);
+        const isAddingToCart = ref(false);
+        const gameStatus = ref({
+            inCart: false,
+            purchased: false,
+            checking: true
+        });
         
         // 返回上一页
         const goBack = () => {
             router.go(-1);
         };
         
+        // 检查游戏状态
+        const checkGameStatus = async () => {
+            if (!userStore.currentUser || !gameitem.value) {
+                gameStatus.value.checking = false;
+                return;
+            }
 
+            try {
+                // 检查游戏是否在购物车中（未支付订单）
+                const { data: cartOrders, error: cartError } = await supabase
+                    .from('user_gameorder')
+                    .select('id')
+                    .eq('user_id', userStore.currentUser.id)
+                    .eq('game_id', gameitem.value.id)
+                    .eq('status', 'pending')
+                    .single();
+
+                if (!cartError || cartError.code !== 'PGRST116') {
+                    gameStatus.value.inCart = !!cartOrders;
+                }
+
+                // 检查游戏是否已购买（已支付订单）
+                const { data: purchasedOrders, error: purchasedError } = await supabase
+                    .from('user_gameorder')
+                    .select('id')
+                    .eq('user_id', userStore.currentUser.id)
+                    .eq('game_id', gameitem.value.id)
+                    .eq('status', 'purchased')
+                    .single();
+
+                if (!purchasedError || purchasedError.code !== 'PGRST116') {
+                    gameStatus.value.purchased = !!purchasedOrders;
+                }
+            } catch (error) {
+                console.error('检查游戏状态失败:', error);
+            } finally {
+                gameStatus.value.checking = false;
+            }
+        };
+
+        // 加入购物车
+        const addToCart = async () => {
+            // 检查用户是否登录
+            if (!userStore.currentUser) {
+                alert('请先登录');
+                return;
+            }
+
+            // 检查游戏信息是否加载完成
+            if (!gameitem.value) {
+                alert('游戏信息加载中');
+                return;
+            }
+
+            // 检查游戏状态
+            if (gameStatus.value.purchased) {
+                alert('您已购买此游戏');
+                return;
+            }
+
+            if (gameStatus.value.inCart) {
+                alert('游戏已在购物车中');
+                return;
+            }
+
+            try {
+                isAddingToCart.value = true;
+
+                // 计算实际价格（考虑折扣）
+                const actualPrice = gameitemAPI.calculateDiscountPrice(gameitem.value.price, gameitem.value.discount);
+
+                // 创建订单
+                const result = await gameorderAPI.createOrder(
+                    userStore.currentUser.id,
+                    gameitem.value.id,
+                    actualPrice
+                );
+
+                if (result.success) {
+                    // 更新游戏状态
+                    gameStatus.value.inCart = true;
+                    alert('已加入购物车');
+                } else {
+                    alert(result.error || '加入购物车失败');
+                }
+            } catch (error) {
+                console.error('加入购物车时发生错误:', error);
+                alert('加入购物车时发生错误');
+            } finally {
+                isAddingToCart.value = false;
+            }
+        };
         
         const gameitem = ref(null);
         
@@ -173,8 +275,12 @@ export default {
         };
         
         // 组件挂载时加载游戏详情
-        onMounted(() => {
-          loadGameDetail();
+        onMounted(async () => {
+          await loadGameDetail();
+          // 游戏加载完成后检查状态
+          if (gameitem.value) {
+            await checkGameStatus();
+          }
         });
         
         return {
@@ -182,8 +288,12 @@ export default {
           isLoading,
           isFeaturesLoading,
           notFound,
+          isAddingToCart,
+          gameStatus,
           formatDate: gameitemAPI.formatDate,
           goBack,
+          addToCart,
+          checkGameStatus,
           calculateDiscountPrice: gameitemAPI.calculateDiscountPrice,
           calculateDiscountPercent: gameitemAPI.calculateDiscountPercent
         };
@@ -251,7 +361,16 @@ export default {
                             <span class="game-price" :class="{'discount': gameitem.discount !== undefined && gameitem.discount < 1 && gameitem.price > 0}">{{ calculateDiscountPrice(gameitem.price, gameitem.discount) === '免费' ? '' : '￥' }}{{ calculateDiscountPrice(gameitem.price, gameitem.discount) }}</span>
                         </div>
                         <div class="game-actions">
-                            <button class="add-to-cart">加入购物车</button>
+                            <button 
+                                class="add-to-cart" 
+                                @click="addToCart" 
+                                :disabled="isAddingToCart || gameStatus.inCart || gameStatus.purchased || gameStatus.checking"
+                            >
+                                {{ isAddingToCart ? '加入中...' : 
+                                   gameStatus.checking ? '检查中...' : 
+                                   gameStatus.purchased ? '已购买' : 
+                                   gameStatus.inCart ? '已加入购物车' : '加入购物车' }}
+                            </button>
                             <button class="wishlist">愿望单</button>
                         </div>
                     </div>
@@ -843,6 +962,36 @@ export default {
 
 .back-button:active {
     transform: translateY(0);
+}
+
+/* 购物车消息样式 */
+.cart-message {
+    margin-top: 16px;
+    padding: 12px;
+    background-color: rgba(46, 204, 113, 0.1);
+    border: 1px solid #2ecc71;
+    border-radius: 4px;
+    color: #2ecc71;
+    font-size: 0.9rem;
+    text-align: center;
+    animation: fadeIn 0.3s ease;
+}
+
+.cart-message.error {
+    background-color: rgba(231, 76, 60, 0.1);
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 </style>
