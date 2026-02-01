@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import BaseBody from '@/componets/BaseBody.vue';
 import BaseContainer from '@/componets/BaseContainer.vue';
 import BaseTitle from '@/componets/BaseTitle.vue';
+import PaymentModal from '@/componets/PaymentModal.vue';
 import { gameorderAPI } from '@/utils/api/gameorderAPI';
 import { useUserStore } from '@/stores/userStore';
 import { useRouter } from 'vue-router';
@@ -12,7 +13,8 @@ export default {
     components: {
         BaseBody,
         BaseContainer,
-        BaseTitle
+        BaseTitle,
+        PaymentModal
     },
     setup() {
         const userStore = useUserStore();
@@ -22,6 +24,7 @@ export default {
         const isCheckoutLoading = ref(false);
         const errorMessage = ref('');
         const successMessage = ref('');
+        const showPaymentModal = ref(false);
         
         // 计算总价
         const totalPrice = computed(() => {
@@ -94,7 +97,6 @@ export default {
         // 结算
         const checkout = async () => {
             try {
-                isCheckoutLoading.value = true;
                 errorMessage.value = '';
                 successMessage.value = '';
                 
@@ -110,6 +112,24 @@ export default {
                     return;
                 }
                 
+                // 打开支付弹窗
+                showPaymentModal.value = true;
+            } catch (error) {
+                console.error('打开支付弹窗时发生错误:', error);
+                errorMessage.value = '打开支付弹窗时发生错误';
+                setTimeout(() => {
+                    errorMessage.value = '';
+                }, 3000);
+            }
+        };
+        
+        // 处理支付确认
+        const handlePaymentConfirm = async () => {
+            try {
+                isCheckoutLoading.value = true;
+                errorMessage.value = '';
+                successMessage.value = '';
+                
                 // 获取所有订单ID
                 const orderIds = cartItems.value.map(item => item.orderId);
                 
@@ -120,6 +140,8 @@ export default {
                     successMessage.value = '结算成功！';
                     // 清空购物车
                     cartItems.value = [];
+                    // 关闭支付弹窗
+                    showPaymentModal.value = false;
                     // 触发全局事件，通知其他组件更新购物车数量
                     window.dispatchEvent(new CustomEvent('cartUpdated'));
                     // 3秒后跳转到首页
@@ -128,6 +150,8 @@ export default {
                     }, 3000);
                 } else {
                     errorMessage.value = result.error || '结算失败';
+                    // 关闭支付弹窗
+                    showPaymentModal.value = false;
                     setTimeout(() => {
                         errorMessage.value = '';
                     }, 3000);
@@ -135,12 +159,19 @@ export default {
             } catch (error) {
                 console.error('结算时发生错误:', error);
                 errorMessage.value = '结算时发生错误';
+                // 关闭支付弹窗
+                showPaymentModal.value = false;
                 setTimeout(() => {
                     errorMessage.value = '';
                 }, 3000);
             } finally {
                 isCheckoutLoading.value = false;
             }
+        };
+        
+        // 关闭支付弹窗
+        const handlePaymentClose = () => {
+            showPaymentModal.value = false;
         };
         
         // 继续购物
@@ -160,8 +191,11 @@ export default {
             isCheckoutLoading,
             errorMessage,
             successMessage,
+            showPaymentModal,
             removeItem,
             checkout,
+            handlePaymentConfirm,
+            handlePaymentClose,
             continueShopping
         }
     }
@@ -241,6 +275,14 @@ export default {
                     </div>
                 </div>
             </div>
+            
+            <!-- 支付弹窗 -->
+            <PaymentModal
+                :visible="showPaymentModal"
+                :order-items="cartItems"
+                @close="handlePaymentClose"
+                @confirm="handlePaymentConfirm"
+            />
         </BaseContainer>
     </BaseBody>
 </template>

@@ -20,6 +20,7 @@ import { gamelibraryAPI } from './gamelibraryAPI.js'
 // 订单状态常量
 export const ORDER_STATUS = {
   PENDING: 'pending',    // 未支付
+  PAYING: 'paying',      // 支付中
   PURCHASED: 'purchased' // 已购买
 }
 
@@ -101,7 +102,7 @@ export const getShoppingCart = async (userId) => {
       return { success: true, data: [], error: null }
     }
 
-    // 获取所有游戏的详细信息
+    // 获取所有游戏的详细信息并检查价格变化
     const gameIds = orders.map(order => order.game_id)
     const gameDetails = await Promise.all(
       gameIds.map(async (gameId) => {
@@ -110,14 +111,39 @@ export const getShoppingCart = async (userId) => {
       })
     )
 
+    // 检查价格变化并更新数据库
+    const priceUpdatePromises = orders.map(async (order, index) => {
+      const game = gameDetails[index]
+      if (game && typeof game.game_price === 'number') {
+        const currentPrice = game.game_price * (game.game_discount || 1)
+        // 如果价格发生变化，更新数据库
+        if (Math.abs(currentPrice - order.buy_price) > 0.01) {
+          return supabase
+            .from('user_gameorder')
+            .update({ buy_price: currentPrice })
+            .eq('id', order.id)
+            .eq('user_id', userId)
+            .eq('status', ORDER_STATUS.PENDING)
+        }
+      }
+      return Promise.resolve()
+    })
+
+    // 执行价格更新
+    await Promise.all(priceUpdatePromises)
+
     // 组合订单和游戏信息
     const cartItems = orders.map((order, index) => {
       const game = gameDetails[index]
+      // 计算游戏的当前价格（考虑折扣）
+      const currentPrice = game && typeof game.game_price === 'number' 
+        ? game.game_price * (game.game_discount || 1) 
+        : order.buy_price
       return {
         orderId: order.id,
         gameId: order.game_id,
         name: game?.game_name || '未知游戏',
-        price: order.buy_price,
+        price: currentPrice,
         image: game?.hero_img || game?.header_img || game?.library_img || '',
         createdAt: order.created_at
       }
@@ -178,15 +204,48 @@ export const batchUpdateOrderStatus = async (userId, orderIds) => {
       return { success: false, error: '获取订单信息失败' }
     }
 
-    // 批量更新订单状态
-    const updatePromises = orderIds.map(orderId => 
+    if (orders.length === 0) {
+      return { success: false, error: '没有可支付的订单' }
+    }
+
+    // 第一步：将订单状态更新为支付中（锁定订单）
+    const lockPromises = orders.map(order => 
       supabase
         .from('user_gameorder')
-        .update({ status: ORDER_STATUS.PURCHASED })
-        .eq('id', orderId)
+        .update({ status: ORDER_STATUS.PAYING })
+        .eq('id', order.id)
         .eq('user_id', userId)
         .eq('status', ORDER_STATUS.PENDING)
-        .select()
+    )
+
+    const lockResults = await Promise.all(lockPromises)
+    const failedLocks = lockResults.filter(result => result.error)
+    
+    if (failedLocks.length > 0) {
+      console.error('部分订单锁定失败:', failedLocks)
+      return { success: false, error: '部分订单锁定失败，请重试' }
+    }
+
+    // 第二步：批量更新订单状态，同时更新价格为当前价格
+    const updatePromises = await Promise.all(
+      orders.map(async (order) => {
+        // 获取游戏的当前价格
+        const gameResult = await gameitemAPI.getGameById(order.game_id);
+        const currentPrice = gameResult.success && typeof gameResult.data.game_price === 'number' 
+          ? gameResult.data.game_price * (gameResult.data.game_discount || 1) 
+          : 0;
+
+        return supabase
+          .from('user_gameorder')
+          .update({ 
+            status: ORDER_STATUS.PURCHASED,
+            buy_price: currentPrice
+          })
+          .eq('id', order.id)
+          .eq('user_id', userId)
+          .eq('status', ORDER_STATUS.PAYING)
+          .select();
+      })
     )
 
     const results = await Promise.all(updatePromises)
@@ -196,7 +255,18 @@ export const batchUpdateOrderStatus = async (userId, orderIds) => {
     
     if (failedResults.length > 0) {
       console.error('部分订单更新失败:', failedResults)
-      return { success: false, error: '部分订单更新失败' }
+      // 尝试恢复订单状态为未支付
+      await Promise.all(
+        orders.map(order => 
+          supabase
+            .from('user_gameorder')
+            .update({ status: ORDER_STATUS.PENDING })
+            .eq('id', order.id)
+            .eq('user_id', userId)
+            .eq('status', ORDER_STATUS.PAYING)
+        )
+      )
+      return { success: false, error: '部分订单更新失败，请重试' }
     }
 
     // 将购买的游戏添加到游戏库
@@ -207,6 +277,21 @@ export const batchUpdateOrderStatus = async (userId, orderIds) => {
     return { success: true, data: updatedOrders, error: null }
   } catch (error) {
     console.error('批量更新订单状态时发生错误:', error)
+    // 发生错误时，尝试恢复订单状态为未支付
+    try {
+      await Promise.all(
+        orderIds.map(orderId => 
+          supabase
+            .from('user_gameorder')
+            .update({ status: ORDER_STATUS.PENDING })
+            .eq('id', orderId)
+            .eq('user_id', userId)
+            .eq('status', ORDER_STATUS.PAYING)
+        )
+      )
+    } catch (recoverError) {
+      console.error('恢复订单状态失败:', recoverError)
+    }
     return { success: false, error: '批量更新订单状态时发生错误' }
   }
 }
