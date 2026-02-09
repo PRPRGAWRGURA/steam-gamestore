@@ -64,8 +64,8 @@ export default {
   z-index: 1000;
   pointer-events: auto;
   color: white;
-  top: 0;
-  right: -400px; /* 显示在卡片右侧，间距10px */
+  top: -7px;
+  right: -404px; /* 显示在卡片右侧，间距10px */
   height: auto;
   max-height: 100vh;
   overflow-y: auto;

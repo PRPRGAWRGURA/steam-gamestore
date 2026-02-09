@@ -144,10 +144,6 @@ export default {
                     showPaymentModal.value = false;
                     // 触发全局事件，通知其他组件更新购物车数量
                     window.dispatchEvent(new CustomEvent('cartUpdated'));
-                    // 3秒后跳转到首页
-                    setTimeout(() => {
-                        router.push('/');
-                    }, 3000);
                 } else {
                     errorMessage.value = result.error || '结算失败';
                     // 关闭支付弹窗

@@ -1,5 +1,5 @@
 <script>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { gamelibraryAPI } from '@/utils/api/gamelibraryAPI';
 import { useUserStore } from '@/stores/userStore';
 
@@ -20,12 +20,13 @@ export default {
     
     // 排序选项
     const sortOptions = [
-      { value: 'date', label: '添加至库的日期' },
+      { value: 'date', label: '入库时间' },
       { value: 'name', label: '游戏名称' },
-      { value: 'playtime', label: '游戏时间' }
     ];
     
     const selectedSort = ref('date');
+    // 自定义下拉栏状态
+    const isDropdownOpen = ref(false);
     
     // 加载游戏数据
     const loadGames = async () => {
@@ -47,6 +48,8 @@ export default {
           // 更新统计信息
           libraryStats.totalGames = result.data.length;
           libraryStats.displayedGames = result.data.length;
+          // 加载完成后排序游戏列表
+          sortGames();
         } else {
           errorMessage.value = result.error || '获取游戏库失败';
         }
@@ -56,153 +59,6 @@ export default {
       } finally {
         isLoading.value = false;
       }
-    };
-    
-    // 开始倒计时
-    const startCountdown = () => {
-      // 清除现有的计时器
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-      }
-      
-      // 设置初始倒计时时间（200ms）
-      const delay = 200;
-      const interval = 10; // 每10ms更新一次
-      const totalSteps = delay / interval;
-      let step = 0;
-      
-      // 立即输出开始信息
-      console.log('倒计时开始:', delay, 'ms');
-      
-      // 开始倒计时间隔
-      countdownTimer = setInterval(() => {
-        step++;
-        const remaining = delay - (step * interval);
-        
-        // 输出当前倒计时和isHovering状态
-        console.log('倒计时剩余:', remaining, 'ms, isHovering:', isHovering.value);
-        
-        // 如果倒计时结束
-        if (step >= totalSteps) {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-          
-          // 执行隐藏操作，添加详细日志
-          console.log('倒计时结束，准备隐藏详情面板，isHovering:', isHovering.value);
-          // 先隐藏面板（触发淡出动画）
-          isPanelVisible.value = false;
-          // 等待过渡动画结束后再清空悬停游戏
-          setTimeout(() => {
-            hoveredGame.value = null;
-            console.log('详情面板已隐藏');
-          }, 300); // 与过渡动画时长一致
-        }
-      }, interval);
-    };
-    
-    // 清除倒计时
-    const clearCountdown = () => {
-      if (hideTimer) {
-        clearTimeout(hideTimer);
-        hideTimer = null;
-      }
-      if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-        console.log('倒计时已清除');
-      }
-      if (hoverDelayTimer) {
-        clearTimeout(hoverDelayTimer);
-        hoverDelayTimer = null;
-      }
-    };
-    
-    // 处理游戏卡片悬停事件
-    const handleGameHover = (game, event) => {
-      // 清除所有计时器
-      clearCountdown();
-      
-      // 如果有悬停延迟计时器，清除它
-      if (hoverDelayTimer) {
-        clearTimeout(hoverDelayTimer);
-        hoverDelayTimer = null;
-      }
-      
-      isHovering.value = true;
-      
-      // 获取游戏卡片的元素
-      const cardElement = event.currentTarget;
-      // 获取卡片在视口中的位置和尺寸
-      const cardRect = cardElement.getBoundingClientRect();
-      // 获取游戏卡片包装器的元素
-      const wrapperElement = cardElement.parentElement;
-      // 获取包装器在视口中的位置
-      const wrapperRect = wrapperElement.getBoundingClientRect();
-      
-      // 固定每行显示7个游戏
-      const cardsPerRow = 7;
-      const gameIndex = games.value.findIndex(g => g.id === game.id);
-      const positionInRow = gameIndex % cardsPerRow;
-      
-      // 详情面板的尺寸
-      const panelWidth = 350;
-      const panelHeight = 450;
-      
-      // 计算详情面板的位置（相对于包装器）
-      let left = cardRect.width + 10; // 显示在卡片右侧，间距10px
-      let top = 0; // 与卡片顶部对齐
-      
-      // 如果是每行的后两个游戏，将详细信息面板显示在卡片左侧（与卡片左侧间距50px千万不要修改）
-      if (positionInRow >= cardsPerRow - 3) {
-        left = -panelWidth - 50;
-      }
-      
-      // 确保信息框不会超出浏览器视口
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      // 获取详情面板在视口中的预计位置
-      const panelViewportLeft = wrapperRect.left + left;
-      const panelViewportRight = panelViewportLeft + panelWidth;
-      const panelViewportTop = wrapperRect.top + top;
-      const panelViewportBottom = panelViewportTop + panelHeight;
-      
-      // 如果信息框超出右侧视口，调整到左侧
-      if (panelViewportRight > viewportWidth) {
-        left = -panelWidth - 50;
-      }
-      
-      // 如果信息框超出左侧视口，调整到右侧
-      if (panelViewportLeft < 0) {
-        left = cardRect.width + 10;
-      }
-      
-      // 如果信息框超出底部视口，调整到上方
-      if (panelViewportBottom > viewportHeight) {
-        top = viewportHeight - panelViewportTop - panelHeight - 20;
-      }
-      
-      // 0.3秒后显示详情面板
-      hoverDelayTimer = setTimeout(() => {
-        hoveredGame.value = game;
-        // 设置详情面板样式
-        detailStyle.left = `${left}px`;
-        detailStyle.top = `${top}px`;
-        
-        // 显示面板并触发淡入动画
-        isPanelVisible.value = true;
-      }, 300); // 0.3秒延迟不要修改
-    };
-    
-    // 处理鼠标离开事件
-    const handleMouseLeave = () => {
-      // 设置延迟隐藏，给用户时间移动鼠标到详情面板
-      startCountdown();
     };
     
     // 格式化日期
@@ -222,6 +78,46 @@ export default {
       return `${hours} 小时`;
     };
     
+    // 排序游戏列表
+    const sortGames = () => {
+      if (!games.value || games.value.length === 0) return;
+      
+      games.value.sort((a, b) => {
+        switch (selectedSort.value) {
+          case 'date':
+            // 按入库时间排序（最新的在前）
+            return new Date(b.addedDate) - new Date(a.addedDate);
+          case 'name':
+            // 按游戏名称排序（字母顺序）
+            return a.name.localeCompare(b.name);
+          default:
+            return 0;
+        }
+      });
+    };
+    
+    // 自定义下拉栏方法
+    const toggleDropdown = () => {
+      isDropdownOpen.value = !isDropdownOpen.value;
+    };
+    
+    const getSelectedOptionLabel = () => {
+      const option = sortOptions.find(opt => opt.value === selectedSort.value);
+      return option ? option.label : '';
+    };
+    
+    const selectOption = (value) => {
+      selectedSort.value = value;
+      isDropdownOpen.value = false;
+      // 选择选项后排序游戏列表
+      sortGames();
+    };
+    
+    // 监听排序选项变化
+    watch(selectedSort, () => {
+      sortGames();
+    });
+    
     // 组件挂载时加载游戏数据
     onMounted(() => {
       loadGames();
@@ -235,7 +131,11 @@ export default {
       isLoading,
       errorMessage,
       formatDate,
-      formatPlaytime
+      formatPlaytime,
+      isDropdownOpen,
+      toggleDropdown,
+      getSelectedOptionLabel,
+      selectOption
     };
   }
 };
@@ -251,7 +151,7 @@ export default {
     <!-- 游戏库头部 -->
     <div class="library-header">
       <div class="library-title">
-        <h2>所有游戏 ({{ libraryStats.displayedGames }}/{{ libraryStats.totalGames }})</h2>
+        <h2>所有游戏（{{ libraryStats.totalGames }}）</h2>
         <button class="library-filter">
           <span class="filter-icon"><FontAwesomeIcon icon="gamepad" /></span>
         </button>
@@ -260,15 +160,21 @@ export default {
       <div class="library-controls">
         <div class="sort-selector">
           <label>排序方式：</label>
-          <select v-model="selectedSort">
-            <option 
-              v-for="option in sortOptions" 
-              :key="option.value" 
-              :value="option.value"
-            >
-              {{ option.label }}
-            </option>
-          </select>
+          <div class="custom-select" @click="toggleDropdown">
+            <div class="select-value">{{ getSelectedOptionLabel() }}</div>
+            <div class="select-arrow">{{ isDropdownOpen ? '▲' : '▼' }}</div>
+            <div v-if="isDropdownOpen" class="select-options">
+              <div 
+                v-for="option in sortOptions" 
+                :key="option.value" 
+                class="select-option" 
+                :class="{ active: selectedSort === option.value }"
+                @click.stop="selectOption(option.value)"
+              >
+                {{ option.label }}
+              </div>
+            </div>
+          </div>
         </div>
         
         <button class="view-toggle">
@@ -353,11 +259,6 @@ export default {
               </div>
             </div>
             
-            <!-- 操作按钮 -->
-            <div class="detail-actions">
-              <button class="play-button">开始游戏</button>
-              <button class="library-button">管理游戏</button>
-            </div>
           </div>
         </div>
       </div>
@@ -467,6 +368,7 @@ export default {
 }
 
 .library-title h2 {
+  line-height: 1.2;
   font-size: 1.2rem;
   font-weight: 600;
   margin: 0;
@@ -486,6 +388,10 @@ export default {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.filter-icon {
+  display: flex;
+}
+
 .library-controls {
   display: flex;
   align-items: center;
@@ -499,13 +405,87 @@ export default {
   font-size: 0.9rem;
 }
 
-.sort-selector select {
+.custom-select {
+  position: relative;
+  display: flex;
+  align-items: center;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   border-radius: 4px;
   padding: 6px 10px;
   font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 150px;
+}
+
+.custom-select:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.select-value {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.select-arrow {
+  display: flex;
+  position: absolute;
+  right: 0;
+  margin-right: 8px;
+  font-size: 0.7rem;
+  transition: transform 0.3s ease;
+}
+
+.select-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(75, 75, 75, 0.5);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 0 4px 4px;
+  margin-top: 2px;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.select-option {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.select-option:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.select-option.active {
+  background: #f9f9f9d6;
+  color: black;
+}
+
+/* 自定义滚动条 */
+.select-options::-webkit-scrollbar {
+  width: 6px;
+}
+
+.select-options::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.select-options::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.select-options::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .view-toggle {
@@ -590,8 +570,8 @@ export default {
   z-index: 1000;
   pointer-events: auto;
   color: white;
-  top: 0;
-  right: -370px; /* 显示在卡片右侧，间距10px */
+  top: -10px;
+  right: -400px; /* 显示在卡片右侧，间距10px */
   height: auto;
   max-height: 100vh;
   overflow-y: auto;
@@ -607,7 +587,7 @@ export default {
 .game-card-wrapper:nth-child(7n+6) .game-detail,
 .game-card-wrapper:nth-child(7n+7) .game-detail {
   right: auto;
-  left: -370px; /* 显示在卡片左侧，间距10px */
+  left: -400px; /* 显示在卡片左侧，间距10px */
 }
 
 /* 悬停时显示详情面板 */
@@ -702,49 +682,6 @@ export default {
 
 .meta-value {
   font-weight: 500;
-}
-
-.detail-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.play-button {
-  flex: 1;
-  background: linear-gradient(45deg, #4299e1 0%, #6366f1 100%);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: auto;
-}
-
-.play-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(66, 153, 225, 0.3);
-}
-
-.library-button {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  pointer-events: auto;
-}
-
-.library-button:hover {
-  background: rgba(255, 255, 255, 0.2);
 }
 
 /* 响应式设计 */

@@ -172,7 +172,7 @@ export default {
 .game-card-wrapper:nth-child(5n+4) .game-detail,
 .game-card-wrapper:nth-child(5n+5) .game-detail {
   right: auto;
-  left: -400px; /* 显示在卡片左侧，间距10px */
+  left: -404px; /* 显示在卡片左侧，间距10px */
 }
 
 </style>

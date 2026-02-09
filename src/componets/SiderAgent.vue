@@ -12,7 +12,7 @@ export default {
     },
     emits: ['update:showDvd'], // 定义事件用于通知父组件更新showDvd状态
     setup(props, { emit }) {
-        const isExpanded = ref(true); // 控制小助手展开/收起状态
+        const isExpanded = ref(false); // 控制小助手展开/收起状态
         const isTyping = ref(false); // 控制AI正在输入状态
         const messages = ref([ // 对话消息列表
             {
